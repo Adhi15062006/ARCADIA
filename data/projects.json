@@ -1,0 +1,64 @@
+[
+  {
+    "id": "p1",
+    "title": "AETHER AI - Generative Dev Workspace",
+    "category": "AI",
+    "description": "An automated programming assistant that writes and compiles software live in sandboxed containers.",
+    "technologies": [
+      "React",
+      "Express",
+      "Gemini API",
+      "Docker",
+      "Tailwind CSS"
+    ],
+    "imageUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80",
+    "liveUrl": "https://aether.arcadia.agency",
+    "caseStudy": "We built an interactive UI using motion animations and a node-based terminal. By deploying server-side proxy routes for the Gemini API, we achieved near-zero latency and ultimate security."
+  },
+  {
+    "id": "p2",
+    "title": "NEBULA - E-Commerce Fashion Paradigm",
+    "category": "Websites",
+    "description": "A high-fashion storefront featuring interactive 3D product modeling and frictionless single-step checkouts.",
+    "technologies": [
+      "React",
+      "Three.js",
+      "Tailwind CSS",
+      "GSAP",
+      "Lenis Scroll"
+    ],
+    "imageUrl": "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=800&q=80",
+    "liveUrl": "https://nebula.arcadia.agency",
+    "caseStudy": "Nebula pushes front-end styling boundaries. Using Lenis for custom scrolling physics combined with GSAP ScrollTrigger, the interface transforms smoothly as elements scale into place."
+  },
+  {
+    "id": "p3",
+    "title": "CYPHER - Encrypted Mobile Wallet",
+    "category": "Mobile Apps",
+    "description": "A biometric-secured cross-platform cryptocurrency wallet featuring real-time market tickers.",
+    "technologies": [
+      "React Native",
+      "Tailwind CSS",
+      "WebSockets",
+      "iOS / Android"
+    ],
+    "imageUrl": "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=800&q=80",
+    "liveUrl": "https://cypher.arcadia.agency",
+    "caseStudy": "Cypher bridges native iOS/Android cryptography with high-speed WebSockets. It delivers real-time portfolio value calculations and handles thousands of simultaneous transactions per second."
+  },
+  {
+    "id": "p4",
+    "title": "NEXUS - Spatial Logistics Dashboard",
+    "category": "UI/UX",
+    "description": "A bento-grid data visualizer that maps worldwide cargo operations in an interactive real-time projection.",
+    "technologies": [
+      "Figma",
+      "D3.js",
+      "React",
+      "Google Maps Platform"
+    ],
+    "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
+    "liveUrl": "https://nexus.arcadia.agency",
+    "caseStudy": "For Nexus, we designed a dark mode interface prioritizing high data density and low cognitive load. The map combines real-time weather tracking with optimal delivery routes using Google Maps Platform APIs."
+  }
+]

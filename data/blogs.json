@@ -1,0 +1,24 @@
+[
+  {
+    "id": "b1",
+    "title": "Designing the Next Web: Beyond Flat Design (2026)",
+    "excerpt": "How Apple, Stripe, and Vercel are leveraging kinetic micro-interactions to create immersive experiences.",
+    "content": "The web is shifting. No longer are flat grids and safe white space enough. In 2026, the elite design paradigm is defined by depth, spatial audio, and context-aware micro-animations. Glassmorphic overlays with blurred backdrop filters, combined with responsive cursor-following ambient glows, establish high production-value. Using Framer Motion for component lifecycles and Lenis for smooth kinetic scrolls creates a continuous narrative flow that keeps users scrolling longer.",
+    "category": "Design",
+    "imageUrl": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=800&q=80",
+    "author": "Aaryan Sharma",
+    "date": "June 25, 2026",
+    "readTime": "5 min read"
+  },
+  {
+    "id": "b2",
+    "title": "Gemini 3.5: Revolutionizing Server-Side Automation",
+    "excerpt": "An in-depth study on integrating state-of-the-art multimodal models into web applications securely.",
+    "content": "With the release of Gemini 3.5, the engineering requirements for integrating AI chatbots and autonomous systems have changed. The Google GenAI SDK offers powerful support for structured JSON schemas and function calling natively. At Arcadia, we enforce server-side API proxy routing, completely shielding sensitive API keys from browser client bundles. In this article, we demonstrate how to initialize GoogleGenAI with appropriate headers, configure low-latency response schemas, and implement streaming conversational agents.",
+    "category": "AI Solutions",
+    "imageUrl": "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=800&q=80",
+    "author": "Dr. Rishi Patel",
+    "date": "May 18, 2026",
+    "readTime": "8 min read"
+  }
+]

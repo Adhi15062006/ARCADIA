@@ -1,0 +1,20 @@
+[
+  {
+    "id": "t1",
+    "name": "Vikram Malhotra",
+    "company": "Zenix Solutions",
+    "role": "CEO & Founder",
+    "content": "ARCADIA transformed our outdated landing page into a digital masterpiece. The animations are fluid, the performance is flawless, and our conversion rate skyrocketed by 45%!",
+    "rating": 5,
+    "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
+  },
+  {
+    "id": "t2",
+    "name": "Priyanka Sen",
+    "company": "Aura Creative",
+    "role": "Creative Director",
+    "content": "The AI chatbot built by Arcadia handles 80% of our customer inquiries automatically! The integration is secure, and their technical support is world-class.",
+    "rating": 5,
+    "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"
+  }
+]

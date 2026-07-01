@@ -1,0 +1,74 @@
+[
+  {
+    "id": "l_4dw0dg8j1",
+    "action": "Admin Login",
+    "details": "Admin logged in successfully from: arcadia",
+    "timestamp": "2026-07-01T12:59:31.370Z"
+  },
+  {
+    "id": "l_0ao416325",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Priyanka Sen",
+    "timestamp": "2026-07-01T12:54:21.824Z"
+  },
+  {
+    "id": "l_ydugg6f2c",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Priyanka Sen",
+    "timestamp": "2026-07-01T12:52:38.919Z"
+  },
+  {
+    "id": "l_uhx4ga82d",
+    "action": "New Project Order",
+    "details": "New order submitted by Priyanka Sen for: Business Website (Awaiting Approval)",
+    "timestamp": "2026-07-01T12:39:28.628Z"
+  },
+  {
+    "id": "l_9wah5z2p6",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Priyanka Sen",
+    "timestamp": "2026-07-01T12:38:33.011Z"
+  },
+  {
+    "id": "l_uf2tomtnd",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Priyanka Sen",
+    "timestamp": "2026-07-01T12:35:56.789Z"
+  },
+  {
+    "id": "l_ax7529506",
+    "action": "Sandbox Register",
+    "details": "Registered Sandbox Emulator Client: Priyanka Sen",
+    "timestamp": "2026-07-01T12:35:56.787Z"
+  },
+  {
+    "id": "l_nf53whrwb",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Aura Client",
+    "timestamp": "2026-07-01T11:43:53.632Z"
+  },
+  {
+    "id": "l_bj9q322yi",
+    "action": "Sandbox Register",
+    "details": "Registered Sandbox Emulator Client: Aura Client",
+    "timestamp": "2026-07-01T11:43:53.631Z"
+  },
+  {
+    "id": "l_p0axpvbj9",
+    "action": "Admin Login",
+    "details": "Admin logged in successfully from: arcadia",
+    "timestamp": "2026-07-01T11:42:22.000Z"
+  },
+  {
+    "id": "l_y1qu0v6sy",
+    "action": "Admin Login",
+    "details": "Admin logged in successfully from: admin",
+    "timestamp": "2026-07-01T11:39:34.398Z"
+  },
+  {
+    "id": "l1",
+    "action": "System Init",
+    "details": "Arcadia core platform initiated successfully on port 3000.",
+    "timestamp": "2026-07-01T11:39:34.397Z"
+  }
+]
