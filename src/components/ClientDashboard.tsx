@@ -287,7 +287,7 @@ export default function ClientDashboard({
           onShowToast("success", `Sandbox Access Granted for ${namePreset}!`);
         }
       } catch (err) {
-        onShowToast("error", "Sandbox communication failed.");
+        onShowToast("error", "Connection to the sandbox authentication gateway failed. Please try again.");
       } finally {
         setIsLoading(false);
       }

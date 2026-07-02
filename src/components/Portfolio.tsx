@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Project } from "../types";
-import { Sparkles, Globe, BookOpen, X, ChevronRight, Check } from "lucide-react";
+import { Sparkles, Globe, BookOpen, X, ChevronRight, Check, Search } from "lucide-react";
 import AnimatedButton from "./ui/animated-button";
 import { FlipText } from "./ui/flip-text";
 import DiagonalCarousel from "./ui/diagonal-carousel";
@@ -15,6 +15,16 @@ export default function Portfolio({ projects, lang }: PortfolioProps) {
   const [activeFilter, setActiveFilter] = useState<string>("All");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+      setCarouselIndex(0);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const filters = ["All", "Websites", "AI", "Mobile Apps", "Branding", "UI/UX"];
 
@@ -28,7 +38,17 @@ export default function Portfolio({ projects, lang }: PortfolioProps) {
   };
 
   const filteredProjects = projects.filter(proj => {
-    return activeFilter === "All" || proj.category === activeFilter;
+    const matchesCategory = activeFilter === "All" || proj.category === activeFilter;
+    const q = debouncedQuery.toLowerCase().trim();
+    if (!q) return matchesCategory;
+    
+    const matchesSearch = 
+      proj.title.toLowerCase().includes(q) ||
+      proj.description.toLowerCase().includes(q) ||
+      proj.category.toLowerCase().includes(q) ||
+      proj.technologies.some(tech => tech.toLowerCase().includes(q));
+      
+    return matchesCategory && matchesSearch;
   });
 
   const carouselImages = filteredProjects.map(proj => ({
@@ -83,24 +103,39 @@ export default function Portfolio({ projects, lang }: PortfolioProps) {
           </motion.p>
         </div>
 
-        {/* Filter Toolbar */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-12">
-          {filters.map((filter) => (
-            <AnimatedButton
-              key={filter}
-              onClick={() => {
-                setActiveFilter(filter);
-                setCarouselIndex(0);
-              }}
-              className={`px-5 py-2.5 rounded-full font-display text-xs font-semibold tracking-wide transition-all ${
-                activeFilter === filter
-                  ? "bg-purple-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.3)]"
-                  : "bg-white/5 text-gray-400 hover:text-white border border-white/5 hover:border-white/10"
-              }`}
-            >
-              {filter === "All" ? (lang === "en" ? "All Masterpieces" : "सभी उत्कृष्ट कृतियाँ") : filter}
-            </AnimatedButton>
-          ))}
+        {/* Search & Category Tabs */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+          {/* Categories Tabs */}
+          <div className="flex flex-wrap gap-2">
+            {filters.map((filter) => (
+              <AnimatedButton
+                key={filter}
+                onClick={() => {
+                  setActiveFilter(filter);
+                  setCarouselIndex(0);
+                }}
+                className={`px-5 py-2.5 rounded-full font-display text-xs font-semibold tracking-wide transition-all ${
+                  activeFilter === filter
+                    ? "bg-purple-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.3)]"
+                    : "bg-white/5 text-gray-400 hover:text-white border border-white/5 hover:border-white/10"
+                }`}
+              >
+                {filter === "All" ? (lang === "en" ? "All Masterpieces" : "सभी उत्कृष्ट कृतियाँ") : filter}
+              </AnimatedButton>
+            ))}
+          </div>
+
+          {/* Search bar */}
+          <div className="relative w-full md:max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder={lang === "en" ? "Search portfolio..." : "पोर्टफोलियो खोजें..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 rounded-full bg-white/5 border border-white/10 font-sans text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-all"
+            />
+          </div>
         </div>
 
         {/* Animated 3D Diagonal Carousel */}

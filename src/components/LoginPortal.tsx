@@ -91,7 +91,7 @@ export default function LoginPortal({
         setClientAuthError(data.error || "Failed to process reset request.");
       }
     } catch (err) {
-      setClientAuthError("Connection to security service failed.");
+      setClientAuthError("Could not connect to the security service. Please check your network and try again.");
     } finally {
       setIsForgotLoading(false);
     }
@@ -124,7 +124,7 @@ export default function LoginPortal({
         setClientAuthError(data.error || "Reset validation failed.");
       }
     } catch (err) {
-      setClientAuthError("Connection to security service failed.");
+      setClientAuthError("Could not connect to the security service. Please check your network and try again.");
     } finally {
       setIsForgotLoading(false);
     }
@@ -161,7 +161,7 @@ export default function LoginPortal({
         setClientAuthError(data.error || "Authentication failed. Double check credentials.");
       }
     } catch (err) {
-      setClientAuthError("Could not connect to authentication gateway.");
+      setClientAuthError("Could not connect to the authentication gateway. Please check your network and try again.");
     } finally {
       setIsClientLoading(false);
     }
@@ -187,7 +187,7 @@ export default function LoginPortal({
         setAdminAuthError(data.error || "Access denied. Token verification failed.");
       }
     } catch (err) {
-      setAdminAuthError("Administrative bridge handshake failed.");
+      setAdminAuthError("Administrative authentication connection failed. Please check your connection to the server.");
     } finally {
       setIsAdminLoading(false);
     }
@@ -214,7 +214,7 @@ export default function LoginPortal({
         setAdminAuthError(data.error || "Access denied. Token verification failed.");
       }
     } catch (err) {
-      setAdminAuthError("Administrative bridge handshake failed.");
+      setAdminAuthError("Administrative authentication connection failed. Please check your connection to the server.");
     } finally {
       setIsAdminLoading(false);
     }
@@ -246,7 +246,7 @@ export default function LoginPortal({
           onShowToast("success", `Sandbox access approved for ${namePreset}!`);
         }
       } catch (err) {
-        onShowToast("error", "Sandbox gateway connection failed.");
+        onShowToast("error", "Connection to the sandbox authentication gateway failed. Please try again.");
       } finally {
         setIsClientLoading(false);
       }

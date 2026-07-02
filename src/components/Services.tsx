@@ -30,11 +30,19 @@ interface ServicesProps {
 export default function Services({ services, onSelectService, lang }: ServicesProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showAllMobile, setShowAllMobile] = useState(false);
 
   React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  React.useEffect(() => {
     setShowAllMobile(false);
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, debouncedQuery]);
 
   const categories = ["All", "Web Development", "AI Solutions", "Design & Marketing"];
 
@@ -60,8 +68,10 @@ export default function Services({ services, onSelectService, lang }: ServicesPr
   // Filter and search logic
   const filteredServices = services.filter(service => {
     const matchesCategory = selectedCategory === "All" || service.category === selectedCategory;
-    const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          service.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = debouncedQuery.toLowerCase().trim();
+    if (!q) return matchesCategory;
+    const matchesSearch = service.title.toLowerCase().includes(q) || 
+                          service.description.toLowerCase().includes(q);
     return matchesCategory && matchesSearch;
   });
 

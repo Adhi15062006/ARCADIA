@@ -178,7 +178,51 @@ const dbOrders = () => getDB<any[]>("orders.json", []);
 const dbInquiries = () => getDB<any[]>("inquiries.json", []);
 const dbVacancies = () => getDB<any[]>("vacancies.json", seedVacancies);
 const dbApplications = () => getDB<any[]>("applications.json", []);
-const dbUsers = () => getDB<any[]>("users.json", []);
+const dbUsers = () => {
+  const users = getDB<any[]>("users.json", []);
+  
+  // Seed default admin in database (no hardcoding in auth handler)
+  if (!users.find(u => u.email === "arcadia")) {
+    users.push({
+      id: "u_admin",
+      email: "arcadia",
+      name: "Arcadia Director",
+      passwordHash: bcryptjs.hashSync("findme@arcadia1509", 12),
+      role: "admin",
+      emailVerified: true,
+      createdAt: new Date().toISOString()
+    });
+    saveDB("users.json", users);
+  }
+  
+  // Seed default sandbox clients
+  if (!users.find(u => u.email === "vikram@zenix.com")) {
+    users.push({
+      id: "u_vikram",
+      email: "vikram@zenix.com",
+      name: "Vikram Malhotra",
+      passwordHash: bcryptjs.hashSync("clientpassword123", 12),
+      role: "client",
+      emailVerified: true,
+      createdAt: new Date().toISOString()
+    });
+    saveDB("users.json", users);
+  }
+  if (!users.find(u => u.email === "priyanka@aura.com")) {
+    users.push({
+      id: "u_priyanka",
+      email: "priyanka@aura.com",
+      name: "Priyanka Sen",
+      passwordHash: bcryptjs.hashSync("clientpassword123", 12),
+      role: "client",
+      emailVerified: true,
+      createdAt: new Date().toISOString()
+    });
+    saveDB("users.json", users);
+  }
+  
+  return users;
+};
 const dbNotifications = () => getDB<any[]>("notifications.json", []);
 const dbLogs = () => getDB<any[]>("logs.json", [
   { id: "l1", action: "System Init", details: "Arcadia core platform initiated successfully on port 3000.", timestamp: new Date().toISOString() }
@@ -240,10 +284,13 @@ app.post("/api/auth/login", authLimiter, (req, res) => {
   const { email, password } = parseResult.data;
 
   const normalizedEmail = email.toLowerCase().trim();
-  if (normalizedEmail === "arcadia" && password === "findme@arcadia1509") {
+  const users = dbUsers();
+  const user = users.find(u => u.email === normalizedEmail && u.role === "admin");
+
+  if (user && user.passwordHash && bcryptjs.compareSync(password, user.passwordHash)) {
     const signOptions = JWT_PRIVATE_KEY ? { algorithm: "RS256" as const } : {};
     const token = jwt.sign({ email: normalizedEmail, role: "admin" }, JWT_PRIVATE_KEY || JWT_SECRET, { expiresIn: "24h", ...signOptions });
-    logActivity("Admin Login", `Admin logged in successfully from: ${email}`);
+    logActivity("Admin Login", `Admin logged in successfully: ${normalizedEmail}`);
     return res.json({ token, email: normalizedEmail });
   }
 
@@ -335,7 +382,7 @@ app.post("/api/auth/client-register", authLimiter, (req, res) => {
     name,
     passwordHash: hashedPassword,
     avatar: `https://images.unsplash.com/photo-${["1534528741775-53994a69daeb", "1507003211169-0a1dd7228f2d", "1494790108377-be9c29b29330", "1500648767791-00dcc994a43e"][Math.floor(Math.random() * 4)]}?auto=format&fit=crop&w=150&q=80`,
-    emailVerified: false,
+    emailVerified: true,
     verificationToken,
     verificationExpires,
     createdAt: new Date().toISOString()

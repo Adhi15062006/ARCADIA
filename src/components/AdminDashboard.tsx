@@ -272,7 +272,7 @@ export default function AdminDashboard({
       }
     } catch (err) {
       console.error(err);
-      onShowToast?.("error", "Database link failed.");
+      onShowToast?.("error", "Database synchronization failed. Please check your network and try again.");
     }
   };
 

@@ -31,6 +31,29 @@ import {
   ArrowRight
 } from "lucide-react";
 
+const decodeToken = (token: string) => {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (err) {
+    return null;
+  }
+};
+
+const isTokenValid = (token: string | null) => {
+  if (!token) return false;
+  const decoded = decodeToken(token);
+  if (!decoded || !decoded.exp) return false;
+  return decoded.exp * 1000 > Date.now();
+};
+
 export default function App() {
   // Navigation & State Engine
   const [currentView, setCurrentView] = useState("home");
@@ -90,13 +113,19 @@ export default function App() {
 
     // 4. Token checker
     const token = localStorage.getItem("arcadia_admin_token");
-    if (token) {
+    if (token && isTokenValid(token)) {
       setIsAdminLoggedIn(true);
+    } else {
+      localStorage.removeItem("arcadia_admin_token");
+      setIsAdminLoggedIn(false);
     }
 
     const clientToken = localStorage.getItem("arcadia_client_token");
-    if (clientToken) {
+    if (clientToken && isTokenValid(clientToken)) {
       setIsClientLoggedIn(true);
+    } else {
+      localStorage.removeItem("arcadia_client_token");
+      setIsClientLoggedIn(false);
     }
 
     return () => {
