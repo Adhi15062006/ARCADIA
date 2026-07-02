@@ -49,7 +49,7 @@ const DATA_DIR = (() => {
   }
   // Default: try to create at cwd
   const fallback = path.join(process.cwd(), "data");
-  try { fs.mkdirSync(fallback, { recursive: true }); } catch {}
+  try { fs.mkdirSync(fallback, { recursive: true }); } catch { }
   return fallback;
 })();
 
@@ -61,10 +61,10 @@ function getDB<T>(filename: string, defaultData: T): T {
   if (memoryStore[filename]) {
     return memoryStore[filename] as T;
   }
-  
+
   const primaryPath = path.join(DATA_DIR, filename);
   const tmpPath = path.join("/tmp", "arcadia_data", filename);
-  
+
   // Try reading from /tmp first (in case serverless container modified it earlier)
   for (const filepath of [tmpPath, primaryPath]) {
     if (fs.existsSync(filepath)) {
@@ -95,7 +95,7 @@ function getDB<T>(filename: string, defaultData: T): T {
       const tmpDir = path.join("/tmp", "arcadia_data");
       if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
       fs.writeFileSync(tmpPath, JSON.stringify(defaultData, null, 2), "utf8");
-    } catch {}
+    } catch { }
   }
   return defaultData;
 }
@@ -401,12 +401,12 @@ app.post("/api/auth/client-forgot", authLimiter, (req, res) => {
   if (!email) {
     return res.status(400).json({ error: "Email is required." });
   }
-  
+
   const normalizedEmail = email.toLowerCase().trim();
 
   // Generate a mock code
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  
+
   if (!(global as any).resetCodes) {
     (global as any).resetCodes = {};
   }
@@ -696,7 +696,7 @@ app.post("/api/auth/social-sandbox", (req, res) => {
       id: "u_" + Math.random().toString(36).substr(2, 9),
       email: normalizedEmail,
       name,
-      avatar: normalizedEmail.includes("vikram") 
+      avatar: normalizedEmail.includes("vikram")
         ? "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
         : "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
       createdAt: new Date().toISOString()
@@ -887,7 +887,7 @@ app.put("/api/services/:id", authenticateJWT, (req, res) => {
   const services = dbServices();
   const idx = services.findIndex(s => s.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Service not found." });
-  
+
   services[idx] = { ...services[idx], ...req.body };
   saveDB("services.json", services);
   logActivity("Update Service", `Updated service: ${services[idx].title}`);
@@ -898,7 +898,7 @@ app.delete("/api/services/:id", authenticateJWT, (req, res) => {
   const services = dbServices();
   const idx = services.findIndex(s => s.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Service not found." });
-  
+
   const title = services[idx].title;
   services.splice(idx, 1);
   saveDB("services.json", services);
@@ -927,7 +927,7 @@ app.put("/api/projects/:id", authenticateJWT, (req, res) => {
   const projects = dbProjects();
   const idx = projects.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Project not found." });
-  
+
   projects[idx] = { ...projects[idx], ...req.body };
   saveDB("projects.json", projects);
   logActivity("Update Project", `Updated portfolio project: ${projects[idx].title}`);
@@ -938,7 +938,7 @@ app.delete("/api/projects/:id", authenticateJWT, (req, res) => {
   const projects = dbProjects();
   const idx = projects.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Project not found." });
-  
+
   const title = projects[idx].title;
   projects.splice(idx, 1);
   saveDB("projects.json", projects);
@@ -972,7 +972,7 @@ app.get("/api/orders", authenticateJWT, (req, res) => {
 app.post("/api/orders", (req, res) => {
   const orders = dbOrders();
   const budget = parseInt(req.body.budget) || 0;
-  
+
   const m1Amt = Math.round(budget * 0.3);
   const m2Amt = Math.round(budget * 0.5);
   const m3Amt = budget - m1Amt - m2Amt;
@@ -1019,7 +1019,7 @@ app.put("/api/orders/:id/status", authenticateJWT, (req, res) => {
   const orders = dbOrders();
   const idx = orders.findIndex(o => o.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Order not found." });
-  
+
   orders[idx].status = req.body.status;
   saveDB("orders.json", orders);
   logActivity("Order Status Change", `Order status updated to '${req.body.status}' for client ${orders[idx].name}`);
@@ -1089,7 +1089,7 @@ app.put("/api/orders/:id/milestones/:mid/request", authenticateJWT, (req, res) =
   `;
 
   sendMockEmail(order.email.toLowerCase().trim(), `ARCADIA Payment Request: ${milestone.label}`, paymentReqHTML, "payment_request");
-  
+
   // Create active notification for client portal
   const notifications = dbNotifications();
   const newNotification = {
@@ -1162,7 +1162,7 @@ app.put("/api/orders/:id/pay", (req, res) => {
   const orders = dbOrders();
   const idx = orders.findIndex(o => o.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Order not found." });
-  
+
   orders[idx].isPaid = true;
   orders[idx].paymentAmount = req.body.amount || 5000;
   // Set all milestones to paid if paying full
@@ -1201,7 +1201,7 @@ app.put("/api/blogs/:id", authenticateJWT, (req, res) => {
   const blogs = dbBlogs();
   const idx = blogs.findIndex(b => b.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Blog post not found." });
-  
+
   blogs[idx] = { ...blogs[idx], ...req.body };
   saveDB("blogs.json", blogs);
   logActivity("Update Blog", `Updated blog: ${blogs[idx].title}`);
@@ -1212,7 +1212,7 @@ app.delete("/api/blogs/:id", authenticateJWT, (req, res) => {
   const blogs = dbBlogs();
   const idx = blogs.findIndex(b => b.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Blog post not found." });
-  
+
   const title = blogs[idx].title;
   blogs.splice(idx, 1);
   saveDB("blogs.json", blogs);
@@ -1241,7 +1241,7 @@ app.put("/api/faqs/:id", authenticateJWT, (req, res) => {
   const faqs = dbFAQs();
   const idx = faqs.findIndex(f => f.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "FAQ not found." });
-  
+
   faqs[idx] = { ...faqs[idx], ...req.body };
   saveDB("faqs.json", faqs);
   logActivity("Update FAQ", `Updated FAQ: ${faqs[idx].question}`);
@@ -1252,7 +1252,7 @@ app.delete("/api/faqs/:id", authenticateJWT, (req, res) => {
   const faqs = dbFAQs();
   const idx = faqs.findIndex(f => f.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "FAQ not found." });
-  
+
   const question = faqs[idx].question;
   faqs.splice(idx, 1);
   saveDB("faqs.json", faqs);
@@ -1515,8 +1515,9 @@ async function startServer() {
   }
 }
 
-// Start server only when running directly (not imported by Vercel serverless)
-if (!process.env.VERCEL) {
+// Start server only when running directly (not imported by Vite config or Vercel serverless)
+if (!process.env.VERCEL && !process.env.SERVER_STARTED && process.argv[1] && !process.argv[1].toLowerCase().includes("vite")) {
+  process.env.SERVER_STARTED = "true";
   startServer();
 }
 

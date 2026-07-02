@@ -12,15 +12,32 @@
       "src": "api/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["data/**"]
+        "includeFiles": [
+          "data/**"
+        ]
       }
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "api/index.ts" },
-    { "src": "/auth/callback(.*)", "dest": "api/index.ts" },
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))", "dest": "/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    {
+      "src": "/api/(.*)",
+      "dest": "api/index.ts"
+    },
+    {
+      "src": "/auth/callback(.*)",
+      "dest": "api/index.ts"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }

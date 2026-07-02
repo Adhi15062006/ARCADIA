@@ -1218,7 +1218,7 @@ export default function ClientDashboard({
               </div>
 
               <p className="text-xs text-gray-400 leading-relaxed">
-                To link real production social auth, you must register your AI Studio container callback URI inside your developer accounts and configure credentials.
+                To link real production social auth, you must register your Arcadia Platform callback URI inside your developer accounts and configure credentials.
               </p>
 
               <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl font-mono text-[11px]">

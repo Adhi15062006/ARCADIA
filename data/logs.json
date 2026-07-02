@@ -1,5 +1,23 @@
 [
   {
+    "id": "l_bl9vi7k8c",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Test Client",
+    "timestamp": "2026-07-02T11:51:27.351Z"
+  },
+  {
+    "id": "l_5cc3e7vxk",
+    "action": "Sandbox Register",
+    "details": "Registered Sandbox Emulator Client: Test Client",
+    "timestamp": "2026-07-02T11:51:27.350Z"
+  },
+  {
+    "id": "l_refm60slj",
+    "action": "Admin Login",
+    "details": "Admin logged in successfully from: arcadia",
+    "timestamp": "2026-07-02T11:51:19.864Z"
+  },
+  {
     "id": "l_ayvak4tsz",
     "action": "Admin Login",
     "details": "Admin logged in successfully from: arcadia",

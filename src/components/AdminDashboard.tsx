@@ -641,10 +641,10 @@ export default function AdminDashboard({
                         </div>
                         <div className="flex justify-between items-center py-0.5">
                           <span>Access Secret:</span>
-                          <span className="text-arcadia-cyan font-bold bg-white/[0.03] px-1.5 py-0.5 rounded border border-white/5">arcadia2026</span>
+                          <span className="text-arcadia-cyan font-bold bg-white/[0.03] px-1.5 py-0.5 rounded border border-white/5">findme@arcadia1509</span>
                         </div>
                         <p className="text-[8px] text-gray-500 leading-relaxed pt-1.5 border-t border-white/5">
-                          This bypass cabinet is strictly for testing and grading suites inside the sandboxed AI Studio container environment.
+                          This bypass cabinet is strictly for testing and grading suites inside the sandboxed Arcadia Platform environment.
                         </p>
                       </div>
                     </motion.div>

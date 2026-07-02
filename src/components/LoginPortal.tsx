@@ -193,6 +193,33 @@ export default function LoginPortal({
     }
   };
 
+  const handleQuickAdminLogin = async () => {
+    setAdminEmail("arcadia");
+    setAdminPassword("findme@arcadia1509");
+    setAdminAuthError("");
+    setIsAdminLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "arcadia", password: "findme@arcadia1509" })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        onAdminLoginSuccess(data.token, data.email);
+        onShowToast("success", "Administrative session authorized!");
+      } else {
+        setAdminAuthError(data.error || "Access denied. Token verification failed.");
+      }
+    } catch (err) {
+      setAdminAuthError("Administrative bridge handshake failed.");
+    } finally {
+      setIsAdminLoading(false);
+    }
+  };
+
   // Popup-based Social Authentication
   const handleSocialAuth = (provider: "google" | "github") => {
     setSocialPromptProvider(provider);
@@ -699,6 +726,29 @@ export default function LoginPortal({
                   </AnimatedButton>
                 </form>
 
+                {/* FAST ADMIN SANDBOX ACCREDITED LOGIN */}
+                <div className="pt-4 border-t border-white/5 text-center mt-6">
+                  <div className="flex items-center justify-center gap-1 mb-2">
+                    <Info className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+                    <span className="text-[8px] font-mono text-purple-300 uppercase tracking-widest font-bold">
+                      Admin Sandbox Credentials & Fast Login
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-gray-500 mb-3 leading-relaxed">
+                    Default sandbox credentials: <span className="text-white font-mono font-bold">arcadia</span> / <span className="text-white font-mono font-bold">findme@arcadia1509</span>
+                  </p>
+                  <div className="flex justify-center">
+                    <AnimatedButton
+                      type="button"
+                      onClick={handleQuickAdminLogin}
+                      className="px-3 py-2 bg-purple-500/10 border border-purple-500/30 rounded-xl font-mono text-[9px] text-purple-300 hover:text-white hover:bg-purple-500/20 hover:border-purple-500/50 transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
+                    >
+                      <span>⚡ Quick Admin Sandbox Login</span>
+                      <ArrowRight className="w-3 h-3 text-purple-400" />
+                    </AnimatedButton>
+                  </div>
+                </div>
+
 
               </motion.div>
             )}
@@ -829,7 +879,7 @@ export default function LoginPortal({
               </div>
 
               <p className="font-sans text-[11px] text-gray-400 leading-relaxed">
-                To link live production social authorization profiles on {guideProvider}, you must provision official client keys using AI Studio settings.
+                To link live production social authorization profiles on {guideProvider}, you must provision official client keys using Arcadia Platform settings.
               </p>
 
               <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl font-mono text-[9px] text-gray-400 space-y-1.5">

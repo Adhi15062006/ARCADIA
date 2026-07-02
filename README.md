@@ -22,5 +22,11 @@ An award-winning, high-performance digital showroom and custom SaaS development 
 3. Run Development Server:
    ```bash
    npm run dev
+   # OR run Vite directly:
+   npx vite
    ```
-   Server and Vite frontend will launch on `http://localhost:5713`.
+   Both commands seamlessly run the Express backend API and Vite frontend on `http://localhost:5713`.
+
+## Test Credentials & Sandboxes
+- **Admin Dashboard**: `arcadia` / `findme@arcadia1509` (or use the Quick Admin Sandbox Login button in the UI).
+- **Client Sandbox**: Click any preset (Vikram Malhotra or Priyanka Sen) in the Client Login portal for 1-click sandbox access.

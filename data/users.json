@@ -12,5 +12,12 @@
     "name": "Priyanka Sen",
     "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
     "createdAt": "2026-07-01T12:35:56.785Z"
+  },
+  {
+    "id": "u_n9zyglvlg",
+    "email": "test@arcadia.com",
+    "name": "Test Client",
+    "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+    "createdAt": "2026-07-02T11:51:27.349Z"
   }
 ]
