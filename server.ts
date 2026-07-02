@@ -6,7 +6,6 @@ import bcryptjs from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 
@@ -1494,6 +1493,7 @@ app.get("/api/health", (req, res) => {
 // Configure Vite middleware in development
 async function startServer() {
   if (process.env.NODE_ENV !== "production" && process.env.PORT !== "3000") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
