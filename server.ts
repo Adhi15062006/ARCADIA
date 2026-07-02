@@ -13,7 +13,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = 5713;
+const PORT = process.env.PORT || 5713;
 // Use RSA keys if provided, otherwise fallback to secret
 const JWT_PRIVATE_KEY = process.env.JWT_PRIVATE_KEY ? fs.readFileSync(process.env.JWT_PRIVATE_KEY, "utf8") : null;
 const JWT_PUBLIC_KEY = process.env.JWT_PUBLIC_KEY ? fs.readFileSync(process.env.JWT_PUBLIC_KEY, "utf8") : null;
@@ -1493,7 +1493,7 @@ app.get("/api/health", (req, res) => {
 
 // Configure Vite middleware in development
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && process.env.PORT !== "3000") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
