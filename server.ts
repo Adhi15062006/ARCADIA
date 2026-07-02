@@ -24,34 +24,89 @@ const JWT_SECRET = process.env.JWT_SECRET || "arcadia_secret_key_2026_futuristic
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// Ensure data folder exists
-const DATA_DIR = path.join(process.cwd(), "data");
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+// Try multiple possible data dir locations (compatible with local dev and Vercel serverless)
+const DATA_DIR = (() => {
+  const candidates = [
+    path.join(process.cwd(), "data"),
+    path.join(process.cwd(), "..", "data"),
+    "/var/task/data",
+    "/var/task/api/data",
+    path.join("/tmp", "arcadia_data")
+  ];
+  for (const dir of candidates) {
+    if (fs.existsSync(dir)) return dir;
+  }
+  // Default: try to create at cwd
+  const fallback = path.join(process.cwd(), "data");
+  try { fs.mkdirSync(fallback, { recursive: true }); } catch {}
+  return fallback;
+})();
+
+// In-memory cache for serverless container state persistence
+const memoryStore: Record<string, any> = {};
 
 // Helper for JSON Database Persistence
 function getDB<T>(filename: string, defaultData: T): T {
-  const filepath = path.join(DATA_DIR, filename);
-  if (!fs.existsSync(filepath)) {
-    fs.writeFileSync(filepath, JSON.stringify(defaultData, null, 2));
-    return defaultData;
+  if (memoryStore[filename]) {
+    return memoryStore[filename] as T;
   }
+  
+  const primaryPath = path.join(DATA_DIR, filename);
+  const tmpPath = path.join("/tmp", "arcadia_data", filename);
+  
+  // Try reading from /tmp first (in case serverless container modified it earlier)
+  for (const filepath of [tmpPath, primaryPath]) {
+    if (fs.existsSync(filepath)) {
+      try {
+        const raw = fs.readFileSync(filepath, "utf8");
+        const parsed = JSON.parse(raw);
+        // If file exists but array is empty, fall back to seed data
+        if (Array.isArray(parsed) && parsed.length === 0 && Array.isArray(defaultData) && (defaultData as any[]).length > 0) {
+          memoryStore[filename] = defaultData;
+          return defaultData;
+        }
+        memoryStore[filename] = parsed;
+        return parsed as T;
+      } catch (err) {
+        console.error(`Error reading database file from ${filepath}:`, err);
+      }
+    }
+  }
+
+  // If not found or failed, store and try writing defaultData
+  memoryStore[filename] = defaultData;
   try {
-    const raw = fs.readFileSync(filepath, "utf8");
-    return JSON.parse(raw);
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(primaryPath, JSON.stringify(defaultData, null, 2), "utf8");
   } catch (err) {
-    console.error(`Error reading database file: ${filename}`, err);
-    return defaultData;
+    // Read-only filesystem on Vercel; try writing to /tmp/arcadia_data instead
+    try {
+      const tmpDir = path.join("/tmp", "arcadia_data");
+      if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+      fs.writeFileSync(tmpPath, JSON.stringify(defaultData, null, 2), "utf8");
+    } catch {}
   }
+  return defaultData;
 }
 
 function saveDB<T>(filename: string, data: T) {
-  const filepath = path.join(DATA_DIR, filename);
+  // Update in-memory store immediately so running server instance sees new changes
+  memoryStore[filename] = data;
+
+  const primaryPath = path.join(DATA_DIR, filename);
   try {
-    fs.writeFileSync(filepath, JSON.stringify(data, null, 2), "utf8");
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(primaryPath, JSON.stringify(data, null, 2), "utf8");
   } catch (err) {
-    console.error(`Error writing database file: ${filename}`, err);
+    // If primary path is read-only (Vercel serverless), write to /tmp/arcadia_data
+    try {
+      const tmpDir = path.join("/tmp", "arcadia_data");
+      const tmpPath = path.join(tmpDir, filename);
+      if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+      fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), "utf8");
+    } catch (tmpErr) {
+      console.error(`Could not write database file ${filename} to disk or /tmp:`, tmpErr);
+    }
   }
 }
 

@@ -327,6 +327,20 @@ export default function AdminDashboard({
     }
   };
 
+  // File upload helper for image conversion to base64
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, target: "project" | "service") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      if (target === "project") {
+        setProjectForm(prev => ({ ...prev, imageUrl: base64 }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // CRUD Actions
   const handleSaveCatalogService = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -663,7 +677,7 @@ export default function AdminDashboard({
                   { id: "users", label: "Registered Clients", icon: Users },
                   { id: "bookings", label: "Demo Bookings", icon: Calendar },
                   { id: "catalog", label: "Catalog Editor", icon: Layers },
-                  { id: "projects", label: "Projects Panel", icon: BookOpen },
+                  { id: "projects", label: "Digital Footprints (Projects)", icon: BookOpen },
                   { id: "vacancies", label: "Vacancies", icon: Briefcase },
                   { id: "applications", label: "Job Applications", icon: UserCheck },
                   { id: "inquiries", label: "Inquiries", icon: MessageSquare },
@@ -1335,15 +1349,15 @@ export default function AdminDashboard({
                 <div className="space-y-6">
                   <div className="flex justify-between items-center border-b border-white/5 pb-4">
                     <div>
-                      <h3 className="font-display font-black text-lg text-white">PROJECTS PANEL</h3>
-                      <p className="font-sans text-xs text-gray-500">Edit, add or prune portfolio entries.</p>
+                      <h3 className="font-display font-black text-lg text-white">DIGITAL FOOTPRINTS (PORTFOLIO PROJECTS)</h3>
+                      <p className="font-sans text-xs text-gray-500">Add, edit, or remove Our Digital Footprints showcased on the frontend.</p>
                     </div>
                     <AnimatedButton
                       onClick={() => setIsCreatingNew("project")}
                       className="px-3.5 py-1.5 rounded-full bg-arcadia-blue hover:bg-blue-600 text-white text-xs font-bold tracking-wide flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(47,128,255,0.3)]"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>New Project</span>
+                      <span>New Digital Footprint</span>
                     </AnimatedButton>
                   </div>
 
@@ -1351,7 +1365,7 @@ export default function AdminDashboard({
                   {(isCreatingNew === "project" || (isEditing && isEditing.type === "project")) && (
                     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-6 rounded-2xl bg-[#0d111c] border border-arcadia-blue/30 mb-6">
                       <h4 className="font-display font-bold text-sm text-white mb-4">
-                        {isCreatingNew === "project" ? "Create New Portfolio Project" : `Edit Portfolio Project: ${isEditing.data.title}`}
+                        {isCreatingNew === "project" ? "Create New Digital Footprint" : `Edit Digital Footprint: ${isEditing.data.title}`}
                       </h4>
                       <form onSubmit={handleSaveProject} className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-gray-300">
                         <div>
@@ -1380,15 +1394,21 @@ export default function AdminDashboard({
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1 font-bold">Preview Image URL</label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="Unsplash image URL..."
-                            value={projectForm.imageUrl}
-                            onChange={e => setProjectForm({ ...projectForm, imageUrl: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-lg text-xs text-white"
-                          />
+                          <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1 font-bold">Preview Image (URL or Upload File)</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              required
+                              placeholder="Unsplash image URL..."
+                              value={projectForm.imageUrl}
+                              onChange={e => setProjectForm({ ...projectForm, imageUrl: e.target.value })}
+                              className="flex-1 px-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-lg text-xs text-white"
+                            />
+                            <label className="px-3 py-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white font-mono text-[10px] cursor-pointer flex items-center shrink-0">
+                              <span>Upload File</span>
+                              <input type="file" accept="image/*" className="hidden" onChange={e => handleFileUpload(e, "project")} />
+                            </label>
+                          </div>
                         </div>
                         <div>
                           <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1 font-bold">Live Demo URL</label>
