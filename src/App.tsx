@@ -15,17 +15,17 @@ import LoginPortal from "./components/LoginPortal";
 import Chatbot from "./components/Chatbot";
 import MiscSection from "./components/MiscSection";
 import { Service, Project, BlogPost, FAQ, Testimonial } from "./types";
-import { 
-  Sparkles, 
-  MapPin, 
-  Mail, 
-  Globe, 
-  CheckCircle, 
-  Clock, 
-  WifiOff, 
-  Compass, 
-  Instagram, 
-  MessageCircle, 
+import {
+  Sparkles,
+  MapPin,
+  Mail,
+  Globe,
+  CheckCircle,
+  Clock,
+  WifiOff,
+  Compass,
+  Instagram,
+  MessageCircle,
   Linkedin,
   MessageSquare,
   ArrowRight
@@ -177,7 +177,7 @@ export default function App() {
   const handleSelectService = (title: string) => {
     setPrefilledService(title);
     showToast("info", `Prefilled form with service: ${title}`);
-    
+
     // Smooth scroll directly to the booking/order form section
     const orderSection = document.getElementById("order-portal");
     if (orderSection) {
@@ -197,7 +197,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen relative font-sans overflow-hidden select-none bg-arcadia-black text-white">
-      
+
       {/* Primary Video Background for entire application wrapper */}
       <div className="fixed inset-0 w-full h-full z-0 overflow-hidden select-none pointer-events-none">
         <video
@@ -222,13 +222,12 @@ export default function App() {
             initial={{ opacity: 0, y: -50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.9 }}
-            className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full border shadow-2xl flex items-center gap-2.5 backdrop-blur-xl ${
-              toast.type === "success" 
-                ? "bg-green-500/10 border-green-500/20 text-green-400" 
-                : toast.type === "error" 
-                ? "bg-red-500/10 border-red-500/20 text-red-400" 
-                : "bg-arcadia-blue/10 border-arcadia-blue/20 text-arcadia-cyan"
-            }`}
+            className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full border shadow-2xl flex items-center gap-2.5 backdrop-blur-xl ${toast.type === "success"
+                ? "bg-green-500/10 border-green-500/20 text-green-400"
+                : toast.type === "error"
+                  ? "bg-red-500/10 border-red-500/20 text-red-400"
+                  : "bg-arcadia-blue/10 border-arcadia-blue/20 text-arcadia-cyan"
+              }`}
           >
             <Sparkles className="w-4 h-4 animate-pulse shrink-0" />
             <span className="font-display text-xs font-bold tracking-wide">{toast.msg}</span>
@@ -292,7 +291,7 @@ export default function App() {
       ) : (
         /* CORE CONTENT WRAPPER */
         <main className="relative z-10">
-          
+
           {currentView === "admin" ? (
             /* Elite Admin workspace view */
             <div className="pt-24 min-h-screen">
@@ -516,8 +515,8 @@ export default function App() {
       <Chatbot />
 
       {/* Invisible/Hidden Developer click toggle in absolute bottom-right corner */}
-      <div 
-        onClick={() => setShowDevOverlay(prev => !prev)} 
+      <div
+        onClick={() => setShowDevOverlay(prev => !prev)}
         className="fixed bottom-0 right-0 w-2 h-2 bg-purple-500/5 cursor-pointer z-50 hover:bg-purple-500/40 transition"
         title="Diagnostic Toggle (Ctrl+D)"
       />
@@ -536,7 +535,7 @@ export default function App() {
                 <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
                 <span>ARCADIA_CORE_DIAGNOSTICS</span>
               </div>
-              <button 
+              <button
                 onClick={() => setShowDevOverlay(false)}
                 className="text-gray-500 hover:text-white transition"
               >
@@ -577,8 +576,8 @@ export default function App() {
                       const maxLat = Math.max(...latencyHistory, 100);
                       const heightPercent = Math.min(100, Math.max(15, (lat / maxLat) * 100));
                       return (
-                        <div 
-                          key={idx} 
+                        <div
+                          key={idx}
                           style={{ height: `${heightPercent}%` }}
                           className={`w-4 rounded-t transition-all ${lat < 100 ? "bg-green-500" : lat < 250 ? "bg-yellow-500" : "bg-red-500"}`}
                           title={`${lat}ms`}
@@ -626,7 +625,7 @@ export default function App() {
       <footer className="bg-[#050505]/40 backdrop-blur-md border-t border-white/5 pt-20 pb-10 relative z-30 font-sans">
         <div className="container mx-auto px-6 max-w-7xl">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-            
+
             <div className="space-y-4">
               <span className="font-display font-extrabold text-lg text-white">ARCADIA<span className="text-arcadia-blue">.</span></span>
               <p className="text-xs text-gray-500 leading-relaxed">

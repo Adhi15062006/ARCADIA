@@ -24,9 +24,20 @@ const JWT_SECRET = process.env.JWT_SECRET || "arcadia_secret_key_2026_futuristic
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+// Normalize Vercel serverless requests if "/api" prefix was stripped by platform routing
+app.use((req, res, next) => {
+  if (req.url && !req.url.startsWith("/api") && !req.url.startsWith("/auth") && !req.url.startsWith("/assets") && !req.url.includes(".")) {
+    req.url = "/api" + (req.url.startsWith("/") ? "" : "/") + req.url;
+  }
+  next();
+});
+
 // Try multiple possible data dir locations (compatible with local dev and Vercel serverless)
 const DATA_DIR = (() => {
+  const localDir = typeof __dirname !== "undefined" ? __dirname : process.cwd();
   const candidates = [
+    path.join(localDir, "data"),
+    path.join(localDir, "..", "data"),
     path.join(process.cwd(), "data"),
     path.join(process.cwd(), "..", "data"),
     "/var/task/data",
