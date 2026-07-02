@@ -1,5 +1,17 @@
 [
   {
+    "id": "l_ayvak4tsz",
+    "action": "Admin Login",
+    "details": "Admin logged in successfully from: arcadia",
+    "timestamp": "2026-07-02T11:22:11.875Z"
+  },
+  {
+    "id": "l_4zd1nvjoi",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Priyanka Sen",
+    "timestamp": "2026-07-02T11:21:46.026Z"
+  },
+  {
     "id": "l_fozqiky6n",
     "action": "Admin Login",
     "details": "Admin logged in successfully from: arcadia",

@@ -1,20 +1,26 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# ARCADIA - Elite AI Solutions & Futuristic Web Development
 
-# Run and deploy your AI Studio app
+An award-winning, high-performance digital showroom and custom SaaS development platform built with React 19, TypeScript, Tailwind CSS v4, Express, and Server-Side Gemini AI integration.
 
-This contains everything you need to run your app locally.
+## Features
+- **Interactive UI/UX**: Motion animations, glassmorphism, and kinetic micro-interactions.
+- **Server-Side AI Chatbot**: Built-in Gemini 3.5 proxy routing ensuring zero browser key leakage.
+- **Dynamic Catalog & Digital Footprints**: Full CRUD management via secure Admin Dashboard with instant image file upload conversion.
+- **Client Order & Milestone Portal**: Complete project tracking, milestone payment simulation, and activity logs.
 
-View your app in AI Studio: https://ai.studio/apps/e008a71b-35b9-498f-a5b4-12308399d8ea
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
+## Running Locally
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+2. Configure `.env`:
+   ```bash
+   GEMINI_API_KEY="your-gemini-key"
+   JWT_SECRET="your-secret-key"
+   ```
+3. Run Development Server:
+   ```bash
+   npm run dev
+   ```
+   Server and Vite frontend will launch on `http://localhost:5713`.
