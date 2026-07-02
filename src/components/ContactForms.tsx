@@ -255,26 +255,6 @@ export default function ContactForms({
     window.print();
   };
 
-  const handleFastSandboxLogin = async (emailPreset: string, namePreset: string) => {
-    try {
-      const res = await fetch("/api/auth/social-sandbox", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailPreset, name: namePreset })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        localStorage.setItem("arcadia_client_token", data.token);
-        localStorage.setItem("arcadia_client_email", data.user.email);
-        localStorage.setItem("arcadia_client_name", data.user.name);
-        localStorage.setItem("arcadia_client_avatar", data.user.avatar || "");
-        onClientLogin?.();
-      }
-    } catch (err) {
-      console.error("Fast sandbox login failed", err);
-    }
-  };
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-7xl mx-auto px-6 py-12 relative z-20">
       
@@ -560,9 +540,8 @@ export default function ContactForms({
               </div>
             </div>
 
-            {/* Company Contact Details card */}
             <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
-              <h4 className="font-display font-bold text-sm text-white">ARCADIA ADMINISTRATIVE REGIONAL HEADQUARTERS</h4>
+              <h4 className="font-display font-bold text-sm text-white">ARCADIA REGIONAL HEADQUARTERS</h4>
               <div className="space-y-2.5 text-xs font-sans text-gray-400">
                 <div className="flex items-center gap-2">
                   <span className="text-arcadia-cyan font-mono text-[10px] w-16">SUPPORT:</span>
@@ -589,7 +568,7 @@ export default function ContactForms({
                 ARCADIA DEVELOPMENT COMPLIANCE
               </p>
               <p className="leading-relaxed">
-                By maintaining an active order, you remain bound to our <strong>Secure Development Terms & Conditions</strong> and <strong>Co-development Privacy Protocols</strong>. All code artifacts, intellectual properties, and server staging variables are fully sandboxed and governed under Noida high-tech jurisdiction.
+                By maintaining an active order, you remain bound to our <strong>Secure Development Terms & Conditions</strong> and <strong>Co-development Privacy Policy</strong>. All code artifacts, intellectual properties, and server staging variables are fully secure and governed under Noida high-tech jurisdiction.
               </p>
               <div className="flex gap-4 pt-1 border-t border-white/5 text-[9px]">
                 <a href="#terms" className="text-arcadia-cyan hover:underline">TERMS OF COMPLIANCE</a>
@@ -639,23 +618,16 @@ export default function ContactForms({
                   <div>
                     <h4 className="font-display font-black text-sm text-white uppercase tracking-wider">Authentication Required</h4>
                     <p className="font-sans text-[11px] text-gray-500 mt-2 leading-relaxed max-w-sm">
-                      Only authenticated users can place project orders. Log in using the button below or bypass instantly using our sandboxed client testing profile.
+                      Only authenticated users can place project orders. Please log in or register a corporate client account to proceed.
                     </p>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-                    <button
-                      type="button"
-                      onClick={() => handleFastSandboxLogin("priyanka@aura.com", "Priyanka Sen")}
-                      className="flex-1 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-display text-[10px] font-bold uppercase tracking-wider transition cursor-pointer shadow-[0_4px_12px_rgba(147,51,234,0.3)] flex items-center justify-center gap-1"
-                    >
-                      ⚡ Fast Sandbox Login
-                    </button>
+                  <div className="w-full max-w-xs flex justify-center">
                     <button
                       type="button"
                       onClick={onNavigateToLogin}
-                      className="flex-1 py-3 rounded-xl border border-white/10 hover:border-white/20 text-gray-300 font-display text-[10px] font-bold uppercase tracking-wider transition cursor-pointer"
+                      className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-display text-[10px] font-bold uppercase tracking-wider transition cursor-pointer shadow-[0_4px_12px_rgba(147,51,234,0.3)] flex items-center justify-center"
                     >
-                      Login Portal
+                      Go to Login Portal
                     </button>
                   </div>
                 </div>
@@ -665,7 +637,7 @@ export default function ContactForms({
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
                       {/* Logged in badge */}
                       <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 text-[10px] text-purple-300 font-mono flex items-center justify-between">
-                        <span>🔐 SECURE CO-DEVELOPMENT SESSION</span>
+                        <span>🔐 SECURED PORTAL SESSION</span>
                         <span className="font-bold">{clientEmail}</span>
                       </div>
 
@@ -801,14 +773,14 @@ export default function ContactForms({
                     </div>
                   </div>
 
-                  {/* Administrative Review Info card */}
+                  {/* Project Review Info card */}
                   <div className="text-center p-6 rounded-2xl bg-arcadia-black border border-white/10 space-y-4">
                     <div className="p-3 bg-purple-500/10 rounded-full w-fit mx-auto border border-purple-500/20 text-purple-400">
                       <ShieldCheck className="w-6 h-6 animate-pulse" />
                     </div>
-                    <h4 className="font-display font-extrabold text-sm text-white">Administrative Review Setup</h4>
+                    <h4 className="font-display font-extrabold text-sm text-white">Project Review & Roadmap Setup</h4>
                     <p className="font-sans text-[11px] text-gray-400 leading-relaxed">
-                      Arcadia operates on an approved milestone payment architecture. Once your order request is submitted, our administrative panel reviews specifications and issues authorized payment links directly to your Client Dashboard. No upfront payment is required today.
+                      Arcadia operates on an approved milestone payment architecture. Once your order request is submitted, our review panel inspects specifications and issues authorized payment links directly to your Client Dashboard. No upfront payment is required today.
                     </p>
                     <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-1.5 text-left font-mono text-[9px] text-gray-400">
                       <div className="flex justify-between">

@@ -623,7 +623,7 @@ export default function App() {
                 <div className="space-y-1 bg-white/[0.02] p-2 rounded-lg border border-white/5">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Container Target:</span>
-                    <span className="text-white font-bold">Cloud Run Sandbox</span>
+                    <span className="text-white font-bold">Cloud Run Instance</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Active Ingress Port:</span>
@@ -688,7 +688,7 @@ export default function App() {
                 <a href="https://wa.me/918328218878" target="_blank" rel="noreferrer" className="p-2.5 rounded-full bg-white/5 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition" title="WhatsApp"><MessageCircle className="w-4 h-4" /></a>
                 <a href="https://linkedin.com/company/arcadia-agency" target="_blank" rel="noreferrer" className="p-2.5 rounded-full bg-white/5 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition" title="LinkedIn"><Linkedin className="w-4 h-4" /></a>
               </div>
-              <p className="text-[10px] text-gray-600 font-mono">ENCRYPTED PROTOCOL SHA-256</p>
+              <p className="text-[10px] text-gray-600 font-mono">SECURE CONNECTION SHA-256</p>
             </div>
 
           </div>

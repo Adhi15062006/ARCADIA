@@ -106,7 +106,7 @@ export default function Chatbot() {
                   <h4 className="font-display font-extrabold text-xs text-white">ARCADIA NEURAL SLOT</h4>
                   <div className="flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping" />
-                    <span className="font-mono text-[8px] text-green-400 font-bold uppercase">ONLINE PROTOCOL</span>
+                    <span className="font-mono text-[8px] text-green-400 font-bold uppercase">SYSTEM STATUS: ONLINE</span>
                   </div>
                 </div>
               </div>

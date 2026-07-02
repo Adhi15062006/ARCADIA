@@ -454,9 +454,9 @@ export default function MiscSection({ blogs, faqs, lang }: MiscSectionProps) {
                     <div className="p-3 bg-green-500/10 rounded-full w-fit mx-auto text-green-400">
                       <Send className="w-6 h-6" />
                     </div>
-                    <h4 className="font-display font-bold text-white">Communication Transmitted</h4>
+                    <h4 className="font-display font-bold text-white">Inquiry Successfully Submitted</h4>
                     <p className="font-sans text-xs text-gray-400 max-w-md mx-auto">
-                      Your packet has successfully traversed our secure web protocols and landed in our administrator inbox. We usually return answers within 6 hours.
+                      Your inquiry has been successfully sent to our team. We usually respond within 6 hours.
                     </p>
                   </div>
                 ) : (

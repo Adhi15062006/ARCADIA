@@ -160,7 +160,7 @@ export default function Navbar({
                   type="button"
                   onClick={() => onNavigate(isAdminLoggedIn ? "admin" : "client")}
                   className="px-4 py-2 rounded-full bg-[#050505]/40 backdrop-blur-md border border-white/10 hover:border-white/20 text-xs font-mono text-arcadia-cyan hover:text-white transition duration-300 flex items-center gap-2 cursor-pointer relative"
-                  title={isAdminLoggedIn ? "Administrative Workspace" : "Secure Client Hub"}
+                  title={isAdminLoggedIn ? "Admin Console" : "Secure Client Hub"}
                 >
                   {isAdminLoggedIn ? (
                     <>

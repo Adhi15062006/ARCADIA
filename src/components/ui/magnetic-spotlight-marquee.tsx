@@ -49,8 +49,8 @@ const DEFAULT_PARAGRAPHS = [
   ],
   [
     "We architect corporate legacies that look premium,",
-    "load instantly, and scale dynamically. From Sandboxed",
-    "code hubs to custom server-side proxy gateways, our",
+    "load instantly, and scale dynamically. From secure",
+    "code hubs to custom server-side proxy layers, our",
     "production quality guarantees exceptional security and speed."
   ]
 ];

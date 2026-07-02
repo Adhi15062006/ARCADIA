@@ -261,38 +261,7 @@ export default function ClientDashboard({
     }
   };
 
-  // Sandbox Fast Login simulation
-  const handleSandboxLogin = (emailPreset: string, namePreset: string) => {
-    setIsLoading(true);
-    setTimeout(async () => {
-      try {
-        const res = await fetch("/api/auth/social-sandbox", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: emailPreset, name: namePreset })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          localStorage.setItem("arcadia_client_token", data.token);
-          localStorage.setItem("arcadia_client_email", data.user.email);
-          localStorage.setItem("arcadia_client_name", data.user.name);
-          localStorage.setItem("arcadia_client_avatar", data.user.avatar || "");
 
-          setToken(data.token);
-          setUserEmail(data.user.email);
-          setUserName(data.user.name);
-          setUserAvatar(data.user.avatar || "");
-
-          if (onLoginSuccess) onLoginSuccess(data.user.name);
-          onShowToast("success", `Sandbox Access Granted for ${namePreset}!`);
-        }
-      } catch (err) {
-        onShowToast("error", "Connection to the sandbox authentication gateway failed. Please try again.");
-      } finally {
-        setIsLoading(false);
-      }
-    }, 400);
-  };
 
   const handleLogout = () => {
     localStorage.removeItem("arcadia_client_token");
@@ -478,32 +447,7 @@ export default function ClientDashboard({
                 )}
               </div>
 
-              {/* FAST SANDBOX ACCESS (FOR THE GRADER / USER TO TEST IMMEDIATELY) */}
-              <div className="mt-6 pt-5 border-t border-white/5 text-center">
-                <div className="flex items-center justify-center gap-1.5 mb-3">
-                  <Info className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-                  <span className="text-[9px] font-mono text-amber-400 uppercase tracking-widest font-bold">
-                    Sandbox Fast Access Emulator
-                  </span>
-                </div>
-                <p className="text-[10px] text-gray-500 mb-3.5 leading-relaxed">
-                  Simulate instant social login directly using predefined test client dossiers below. No credentials setup required.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <AnimatedButton
-                    onClick={() => handleSandboxLogin("vikram@zenix.com", "Vikram Malhotra")}
-                    className="px-2.5 py-1.5 bg-white/[0.02] border border-white/5 rounded-lg font-mono text-[9px] text-gray-400 hover:text-white hover:border-arcadia-cyan/40 transition-all cursor-pointer"
-                  >
-                    🚀 Vikram Malhotra
-                  </AnimatedButton>
-                  <AnimatedButton
-                    onClick={() => handleSandboxLogin("priyanka@aura.com", "Priyanka Sen")}
-                    className="px-2.5 py-1.5 bg-white/[0.02] border border-white/5 rounded-lg font-mono text-[9px] text-gray-400 hover:text-white hover:border-arcadia-cyan/40 transition-all cursor-pointer"
-                  >
-                    🚀 Priyanka Sen
-                  </AnimatedButton>
-                </div>
-              </div>
+
 
             </div>
           </div>
@@ -1155,12 +1099,12 @@ export default function ClientDashboard({
                           <span className="text-sm font-mono text-white text-arcadia-cyan">{userEmail}</span>
                         </div>
                         <div>
-                          <span className="block text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1 font-bold">CLIENT NODE STATUS</span>
-                          <span className="text-xs text-green-400 font-mono font-bold">● ONLINE / SECURE CLIENT SESSION</span>
+                          <span className="block text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1 font-bold">PORTAL STATUS</span>
+                          <span className="text-xs text-green-400 font-mono font-bold">● ONLINE / SECURE CONNECTION</span>
                         </div>
                         <div>
-                          <span className="block text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1 font-bold">SECURITY CLEARANCE</span>
-                          <span className="text-xs text-white font-mono uppercase">Level 1 - Client Pipeline Access</span>
+                          <span className="block text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1 font-bold">ACCESS LEVEL</span>
+                          <span className="text-xs text-white font-mono uppercase">Verified Client Access</span>
                         </div>
                       </div>
 
@@ -1257,26 +1201,12 @@ export default function ClientDashboard({
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                <AnimatedButton
-                  onClick={() => {
-                    setShowOAuthGuide(false);
-                    // Open preset bypass automatically as fallback
-                    if (guideProvider === "Google") {
-                      handleSandboxLogin("vikram@zenix.com", "Vikram Malhotra");
-                    } else {
-                      handleSandboxLogin("priyanka@aura.com", "Priyanka Sen");
-                    }
-                  }}
-                  className="flex-1 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-display text-xs font-bold tracking-wider uppercase hover:bg-amber-500/20 transition cursor-pointer"
-                >
-                  Bypass & Sandbox Simulate
-                </AnimatedButton>
+              <div className="flex gap-3">
                 <AnimatedButton
                   onClick={() => setShowOAuthGuide(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-arcadia-blue text-white font-display text-xs font-bold tracking-wider uppercase hover:shadow-[0_0_15px_rgba(47,128,255,0.3)] transition cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-arcadia-blue text-white font-display text-xs font-bold tracking-wider uppercase hover:shadow-[0_0_15px_rgba(47,128,255,0.3)] transition cursor-pointer text-center"
                 >
-                  I Understand, Let's Code
+                  I Understand
                 </AnimatedButton>
               </div>
 

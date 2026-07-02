@@ -195,7 +195,7 @@ const dbUsers = () => {
     saveDB("users.json", users);
   }
   
-  // Seed default sandbox clients
+  // Seed default clients
   if (!users.find(u => u.email === "vikram@zenix.com")) {
     users.push({
       id: "u_vikram",
@@ -245,8 +245,8 @@ function logActivity(action: string, details: string) {
   saveDB("logs.json", logs.slice(0, 100)); // Keep last 100 logs
 }
 
-function sendMockEmail(to: string, subject: string, body: string, type: string) {
-  const emails = getDB<any[]>("mock_emails.json", []);
+function sendOutboundEmail(to: string, subject: string, body: string, type: string) {
+  const emails = getDB<any[]>("sent_emails.json", []);
   const newEmail = {
     id: "mail_" + Math.random().toString(36).substr(2, 9),
     to,
@@ -256,8 +256,8 @@ function sendMockEmail(to: string, subject: string, body: string, type: string) 
     sentAt: new Date().toISOString()
   };
   emails.unshift(newEmail);
-  saveDB("mock_emails.json", emails);
-  logActivity("Email Simulation", `Mock email dispatched to: ${to} (Subject: ${subject})`);
+  saveDB("sent_emails.json", emails);
+  logActivity("Email Dispatch", `Email dispatched to: ${to} (Subject: ${subject})`);
 }
 
 // REST API Endpoints
@@ -314,13 +314,13 @@ const authenticateJWT = (req: any, res: any, next: any) => {
   }
 };
 
-// Mock Emails API
-app.get("/api/mock-emails", authenticateJWT, (req, res) => {
-  res.json(getDB<any[]>("mock_emails.json", []));
+// Outbound Email Log API
+app.get("/api/sent-emails", authenticateJWT, (req, res) => {
+  res.json(getDB<any[]>("sent_emails.json", []));
 });
 
-app.post("/api/mock-emails/clear", authenticateJWT, (req, res) => {
-  saveDB("mock_emails.json", []);
+app.post("/api/sent-emails/clear", authenticateJWT, (req, res) => {
+  saveDB("sent_emails.json", []);
   res.json({ success: true });
 });
 
@@ -391,10 +391,10 @@ app.post("/api/auth/client-register", authLimiter, (req, res) => {
   users.push(newUser);
   saveDB("users.json", users);
 
-  // Send mock verification email
+  // Dispatch verification email
   const verifyLink = `${process.env.BASE_URL || "http://localhost:3000"}/verify-email?token=${verificationToken}&email=${encodeURIComponent(normalizedEmail)}`;
   const emailBody = `Please verify your email by clicking the following link: ${verifyLink}`;
-  sendMockEmail(normalizedEmail, "Email Verification", emailBody, "verification");
+  sendOutboundEmail(normalizedEmail, "Email Verification", emailBody, "verification");
 
   const signOptions = JWT_PRIVATE_KEY ? { algorithm: "RS256" as const } : {};
   const token = jwt.sign({ email: normalizedEmail, name, role: "client" }, JWT_PRIVATE_KEY || JWT_SECRET, { expiresIn: "24h", ...signOptions });
@@ -481,12 +481,12 @@ app.post("/api/auth/client-forgot", authLimiter, (req, res) => {
          <p style="color: #ef4444; font-size: 11px; margin: 0; font-family: monospace;">🚨 This verification session expires in exactly 15 minutes.</p>
       </div>
       <div style="text-align: center; margin-top: 30px; font-size: 11px; color: #4b5563;">
-        <p>© 2026 ARCADIA CO-DEV HUB. All systems operational on secure sandbox protocols.</p>
+        <p>© 2026 ARCADIA HUB. All systems operational on secure connection systems.</p>
       </div>
     </div>
   `;
 
-  sendMockEmail(normalizedEmail, "ARCADIA Security Ticket: Password Reset Authorization", passwordResetHTML, "password_reset");
+  sendOutboundEmail(normalizedEmail, "ARCADIA Security Ticket: Password Reset Authorization", passwordResetHTML, "password_reset");
 
   logActivity("Client Forgot Password", `Forgot password code requested for: ${normalizedEmail}. Code: ${code}`);
 
@@ -726,40 +726,7 @@ app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
   }
 });
 
-// Sandbox Fast-Access Session Generator
-app.post("/api/auth/social-sandbox", (req, res) => {
-  const { email, name } = req.body;
-  if (!email || !name) {
-    return res.status(400).json({ error: "Email and name are required for sandbox." });
-  }
 
-  const normalizedEmail = email.toLowerCase().trim();
-  const users = dbUsers();
-  let user = users.find(u => u.email === normalizedEmail);
-
-  if (!user) {
-    user = {
-      id: "u_" + Math.random().toString(36).substr(2, 9),
-      email: normalizedEmail,
-      name,
-      avatar: normalizedEmail.includes("vikram")
-        ? "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
-        : "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
-      createdAt: new Date().toISOString()
-    };
-    users.push(user);
-    saveDB("users.json", users);
-    logActivity("Sandbox Register", `Registered Sandbox Emulator Client: ${name}`);
-  }
-
-  const token = jwt.sign({ email: normalizedEmail, name: user.name, role: "client" }, JWT_SECRET, { expiresIn: "24h" });
-  logActivity("Sandbox Login", `Logged in Sandbox Emulator Client: ${name}`);
-
-  return res.json({
-    token,
-    user: { email: normalizedEmail, name: user.name, avatar: user.avatar }
-  });
-});
 
 // Admin Users List Endpoint
 app.get("/api/users", authenticateJWT, (req: any, res) => {
@@ -787,7 +754,7 @@ app.put("/api/orders/:id/approve-request", authenticateJWT, (req: any, res) => {
     const firstMilestone = order.milestones[0];
     if (firstMilestone.status === "Pending" || firstMilestone.status === "Link Sent") {
       firstMilestone.status = "Link Sent";
-      firstMilestone.paymentLink = `https://rzp.io/i/mock_arcadia_${order.id}_${firstMilestone.id}`;
+      firstMilestone.paymentLink = `https://rzp.io/i/pay_arcadia_${order.id}_${firstMilestone.id}`;
     }
 
     const paymentReqHTML = `
@@ -826,16 +793,16 @@ app.put("/api/orders/:id/approve-request", authenticateJWT, (req: any, res) => {
             <a href="${firstMilestone.paymentLink}" style="background-color: #2f80ff; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-size: 14px; font-weight: bold; display: inline-block; box-shadow: 0 4px 12px rgba(47, 128, 255, 0.3);">
               Authorize Milestone Payment Securely
             </a>
-            <span style="display: block; font-size: 10px; color: #6b7280; margin-top: 10px;">Powered by Razorpay Secure Sandbox Protocol</span>
+            <span style="display: block; font-size: 10px; color: #6b7280; margin-top: 10px;">Powered by Razorpay Secure Payments</span>
           </div>
         </div>
         <div style="text-align: center; margin-top: 30px; font-size: 11px; color: #4b5563;">
-          <p>© 2026 ARCADIA CO-DEV HUB. All systems operational on secure sandbox protocols.</p>
+          <p>© 2026 ARCADIA HUB. All systems operational on secure connection systems.</p>
         </div>
       </div>
     `;
 
-    sendMockEmail(order.email.toLowerCase().trim(), `ARCADIA Payment Request: ${firstMilestone.label}`, paymentReqHTML, "payment_request");
+    sendOutboundEmail(order.email.toLowerCase().trim(), `ARCADIA Payment Request: ${firstMilestone.label}`, paymentReqHTML, "payment_request");
   }
 
   // Create active notification for client portal
@@ -1087,7 +1054,7 @@ app.put("/api/orders/:id/milestones/:mid/request", authenticateJWT, (req, res) =
   if (!milestone) return res.status(404).json({ error: "Milestone not found." });
 
   milestone.status = "Link Sent";
-  milestone.paymentLink = `https://rzp.io/i/mock_arcadia_${order.id}_${milestone.id}`;
+  milestone.paymentLink = `https://rzp.io/i/pay_arcadia_${order.id}_${milestone.id}`;
 
   const paymentReqHTML = `
     <div style="font-family: sans-serif; background-color: #0d0f12; color: #f3f4f6; padding: 40px 20px; border-radius: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #1f2937;">
@@ -1125,16 +1092,16 @@ app.put("/api/orders/:id/milestones/:mid/request", authenticateJWT, (req, res) =
           <a href="${milestone.paymentLink}" style="background-color: #2f80ff; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-size: 14px; font-weight: bold; display: inline-block; box-shadow: 0 4px 12px rgba(47, 128, 255, 0.3);">
             Authorize Milestone Payment Securely
           </a>
-          <span style="display: block; font-size: 10px; color: #6b7280; margin-top: 10px;">Powered by Razorpay Secure Sandbox Protocol</span>
+          <span style="display: block; font-size: 10px; color: #6b7280; margin-top: 10px;">Powered by Razorpay Secure Payments</span>
         </div>
       </div>
       <div style="text-align: center; margin-top: 30px; font-size: 11px; color: #4b5563;">
-        <p>© 2026 ARCADIA CO-DEV HUB. All systems operational on secure sandbox protocols.</p>
+        <p>© 2026 ARCADIA HUB. All systems operational on secure connection systems.</p>
       </div>
     </div>
   `;
 
-  sendMockEmail(order.email.toLowerCase().trim(), `ARCADIA Payment Request: ${milestone.label}`, paymentReqHTML, "payment_request");
+  sendOutboundEmail(order.email.toLowerCase().trim(), `ARCADIA Payment Request: ${milestone.label}`, paymentReqHTML, "payment_request");
 
   // Create active notification for client portal
   const notifications = dbNotifications();

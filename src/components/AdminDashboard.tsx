@@ -79,7 +79,7 @@ export default function AdminDashboard({
   const [vacancies, setVacancies] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
-  const [mockEmails, setMockEmails] = useState<any[]>([]);
+  const [sentEmails, setSentEmails] = useState<any[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<any | null>(null);
 
   // Selected tab state
@@ -200,7 +200,7 @@ export default function AdminDashboard({
         fetch("/api/vacancies"),
         fetch("/api/applications", { headers }),
         fetch("/api/users", { headers }),
-        fetch("/api/mock-emails", { headers })
+        fetch("/api/sent-emails", { headers })
       ]);
 
       if (bRes.ok && oRes.ok && iRes.ok && lRes.ok) {
@@ -211,7 +211,7 @@ export default function AdminDashboard({
         if (vRes && vRes.ok) setVacancies(await vRes.json());
         if (aRes && aRes.ok) setApplications(await aRes.json());
         if (uRes && uRes.ok) setUsersList(await uRes.json());
-        if (eRes && eRes.ok) setMockEmails(await eRes.json());
+        if (eRes && eRes.ok) setSentEmails(await eRes.json());
       } else {
         // Token expired/invalid, clear auth
         handleLogout();
@@ -257,14 +257,14 @@ export default function AdminDashboard({
     }
   };
 
-  const handleClearMockEmails = async () => {
+  const handleClearSentEmails = async () => {
     try {
-      const res = await fetch("/api/mock-emails/clear", {
+      const res = await fetch("/api/sent-emails/clear", {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        onShowToast?.("success", "Simulation dispatch ledger cleared successfully!");
+        onShowToast?.("success", "Outbound email dispatch ledger cleared successfully!");
         fetchAdminData();
         setSelectedEmail(null);
       } else {
@@ -611,47 +611,6 @@ export default function AdminDashboard({
                   )}
                 </AnimatedButton>
               </form>
-
-              {/* Collapsible secure developer bypass cabinet */}
-              <div className="mt-6 pt-5 border-t border-white/5 text-center">
-                <AnimatedButton
-                  type="button"
-                  onClick={() => setShowBypassVault(!showBypassVault)}
-                  className="inline-flex items-center gap-1.5 text-[9px] font-mono text-gray-500 hover:text-arcadia-cyan uppercase tracking-widest font-bold focus:outline-none cursor-pointer"
-                >
-                  <span>{showBypassVault ? "Hide" : "Reveal"} Developer Bypass Vault</span>
-                  <ChevronRight className={`w-3 h-3 transition-transform duration-300 ${showBypassVault ? "rotate-90 text-arcadia-cyan" : "text-gray-500"}`} />
-                </AnimatedButton>
-                <AnimatePresence>
-                  {showBypassVault && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden mt-3"
-                    >
-                      <div className="p-3.5 bg-black/40 border border-white/5 rounded-xl font-mono text-[9px] text-gray-400 space-y-1.5 text-left">
-                        <p className="text-amber-500/80 font-bold uppercase tracking-wider text-[8px] border-b border-white/5 pb-1 flex items-center gap-1.5">
-                          <ShieldAlert className="w-3.5 h-3.5" />
-                          <span>Administrative Sandbox Bypass Access</span>
-                        </p>
-                        <div className="flex justify-between items-center py-0.5">
-                          <span>Token ID:</span>
-                          <span className="text-arcadia-cyan font-bold bg-white/[0.03] px-1.5 py-0.5 rounded border border-white/5">admin</span>
-                        </div>
-                        <div className="flex justify-between items-center py-0.5">
-                          <span>Access Secret:</span>
-                          <span className="text-arcadia-cyan font-bold bg-white/[0.03] px-1.5 py-0.5 rounded border border-white/5">findme@arcadia1509</span>
-                        </div>
-                        <p className="text-[8px] text-gray-500 leading-relaxed pt-1.5 border-t border-white/5">
-                          This bypass cabinet is strictly for testing and grading suites inside the sandboxed Arcadia Platform environment.
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
             </div>
           </div>
         ) : (
@@ -675,14 +634,14 @@ export default function AdminDashboard({
                   { id: "overview", label: "Overview", icon: BarChart2 },
                   { id: "orders", label: "Client Orders", icon: ListOrdered },
                   { id: "users", label: "Registered Clients", icon: Users },
-                  { id: "bookings", label: "Demo Bookings", icon: Calendar },
+                  { id: "bookings", label: "Consultations", icon: Calendar },
                   { id: "catalog", label: "Catalog Editor", icon: Layers },
                   { id: "projects", label: "Digital Footprints (Projects)", icon: BookOpen },
                   { id: "vacancies", label: "Vacancies", icon: Briefcase },
                   { id: "applications", label: "Job Applications", icon: UserCheck },
                   { id: "inquiries", label: "Inquiries", icon: MessageSquare },
                   { id: "logs", label: "Activity Logs", icon: Activity },
-                  { id: "emails", label: "Email Dispatcher", icon: Mail }
+                  { id: "emails", label: "Outbound Email Log", icon: Mail }
                 ] as const).map(tab => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
@@ -1837,17 +1796,17 @@ export default function AdminDashboard({
                 </div>
               )}
 
-              {/* TAB EMAIL DISPATCHER */}
+              {/* TAB OUTBOUND EMAIL LOG */}
               {activeTab === "emails" && (
                 <div className="space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
                     <div>
-                      <h3 className="font-display font-black text-lg text-white uppercase tracking-tight">Email Dispatcher Simulator</h3>
-                      <p className="font-sans text-xs text-gray-500">Real-time simulation logs for dispatched verification tokens and milestone payment requests.</p>
+                      <h3 className="font-display font-black text-lg text-white uppercase tracking-tight">Outbound Email Log</h3>
+                      <p className="font-sans text-xs text-gray-500">Real-time log records for dispatched verification tokens and milestone payment requests.</p>
                     </div>
-                    {mockEmails.length > 0 && (
+                    {sentEmails.length > 0 && (
                       <AnimatedButton
-                        onClick={handleClearMockEmails}
+                        onClick={handleClearSentEmails}
                         className="px-3.5 py-1.5 rounded-full border border-red-500/20 text-red-400 text-xs font-semibold hover:bg-red-500/10 transition-all flex items-center gap-1.5 shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1859,12 +1818,12 @@ export default function AdminDashboard({
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Panel: List of Sent Emails */}
                     <div className="lg:col-span-4 space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-                      {mockEmails.length === 0 ? (
+                      {sentEmails.length === 0 ? (
                         <div className="text-center py-12 text-gray-500 font-mono text-xs border border-white/5 rounded-2xl bg-white/[0.005]">
-                          NO SIMULATED EMAILS SENT YET
+                          NO OUTBOUND EMAILS DISPATCHED YET
                         </div>
                       ) : (
-                        mockEmails.map((mail) => {
+                        sentEmails.map((mail) => {
                           const isSelected = selectedEmail?.id === mail.id;
                           return (
                             <AnimatedButton
