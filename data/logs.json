@@ -1,5 +1,11 @@
 [
   {
+    "id": "l_794z18cih",
+    "action": "Admin Login",
+    "details": "Admin logged in successfully from: arcadia",
+    "timestamp": "2026-07-02T07:43:52.443Z"
+  },
+  {
     "id": "l_9hmv2fkgi",
     "action": "New Project Order",
     "details": "New order submitted by Test User for: AI Chatbot (Awaiting Approval)",
