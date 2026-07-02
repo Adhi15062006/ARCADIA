@@ -1,5 +1,39 @@
 [
   {
+    "id": "ord_6yb1sey2n",
+    "status": "Pending",
+    "isPaid": false,
+    "name": "Test User",
+    "email": "test@test.com",
+    "service": "AI Chatbot",
+    "budget": "7999",
+    "description": "Test order",
+    "milestones": [
+      {
+        "id": "m1",
+        "label": "Kickoff Booking Deposit (30%)",
+        "percentage": 30,
+        "amount": 2400,
+        "status": "Pending"
+      },
+      {
+        "id": "m2",
+        "label": "Mid-Project Development Phase (50%)",
+        "percentage": 50,
+        "amount": 4000,
+        "status": "Pending"
+      },
+      {
+        "id": "m3",
+        "label": "Project Handover & Settlement (20%)",
+        "percentage": 20,
+        "amount": 1599,
+        "status": "Pending"
+      }
+    ],
+    "createdAt": "2026-07-01T13:55:32.354Z"
+  },
+  {
     "id": "ord_eyatn1vyp",
     "status": "Pending",
     "isPaid": false,

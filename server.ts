@@ -163,8 +163,8 @@ const authLimiter = rateLimit({
 
 // Input validation schemas
 const adminLoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6)
+  email: z.string().min(1),
+  password: z.string().min(1)
 });
 
 app.post("/api/auth/login", authLimiter, (req, res) => {
@@ -1377,36 +1377,38 @@ Be friendly, and answer in English (or Hindi if they speak Hindi, representing m
 
       const text = response.text || "I apologize, but I couldn't generate a response right now. Please feel free to ask again.";
       return res.json({ text });
-    } else {
-      // Fallback Simulator mode if Gemini API key is missing
-      const lower = message.toLowerCase();
-      let responseText = "";
-      if (lower.includes("price") || lower.includes("rate") || lower.includes("cost") || lower.includes("catalog")) {
-        responseText = "Arcadia offers highly transparent, award-winning pricing. Some of our popular solutions are:\n" +
-          "- **Landing Pages**: ₹2,999\n" +
-          "- **Business Websites**: ₹7,999\n" +
-          "- **E-Commerce Web Apps**: ₹19,999\n" +
-          "- **AI Chatbots**: ₹7,999\n" +
-          "- **Android / iOS Apps**: Starting from ₹29,999\n\n" +
-          "Would you like me to guide you to our order system?";
-      } else if (lower.includes("book") || lower.includes("demo") || lower.includes("consultation") || lower.includes("call")) {
-        responseText = "I'd be absolutely thrilled to assist you with booking a free 30-minute consultation! You can complete the 'Book Free Demo' form below directly, or give me your details (Name, Email, Phone, Preferred Mode) and our elite architects will connect with you.";
-      } else if (lower.includes("services") || lower.includes("what do you do") || lower.includes("develop")) {
-        responseText = "ARCADIA is an elite, multi-disciplinary engineering agency providing:\n" +
-          "1. **Modern Web Development** (SaaS platforms, E-Commerce, Portfolios)\n" +
-          "2. **Advanced AI Solutions** (Custom LLM systems, Gemini Chatbots, voice-agents)\n" +
-          "3. **Native Mobile App Engineering** (iOS & Android)\n" +
-          "4. **Brand Design & SEO Strategy** (Figma wireframing, core identity, performance audit)";
-      } else {
-        responseText = "Thank you for connecting with ARCADIA AI Solutions. We are an Indian web development and artificial intelligence studio focused on building high-performance digital legacies.\n\n" +
-          "Whether you need a custom landing page (₹2,999), e-commerce setup, or custom AI chatbots (₹7,999), we deliver next-generation performance. How can I empower your project today?";
-      }
-      return res.json({ text: responseText, note: "AI running in adaptive offline preview mode" });
     }
   } catch (err: any) {
-    console.error("Gemini API server-side error:", err);
-    return res.status(500).json({ error: "Gemini server-side communication failed.", details: err.message });
+    console.error("Gemini API server-side error (falling back to simulator):", err.message);
+    // Fall through to simulator mode below
   }
+
+  // Fallback Simulator mode if Gemini API key is missing or call failed
+  const lower = message.toLowerCase();
+  let responseText = "";
+  if (lower.includes("price") || lower.includes("rate") || lower.includes("cost") || lower.includes("catalog")) {
+    responseText = "Arcadia offers highly transparent, award-winning pricing. Some of our popular solutions are:\n" +
+      "- **Landing Pages**: ₹2,999\n" +
+      "- **Business Websites**: ₹7,999\n" +
+      "- **E-Commerce Web Apps**: ₹19,999\n" +
+      "- **AI Chatbots**: ₹7,999\n" +
+      "- **Android / iOS Apps**: Starting from ₹29,999\n\n" +
+      "Would you like me to guide you to our order system?";
+  } else if (lower.includes("order") || lower.includes("buy") || lower.includes("purchase") || lower.includes("start")) {
+    responseText = "Absolutely! You can start your project right away through our 'Start Your Project' section. Simply select a service, fill in your details, and we'll get back to you within 24 hours with a personalized proposal. Click the **Order** button on any service card to begin!";
+  } else if (lower.includes("book") || lower.includes("demo") || lower.includes("consultation") || lower.includes("call")) {
+    responseText = "I'd be absolutely thrilled to assist you with booking a free 30-minute consultation! You can complete the 'Book Free Demo' form below directly, or give me your details (Name, Email, Phone, Preferred Mode) and our elite architects will connect with you.";
+  } else if (lower.includes("services") || lower.includes("what do you do") || lower.includes("develop")) {
+    responseText = "ARCADIA is an elite, multi-disciplinary engineering agency providing:\n" +
+      "1. **Modern Web Development** (SaaS platforms, E-Commerce, Portfolios)\n" +
+      "2. **Advanced AI Solutions** (Custom LLM systems, Gemini Chatbots, voice-agents)\n" +
+      "3. **Native Mobile App Engineering** (iOS & Android)\n" +
+      "4. **Brand Design & SEO Strategy** (Figma wireframing, core identity, performance audit)";
+  } else {
+    responseText = "Thank you for connecting with ARCADIA AI Solutions. We are an Indian web development and artificial intelligence studio focused on building high-performance digital legacies.\n\n" +
+      "Whether you need a custom landing page (₹2,999), e-commerce setup, or custom AI chatbots (₹7,999), we deliver next-generation performance. How can I empower your project today?";
+  }
+  return res.json({ text: responseText, note: "AI running in adaptive offline preview mode" });
 });
 
 // Real-Time Dev System Health & Latency Endpoint
@@ -1447,6 +1449,9 @@ async function startServer() {
   }
 }
 
-startServer();
+// Start server only when running directly (not imported by Vercel serverless)
+if (!process.env.VERCEL) {
+  startServer();
+}
 
 export default app;
