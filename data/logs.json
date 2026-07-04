@@ -1,5 +1,71 @@
 [
   {
+    "id": "l_a24q0dk83",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Aura Client",
+    "timestamp": "2026-07-04T18:14:00.180Z"
+  },
+  {
+    "id": "l_j6sfh6rhf",
+    "action": "Order Status Change",
+    "details": "Order status updated to 'Completed' for client Aura Client",
+    "timestamp": "2026-07-04T18:13:52.134Z"
+  },
+  {
+    "id": "l_klnmst0nl",
+    "action": "Admin Login",
+    "details": "Admin logged in successfully from: Arcadia",
+    "timestamp": "2026-07-04T18:13:27.594Z"
+  },
+  {
+    "id": "l_qpn6u6jbk",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Aura Client",
+    "timestamp": "2026-07-04T18:12:56.278Z"
+  },
+  {
+    "id": "l_bcpx0dfab",
+    "action": "Order Status Change",
+    "details": "Order status updated to 'Accepted' for client Aura Client",
+    "timestamp": "2026-07-04T18:12:47.849Z"
+  },
+  {
+    "id": "l_1q99y2fwa",
+    "action": "Admin Login",
+    "details": "Admin logged in successfully from: Arcadia",
+    "timestamp": "2026-07-04T18:12:38.200Z"
+  },
+  {
+    "id": "l_i8joogxet",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Aura Client",
+    "timestamp": "2026-07-04T18:12:07.283Z"
+  },
+  {
+    "id": "l_8djlgqnnb",
+    "action": "Order Status Change",
+    "details": "Order status updated to 'Payment Pending' for client Aura Client",
+    "timestamp": "2026-07-04T18:12:00.849Z"
+  },
+  {
+    "id": "l_by5lu5eae",
+    "action": "Admin Login",
+    "details": "Admin logged in successfully from: Arcadia",
+    "timestamp": "2026-07-04T18:11:49.416Z"
+  },
+  {
+    "id": "l_44q4r4cql",
+    "action": "New Project Order",
+    "details": "New order submitted by Aura Client for: Website Redesign (Awaiting Approval)",
+    "timestamp": "2026-07-04T18:11:19.221Z"
+  },
+  {
+    "id": "l_se3zzl8ks",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Aura Client",
+    "timestamp": "2026-07-04T18:10:53.879Z"
+  },
+  {
     "id": "l_c8wtzfw26",
     "action": "Admin Login",
     "details": "Admin logged in successfully from: Arcadia",

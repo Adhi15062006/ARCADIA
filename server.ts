@@ -917,6 +917,28 @@ app.put("/api/orders/:id/status", authenticateJWT, (req, res) => {
   res.json(orders[idx]);
 });
 
+// Admin approves payment for a specific milestone
+app.put("/api/orders/:id/milestones/:mid/approve", authenticateJWT, (req, res) => {
+  const orders = dbOrders();
+  const idx = orders.findIndex(o => o.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Order not found." });
+
+  const order = orders[idx];
+  if (!order.milestones) {
+    order.milestones = [];
+  }
+
+  const milestone = order.milestones.find((m: any) => m.id === req.params.mid);
+  if (!milestone) return res.status(404).json({ error: "Milestone not found." });
+
+  milestone.status = "Approved";
+  milestone.paymentLink = `https://rzp.io/i/mock_arcadia_${order.id}_${milestone.id}`;
+
+  saveDB("orders.json", orders);
+  logActivity("Milestone Approved", `Milestone payment '${milestone.label}' approved for client ${order.name}`);
+  res.json(order);
+});
+
 // Admin requests / sends payment link for a specific milestone
 app.put("/api/orders/:id/milestones/:mid/request", authenticateJWT, (req, res) => {
   const orders = dbOrders();

@@ -38,7 +38,7 @@ export interface PaymentMilestone {
   label: string;
   percentage: number;
   amount: number;
-  status: "Pending" | "Link Sent" | "Paid";
+  status: "Pending" | "Link Sent" | "Paid" | "Approved";
   paymentLink?: string;
   paidAt?: string;
   invoiceGenerated?: boolean;

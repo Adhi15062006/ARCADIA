@@ -1,1 +1,41 @@
-[]
+[
+  {
+    "id": "ord_41y41cfk3",
+    "status": "Completed",
+    "isPaid": false,
+    "name": "Aura Client",
+    "company": "",
+    "email": "godesportsfreefire@gmail.com",
+    "phone": "+919090067979",
+    "service": "Website Redesign",
+    "budget": "5999",
+    "deadline": "10 Days",
+    "description": "",
+    "fileUrl": "",
+    "paymentScreenshot": "",
+    "milestones": [
+      {
+        "id": "m1",
+        "label": "Kickoff Booking Deposit (30%)",
+        "percentage": 30,
+        "amount": 1800,
+        "status": "Pending"
+      },
+      {
+        "id": "m2",
+        "label": "Mid-Project Development Phase (50%)",
+        "percentage": 50,
+        "amount": 3000,
+        "status": "Pending"
+      },
+      {
+        "id": "m3",
+        "label": "Project Handover & Settlement (20%)",
+        "percentage": 20,
+        "amount": 1199,
+        "status": "Pending"
+      }
+    ],
+    "createdAt": "2026-07-04T18:11:19.220Z"
+  }
+]

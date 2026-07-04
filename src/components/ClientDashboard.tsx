@@ -912,6 +912,7 @@ export default function ClientDashboard({
                                           </span>
                                           <span className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase tracking-wider ${
                                             milestone.status === "Paid" ? "bg-green-500/10 text-green-400" :
+                                            milestone.status === "Approved" ? "bg-blue-500/10 text-blue-400 animate-pulse" :
                                             milestone.status === "Link Sent" ? "bg-purple-500/10 text-purple-400 animate-pulse" :
                                             "bg-white/5 text-gray-500"
                                           }`}>
@@ -932,7 +933,7 @@ export default function ClientDashboard({
                                             <Download className="w-3.5 h-3.5" />
                                             <span>DOWNLOAD SIGNED INVOICE</span>
                                           </AnimatedButton>
-                                        ) : milestone.status === "Link Sent" ? (
+                                        ) : (milestone.status === "Link Sent" || milestone.status === "Approved") ? (
                                           <div className="space-y-2">
                                             <AnimatedButton
                                               type="button"

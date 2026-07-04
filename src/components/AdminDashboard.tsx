@@ -170,6 +170,28 @@ export default function AdminDashboard({
     }
   };
 
+  const handleMilestoneApprove = async (orderId: string, milestoneId: string) => {
+    try {
+      const headers = { 
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      };
+      const res = await fetch(`/api/orders/${orderId}/milestones/${milestoneId}/approve`, {
+        method: "PUT",
+        headers
+      });
+      if (res.ok) {
+        onShowToast?.("success", "Milestone payment approved! Client can now pay this milestone.");
+        fetchAdminData();
+      } else {
+        onShowToast?.("error", "Failed to approve milestone payment.");
+      }
+    } catch (err) {
+      console.error("Error calling milestone approve API.", err);
+      onShowToast?.("error", "Error processing transaction.");
+    }
+  };
+
   // CRUD item editing state
   const [isEditing, setIsEditing] = useState<any>(null); // holds { type: 'service' | 'project' | 'blog' | 'faq', data: any }
   const [isCreatingNew, setIsCreatingNew] = useState<"service" | "project" | "blog" | "faq" | "vacancy" | null>(null);
@@ -869,6 +891,7 @@ export default function AdminDashboard({
                                                   </span>
                                                   <span className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase tracking-wider ${
                                                     milestone.status === "Paid" ? "bg-green-500/10 text-green-400" :
+                                                    milestone.status === "Approved" ? "bg-blue-500/10 text-blue-400 animate-pulse" :
                                                     milestone.status === "Link Sent" ? "bg-purple-500/10 text-purple-400 animate-pulse" :
                                                     "bg-white/5 text-gray-500"
                                                   }`}>
@@ -892,10 +915,12 @@ export default function AdminDashboard({
                                                       <span>PDF</span>
                                                     </AnimatedButton>
                                                   </div>
-                                                ) : milestone.status === "Link Sent" ? (
+                                                ) : (milestone.status === "Link Sent" || milestone.status === "Approved") ? (
                                                   <div className="flex flex-col gap-1.5">
-                                                    <span className="block text-center py-1 font-mono text-[8px] text-purple-400 uppercase tracking-widest font-black">
-                                                      ⏳ Link Dispatched
+                                                    <span className={`block text-center py-1 font-mono text-[8px] uppercase tracking-widest font-black ${
+                                                      milestone.status === "Approved" ? "text-blue-400" : "text-purple-400"
+                                                    }`}>
+                                                      {milestone.status === "Approved" ? "⏳ Approved" : "⏳ Link Dispatched"}
                                                     </span>
                                                     <AnimatedButton
                                                       type="button"
@@ -909,8 +934,15 @@ export default function AdminDashboard({
                                                   <div className="flex flex-col gap-1.5">
                                                     <AnimatedButton
                                                       type="button"
+                                                      onClick={() => handleMilestoneApprove(order.id, milestone.id)}
+                                                      className="w-full py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-mono font-black tracking-wider uppercase transition cursor-pointer"
+                                                    >
+                                                      Approve Payment
+                                                    </AnimatedButton>
+                                                    <AnimatedButton
+                                                      type="button"
                                                       onClick={() => handleMilestoneRequest(order.id, milestone.id)}
-                                                      className="w-full py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-[9px] font-mono font-black tracking-wider uppercase transition cursor-pointer"
+                                                      className="w-full py-1.2 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/10 text-[8.5px] font-mono font-black tracking-wider uppercase transition cursor-pointer"
                                                     >
                                                       Send Payment Link
                                                     </AnimatedButton>
