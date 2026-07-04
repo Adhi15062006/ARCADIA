@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Project } from "../types";
-import { Sparkles, Globe, BookOpen, X, ChevronRight, Check, Search } from "lucide-react";
+import { Sparkles, Globe, BookOpen, X, ChevronRight, Check } from "lucide-react";
 import AnimatedButton from "./ui/animated-button";
 import { FlipText } from "./ui/flip-text";
-import DiagonalCarousel from "./ui/diagonal-carousel";
+import { DiagonalCarousel } from "./ui/diagonal-carousel";
 
 interface PortfolioProps {
   projects: Project[];
@@ -14,17 +14,12 @@ interface PortfolioProps {
 export default function Portfolio({ projects, lang }: PortfolioProps) {
   const [activeFilter, setActiveFilter] = useState<string>("All");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState<number>(0);
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedQuery(searchQuery);
-      setCarouselIndex(0);
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [searchQuery]);
+  const handleFilterChange = (filter: string) => {
+    setActiveFilter(filter);
+    setActiveIndex(0);
+  };
 
   const filters = ["All", "Websites", "AI", "Mobile Apps", "Branding", "UI/UX"];
 
@@ -38,38 +33,27 @@ export default function Portfolio({ projects, lang }: PortfolioProps) {
   };
 
   const filteredProjects = projects.filter(proj => {
-    const matchesCategory = activeFilter === "All" || proj.category === activeFilter;
-    const q = debouncedQuery.toLowerCase().trim();
-    if (!q) return matchesCategory;
-    
-    const matchesSearch = 
-      proj.title.toLowerCase().includes(q) ||
-      proj.description.toLowerCase().includes(q) ||
-      proj.category.toLowerCase().includes(q) ||
-      proj.technologies.some(tech => tech.toLowerCase().includes(q));
-      
-    return matchesCategory && matchesSearch;
+    return activeFilter === "All" || proj.category === activeFilter;
   });
 
-  const carouselImages = filteredProjects.map(proj => ({
+  const carouselItems = filteredProjects.map(proj => ({
     src: proj.imageUrl,
-    alt: proj.category,
     title: proj.title,
-    description: proj.description
+    subtitle: proj.description,
   }));
 
   return (
     <section 
       id="portfolio" 
-      className="py-24 relative w-full bg-[#050505]/40 backdrop-blur-md border-b border-white/5 overflow-hidden"
+      className="py-12 sm:py-24 relative w-full bg-[#050505]/40 backdrop-blur-md border-b border-white/5 overflow-hidden"
     >
       <div className="glow-bg glow-cyan w-[500px] h-[500px] top-[20%] left-[-5%] opacity-15" />
       <div className="glow-bg glow-purple w-[400px] h-[400px] bottom-[10%] right-[-5%] opacity-20" />
 
-      <div className="container mx-auto px-6 relative z-10 w-full max-w-7xl">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10 w-full max-w-7xl">
         
         {/* Header */}
-        <div className="text-center max-w-2xl mx-auto mb-16">
+        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -103,65 +87,39 @@ export default function Portfolio({ projects, lang }: PortfolioProps) {
           </motion.p>
         </div>
 
-        {/* Search & Category Tabs */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
-          {/* Categories Tabs */}
-          <div className="flex flex-wrap gap-2">
-            {filters.map((filter) => (
-              <AnimatedButton
-                key={filter}
-                onClick={() => {
-                  setActiveFilter(filter);
-                  setCarouselIndex(0);
-                }}
-                className={`px-5 py-2.5 rounded-full font-display text-xs font-semibold tracking-wide transition-all ${
-                  activeFilter === filter
-                    ? "bg-purple-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.3)]"
-                    : "bg-white/5 text-gray-400 hover:text-white border border-white/5 hover:border-white/10"
-                }`}
-              >
-                {filter === "All" ? (lang === "en" ? "All Masterpieces" : "सभी उत्कृष्ट कृतियाँ") : filter}
-              </AnimatedButton>
-            ))}
-          </div>
-
-          {/* Search bar */}
-          <div className="relative w-full md:max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder={lang === "en" ? "Search portfolio..." : "पोर्टफोलियो खोजें..."}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 rounded-full bg-white/5 border border-white/10 font-sans text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-all"
-            />
-          </div>
+        {/* Filter Toolbar */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-12">
+          {filters.map((filter) => (
+            <AnimatedButton
+              key={filter}
+              onClick={() => handleFilterChange(filter)}
+              className={`px-5 py-2.5 rounded-full font-display text-xs font-semibold tracking-wide transition-all ${
+                activeFilter === filter
+                  ? "bg-purple-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.3)]"
+                  : "bg-white/5 text-gray-400 hover:text-white border border-white/5 hover:border-white/10"
+              }`}
+            >
+              {filter === "All" ? (lang === "en" ? "All Masterpieces" : "सभी उत्कृष्ट कृतियाँ") : filter}
+            </AnimatedButton>
+          ))}
         </div>
 
-        {/* Animated 3D Diagonal Carousel */}
-        <div className="w-full relative z-10 flex flex-col items-center justify-center">
-          {carouselImages.length > 0 ? (
-            <div className="w-full h-[580px] relative overflow-hidden rounded-[32px] border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl flex flex-col items-center justify-center">
-              <DiagonalCarousel
-                items={filteredProjects.map(proj => ({
-                  src: proj.imageUrl,
-                  title: proj.title,
-                  alt: proj.category
-                }))}
-                activeIndex={carouselIndex}
-                onActiveIndexChange={setCarouselIndex}
-                onItemClick={(index) => {
-                  const project = filteredProjects[index];
-                  if (project) {
-                    setSelectedProject(project);
-                  }
-                }}
-                slideSize={250}
-                className="w-full h-[540px]"
-                showControls={false}
-                showDots={false}
-              />
-            </div>
+        {/* Animated Diagonal Carousel */}
+        <div className="w-full relative z-10 py-6">
+          {carouselItems.length > 0 ? (
+            <DiagonalCarousel
+              items={carouselItems}
+              defaultActiveIndex={activeIndex}
+              slideSize={210}
+              className="min-h-[500px]"
+              onSelect={(idx) => setActiveIndex(idx)}
+              onItemClick={(idx) => {
+                const project = filteredProjects[idx];
+                if (project) {
+                  setSelectedProject(project);
+                }
+              }}
+            />
           ) : (
             <div className="text-center py-16">
               <p className="font-mono text-xs text-gray-500 uppercase tracking-widest">
@@ -186,7 +144,7 @@ export default function Portfolio({ projects, lang }: PortfolioProps) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ type: "spring", damping: 25, stiffness: 180 }}
-                className="w-full max-w-2xl bg-arcadia-dark rounded-[32px] border border-white/10 overflow-hidden shadow-2xl relative"
+                className="w-full max-w-2xl bg-arcadia-dark rounded-3xl border border-white/10 overflow-hidden shadow-2xl relative"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Close absolute btn */}

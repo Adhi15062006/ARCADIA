@@ -13,12 +13,12 @@ export function FlipText({ children, className = "", id }: FlipTextProps) {
       id={id}
       className={`relative inline-block overflow-hidden whitespace-nowrap cursor-pointer ${className}`}
     >
-      <motion.div
+      <motion.span
         initial="initial"
         whileHover="hover"
-        className="relative"
+        className="relative inline-block whitespace-nowrap"
       >
-        <div>
+        <span className="inline-block whitespace-nowrap">
           {children.split("").map((char, i) => (
             <motion.span
               key={i}
@@ -36,8 +36,8 @@ export function FlipText({ children, className = "", id }: FlipTextProps) {
               {char === " " ? "\u00A0" : char}
             </motion.span>
           ))}
-        </div>
-        <div className="absolute inset-0">
+        </span>
+        <span className="absolute inset-0 inline-block whitespace-nowrap">
           {children.split("").map((char, i) => (
             <motion.span
               key={i}
@@ -55,8 +55,8 @@ export function FlipText({ children, className = "", id }: FlipTextProps) {
               {char === " " ? "\u00A0" : char}
             </motion.span>
           ))}
-        </div>
-      </motion.div>
+        </span>
+      </motion.span>
     </span>
   );
 }

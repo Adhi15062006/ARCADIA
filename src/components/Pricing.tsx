@@ -132,7 +132,7 @@ export default function Pricing({ onSelectPlan, lang }: PricingProps) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
-                className={`rounded-[28px] p-8 flex-col relative h-full transition-all duration-300 ${
+                className={`rounded-3xl p-8 flex-col relative h-full transition-all duration-300 ${
                   isHiddenMobile ? "hidden lg:flex" : "flex"
                 } ${
                   plan.isHighlighted
@@ -142,7 +142,7 @@ export default function Pricing({ onSelectPlan, lang }: PricingProps) {
               >
                 {/* Highlight Neon Gradient line */}
                 {plan.isHighlighted && (
-                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-arcadia-blue via-arcadia-cyan to-purple-600 rounded-t-[28px]" />
+                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-arcadia-blue via-arcadia-cyan to-purple-600 rounded-t-3xl" />
                 )}
 
                 {/* Top Row Label / Badge */}

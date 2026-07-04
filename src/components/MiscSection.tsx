@@ -149,7 +149,7 @@ export default function MiscSection({ blogs, faqs, lang }: MiscSectionProps) {
               return (
                 <div 
                   key={faq.id} 
-                  className="rounded-2xl border border-white/5 bg-white/[0.01] overflow-hidden transition-colors hover:bg-white/[0.02]"
+                  className="rounded-3xl border border-white/5 bg-white/[0.01] overflow-hidden transition-colors hover:bg-white/[0.02]"
                 >
                   <AnimatedButton
                     onClick={() => setOpenFAQ(isOpen ? null : faq.id)}
@@ -203,7 +203,7 @@ export default function MiscSection({ blogs, faqs, lang }: MiscSectionProps) {
               <div 
                 key={blog.id} 
                 onClick={() => setReadingBlog(blog)}
-                className="group rounded-2xl bg-arcadia-dark border border-white/5 overflow-hidden hover:border-purple-500/30 transition shadow-xl cursor-pointer flex flex-col h-full"
+                className="group rounded-3xl bg-arcadia-dark border border-white/5 overflow-hidden hover:border-purple-500/30 transition shadow-xl cursor-pointer flex flex-col h-full"
               >
                 <div className="aspect-[16/10] w-full overflow-hidden bg-gray-900 relative">
                   <div className="absolute inset-0 bg-gradient-to-t from-arcadia-dark to-transparent opacity-60 z-10" />
@@ -310,7 +310,7 @@ export default function MiscSection({ blogs, faqs, lang }: MiscSectionProps) {
             {careerPositions.map((pos) => (
               <div 
                 key={pos.title} 
-                className="p-6 rounded-2xl border border-white/5 bg-white/[0.01] hover:border-green-500/20 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="p-6 rounded-3xl border border-white/5 bg-white/[0.01] hover:border-green-500/20 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div>
                   <h4 className="font-display font-bold text-base text-white">{pos.title}</h4>
@@ -435,7 +435,7 @@ export default function MiscSection({ blogs, faqs, lang }: MiscSectionProps) {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
             
             {/* Left Column Inquiry form */}
-            <div className="lg:col-span-7 rounded-[32px] p-8 bg-[#050505]/20 backdrop-blur-md border border-white/5 shadow-2xl flex flex-col justify-between">
+            <div className="lg:col-span-7 rounded-3xl p-8 bg-[#050505]/20 backdrop-blur-md border border-white/5 shadow-2xl flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2.5 mb-6">
                   <div className="p-2 rounded-xl bg-arcadia-blue/10 border border-arcadia-blue/20 text-arcadia-blue">
@@ -454,9 +454,9 @@ export default function MiscSection({ blogs, faqs, lang }: MiscSectionProps) {
                     <div className="p-3 bg-green-500/10 rounded-full w-fit mx-auto text-green-400">
                       <Send className="w-6 h-6" />
                     </div>
-                    <h4 className="font-display font-bold text-white">Inquiry Successfully Submitted</h4>
+                    <h4 className="font-display font-bold text-white">Communication Transmitted</h4>
                     <p className="font-sans text-xs text-gray-400 max-w-md mx-auto">
-                      Your inquiry has been successfully sent to our team. We usually respond within 6 hours.
+                      Your packet has successfully traversed our secure web protocols and landed in our administrator inbox. We usually return answers within 6 hours.
                     </p>
                   </div>
                 ) : (
@@ -523,9 +523,9 @@ export default function MiscSection({ blogs, faqs, lang }: MiscSectionProps) {
             </div>
 
             {/* Right Column Maps & Details */}
-            <div className="lg:col-span-5 rounded-[32px] p-2 bg-[#050505]/20 backdrop-blur-md border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[400px]">
+            <div className="lg:col-span-5 rounded-3xl p-2 bg-[#050505]/20 backdrop-blur-md border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[400px]">
               {/* highly stylized premium dark Google maps embed iframe centering Punganur, Andhra Pradesh */}
-              <div className="relative w-full h-[240px] rounded-2xl overflow-hidden border border-white/10">
+              <div className="relative w-full h-[240px] rounded-3xl overflow-hidden border border-white/10">
                 <iframe 
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3876.54133481261!2d78.57218671481183!3d13.513788990501865!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb2912a781b2a95%3A0xc3911f44a30dbf2!2sPunganur%2C%20Andhra%20Pradesh%20517247!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin" 
                   width="100%" 

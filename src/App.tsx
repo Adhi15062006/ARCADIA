@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import { StackedLogos } from "./components/ui/stacked-logos";
+import { LogoSlider } from "./components/ui/logo-slider";
 import { FlipText } from "./components/ui/flip-text";
 
 const Services = React.lazy(() => import("./components/Services"));
@@ -15,44 +16,21 @@ import LoginPortal from "./components/LoginPortal";
 import Chatbot from "./components/Chatbot";
 import MiscSection from "./components/MiscSection";
 import { Service, Project, BlogPost, FAQ, Testimonial } from "./types";
-import {
-  Sparkles,
-  MapPin,
-  Mail,
-  Globe,
-  CheckCircle,
-  Clock,
-  WifiOff,
-  Compass,
-  Instagram,
-  MessageCircle,
+import { 
+  Sparkles, 
+  MapPin, 
+  Mail, 
+  Globe, 
+  CheckCircle, 
+  Clock, 
+  WifiOff, 
+  Compass, 
+  Instagram, 
+  MessageCircle, 
   Linkedin,
   MessageSquare,
   ArrowRight
 } from "lucide-react";
-
-const decodeToken = (token: string) => {
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    return JSON.parse(jsonPayload);
-  } catch (err) {
-    return null;
-  }
-};
-
-const isTokenValid = (token: string | null) => {
-  if (!token) return false;
-  const decoded = decodeToken(token);
-  if (!decoded || !decoded.exp) return false;
-  return decoded.exp * 1000 > Date.now();
-};
 
 export default function App() {
   // Navigation & State Engine
@@ -113,19 +91,13 @@ export default function App() {
 
     // 4. Token checker
     const token = localStorage.getItem("arcadia_admin_token");
-    if (token && isTokenValid(token)) {
+    if (token) {
       setIsAdminLoggedIn(true);
-    } else {
-      localStorage.removeItem("arcadia_admin_token");
-      setIsAdminLoggedIn(false);
     }
 
     const clientToken = localStorage.getItem("arcadia_client_token");
-    if (clientToken && isTokenValid(clientToken)) {
+    if (clientToken) {
       setIsClientLoggedIn(true);
-    } else {
-      localStorage.removeItem("arcadia_client_token");
-      setIsClientLoggedIn(false);
     }
 
     return () => {
@@ -206,7 +178,7 @@ export default function App() {
   const handleSelectService = (title: string) => {
     setPrefilledService(title);
     showToast("info", `Prefilled form with service: ${title}`);
-
+    
     // Smooth scroll directly to the booking/order form section
     const orderSection = document.getElementById("order-portal");
     if (orderSection) {
@@ -226,7 +198,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen relative font-sans overflow-hidden select-none bg-arcadia-black text-white">
-
+      
       {/* Primary Video Background for entire application wrapper */}
       <div className="fixed inset-0 w-full h-full z-0 overflow-hidden select-none pointer-events-none">
         <video
@@ -251,12 +223,13 @@ export default function App() {
             initial={{ opacity: 0, y: -50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.9 }}
-            className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full border shadow-2xl flex items-center gap-2.5 backdrop-blur-xl ${toast.type === "success"
-                ? "bg-green-500/10 border-green-500/20 text-green-400"
-                : toast.type === "error"
-                  ? "bg-red-500/10 border-red-500/20 text-red-400"
-                  : "bg-arcadia-blue/10 border-arcadia-blue/20 text-arcadia-cyan"
-              }`}
+            className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full border shadow-2xl flex items-center gap-2.5 backdrop-blur-xl ${
+              toast.type === "success" 
+                ? "bg-green-500/10 border-green-500/20 text-green-400" 
+                : toast.type === "error" 
+                ? "bg-red-500/10 border-red-500/20 text-red-400" 
+                : "bg-arcadia-blue/10 border-arcadia-blue/20 text-arcadia-cyan"
+            }`}
           >
             <Sparkles className="w-4 h-4 animate-pulse shrink-0" />
             <span className="font-display text-xs font-bold tracking-wide">{toast.msg}</span>
@@ -320,7 +293,7 @@ export default function App() {
       ) : (
         /* CORE CONTENT WRAPPER */
         <main className="relative z-10">
-
+          
           {currentView === "admin" ? (
             /* Elite Admin workspace view */
             <div className="pt-24 min-h-screen">
@@ -447,30 +420,120 @@ export default function App() {
                 }}
                 lang={lang}
               />              {/* Trust Badge / Companies Logo Section */}
-              <section className="py-12 bg-[#050505]/40 backdrop-blur-md border-b border-white/5 relative z-10">
-                <div className="container mx-auto px-6 max-w-7xl text-center">
-                  <p className="font-mono text-[9px] uppercase tracking-widest text-gray-500 mb-2">
-                    Empowering Next-Gen Ventures & Enterprise Systems
-                  </p>
-                  <StackedLogos
-                    logos={[
-                      { src: "/logo1.svg", alt: "ZENIX CORP" },
-                      { src: "/logo2.svg", alt: "AURA DESIGN" },
-                      { src: "/logo3.svg", alt: "NEXUS SAAS" },
-                      { src: "/logo4.svg", alt: "SOLARIS" },
-                      { src: "/logo5.svg", alt: "OCTA SEC" },
-                    ]}
-                  />
-                </div>
-              </section>
+              <LogoSlider
+                trustedByTitle="Accredited Tech Integration Partners"
+                trustedBySubtitle="Empowering elite enterprise squads, high-growth modern ventures, and decentralized networks worldwide"
+                showStats={true}
+                logos={[
+                  { src: "/logo1.svg", alt: "ZENIX CORP" },
+                  { src: "/logo2.svg", alt: "AURA DESIGN" },
+                  { src: "/logo3.svg", alt: "NEXUS SAAS" },
+                  { src: "/logo4.svg", alt: "SOLARIS" },
+                  { src: "/logo5.svg", alt: "OCTA SEC" },
+                  { src: "/logo1.svg", alt: "KRONOS AI" },
+                  { src: "/logo2.svg", alt: "AEON CLOUD" },
+                  { src: "/logo3.svg", alt: "LUMEN LABS" },
+                ]}
+              />
 
               {/* Dynamic Service Catalog */}
               <Suspense fallback={
-                <section className="py-24 bg-[#050505]/40 backdrop-blur-md border-b border-white/5 flex flex-col items-center justify-center gap-4 min-h-[400px]">
-                  <div className="relative">
-                    <div className="w-10 h-10 border-4 border-arcadia-blue border-t-transparent rounded-full animate-spin" />
+                <section className="py-24 bg-[#050505]/40 backdrop-blur-md border-b border-white/5 relative overflow-hidden min-h-[500px]">
+                  {/* Matching Section Header skeleton */}
+                  <div className="container mx-auto px-6 relative z-10 w-full max-w-7xl text-center">
+                    <div className="max-w-2xl mx-auto mb-16 flex flex-col items-center">
+                      {/* Category mini-badge skeleton */}
+                      <div className="w-24 h-5 rounded-full bg-white/5 animate-pulse mb-4 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                      </div>
+                      {/* Title skeleton */}
+                      <div className="w-64 h-10 rounded-xl bg-white/5 animate-pulse mb-4 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                      </div>
+                      {/* Subtitle skeleton */}
+                      <div className="w-80 h-4 rounded-lg bg-white/5 animate-pulse relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                      </div>
+                    </div>
+
+                    {/* Filter and Search Bar row skeleton */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+                      <div className="flex flex-wrap gap-2">
+                        {[1, 2, 3, 4].map((i) => (
+                          <div key={i} className="w-28 h-8 rounded-full bg-white/5 animate-pulse relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="w-full md:max-w-xs h-10 rounded-full bg-white/5 animate-pulse relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                      </div>
+                    </div>
+
+                    {/* Horizontal Centered Grid of beautiful cards that match the perspective carousel height and card width! */}
+                    <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8 max-w-[1000px] mx-auto py-2">
+                      {[1, 2, 3].map((idx) => (
+                        <div 
+                          key={idx}
+                          className={`relative rounded-3xl overflow-hidden border border-white/5 bg-arcadia-dark/95 shadow-2xl w-[260px] h-[300px] sm:h-[360px] flex flex-col justify-between p-6 text-left group animate-pulse ${
+                            idx === 3 ? "hidden md:flex" : "flex"
+                          }`}
+                        >
+                          {/* Inner shimmer background element */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
+                          
+                          {/* Top part / Image placeholder */}
+                          <div className="space-y-3">
+                            {/* Dummy icon placeholder */}
+                            <div className="w-10 h-10 rounded-2xl bg-white/5 relative overflow-hidden">
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                            </div>
+                            
+                            {/* Badge placeholder */}
+                            <div className="w-20 h-4 rounded bg-white/5 relative overflow-hidden">
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                            </div>
+
+                            {/* Title placeholder */}
+                            <div className="space-y-1.5 pt-2">
+                              <div className="w-3/4 h-4 rounded bg-white/5 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                              </div>
+                              <div className="w-1/2 h-4 rounded bg-white/5 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Bottom part / Description & Price row */}
+                          <div className="space-y-3 pt-4 border-t border-white/5">
+                            {/* Description lines */}
+                            <div className="space-y-1.5">
+                              <div className="w-full h-2 rounded bg-white/5 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                              </div>
+                              <div className="w-5/6 h-2 rounded bg-white/5 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                              </div>
+                            </div>
+
+                            {/* Footer Price & Button row */}
+                            <div className="flex items-center justify-between pt-2">
+                              <div className="space-y-1">
+                                <div className="w-10 h-2 rounded bg-white/5 relative overflow-hidden" />
+                                <div className="w-14 h-3 rounded bg-white/5 relative overflow-hidden">
+                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                                </div>
+                              </div>
+                              <div className="w-16 h-7 rounded-full bg-white/5 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <span className="font-mono text-[9px] text-gray-500 tracking-widest uppercase">LOADING SOLUTIONS CATALOG...</span>
                 </section>
               }>
                 <Services
@@ -523,7 +586,6 @@ export default function App() {
                     clientEmail={localStorage.getItem("arcadia_client_email") || ""}
                     clientName={localStorage.getItem("arcadia_client_name") || ""}
                     onNavigateToLogin={() => setCurrentView("client")}
-                    onClientLogin={() => setIsClientLoggedIn(true)}
                   />
                 </div>
               </section>
@@ -544,8 +606,8 @@ export default function App() {
       <Chatbot />
 
       {/* Invisible/Hidden Developer click toggle in absolute bottom-right corner */}
-      <div
-        onClick={() => setShowDevOverlay(prev => !prev)}
+      <div 
+        onClick={() => setShowDevOverlay(prev => !prev)} 
         className="fixed bottom-0 right-0 w-2 h-2 bg-purple-500/5 cursor-pointer z-50 hover:bg-purple-500/40 transition"
         title="Diagnostic Toggle (Ctrl+D)"
       />
@@ -564,7 +626,7 @@ export default function App() {
                 <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
                 <span>ARCADIA_CORE_DIAGNOSTICS</span>
               </div>
-              <button
+              <button 
                 onClick={() => setShowDevOverlay(false)}
                 className="text-gray-500 hover:text-white transition"
               >
@@ -605,8 +667,8 @@ export default function App() {
                       const maxLat = Math.max(...latencyHistory, 100);
                       const heightPercent = Math.min(100, Math.max(15, (lat / maxLat) * 100));
                       return (
-                        <div
-                          key={idx}
+                        <div 
+                          key={idx} 
                           style={{ height: `${heightPercent}%` }}
                           className={`w-4 rounded-t transition-all ${lat < 100 ? "bg-green-500" : lat < 250 ? "bg-yellow-500" : "bg-red-500"}`}
                           title={`${lat}ms`}
@@ -623,7 +685,7 @@ export default function App() {
                 <div className="space-y-1 bg-white/[0.02] p-2 rounded-lg border border-white/5">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Container Target:</span>
-                    <span className="text-white font-bold">Cloud Run Instance</span>
+                    <span className="text-white font-bold">Cloud Run Sandbox</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Active Ingress Port:</span>
@@ -654,7 +716,7 @@ export default function App() {
       <footer className="bg-[#050505]/40 backdrop-blur-md border-t border-white/5 pt-20 pb-10 relative z-30 font-sans">
         <div className="container mx-auto px-6 max-w-7xl">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-
+            
             <div className="space-y-4">
               <span className="font-display font-extrabold text-lg text-white">ARCADIA<span className="text-arcadia-blue">.</span></span>
               <p className="text-xs text-gray-500 leading-relaxed">
@@ -686,9 +748,8 @@ export default function App() {
               <div className="flex gap-4">
                 <a href="https://www.instagram.com/arcadiadevelopers?igsh=d2s0Y2l5ZzkzN3M=" target="_blank" rel="noreferrer" className="p-2.5 rounded-full bg-white/5 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition" title="Instagram"><Instagram className="w-4 h-4" /></a>
                 <a href="https://wa.me/918328218878" target="_blank" rel="noreferrer" className="p-2.5 rounded-full bg-white/5 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition" title="WhatsApp"><MessageCircle className="w-4 h-4" /></a>
-                <a href="https://linkedin.com/company/arcadia-agency" target="_blank" rel="noreferrer" className="p-2.5 rounded-full bg-white/5 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition" title="LinkedIn"><Linkedin className="w-4 h-4" /></a>
               </div>
-              <p className="text-[10px] text-gray-600 font-mono">SECURE CONNECTION SHA-256</p>
+              <p className="text-[10px] text-gray-600 font-mono">ENCRYPTED PROTOCOL SHA-256</p>
             </div>
 
           </div>

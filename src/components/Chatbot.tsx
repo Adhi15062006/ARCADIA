@@ -94,7 +94,7 @@ export default function Chatbot() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 30 }}
             transition={{ type: "spring", damping: 25, stiffness: 220 }}
-            className="w-[90vw] sm:w-[360px] h-[480px] bg-arcadia-dark rounded-[28px] border border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.7)] flex flex-col justify-between overflow-hidden mb-4 relative"
+            className="w-[90vw] sm:w-[360px] h-[480px] bg-arcadia-dark rounded-3xl border border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.7)] flex flex-col justify-between overflow-hidden mb-4 relative"
           >
             {/* Header branding overlay */}
             <div className="p-4 bg-arcadia-black border-b border-white/10 flex items-center justify-between">
@@ -106,7 +106,7 @@ export default function Chatbot() {
                   <h4 className="font-display font-extrabold text-xs text-white">ARCADIA NEURAL SLOT</h4>
                   <div className="flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping" />
-                    <span className="font-mono text-[8px] text-green-400 font-bold uppercase">SYSTEM STATUS: ONLINE</span>
+                    <span className="font-mono text-[8px] text-green-400 font-bold uppercase">ONLINE PROTOCOL</span>
                   </div>
                 </div>
               </div>

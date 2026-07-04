@@ -33,7 +33,6 @@ interface ContactFormsProps {
   clientEmail?: string;
   clientName?: string;
   onNavigateToLogin?: () => void;
-  onClientLogin?: () => void;
 }
 
 export default function ContactForms({ 
@@ -43,8 +42,7 @@ export default function ContactForms({
   isClientLoggedIn = false,
   clientEmail = "",
   clientName = "",
-  onNavigateToLogin,
-  onClientLogin
+  onNavigateToLogin
 }: ContactFormsProps) {
   // Booking Form State
   const [bookingData, setBookingData] = useState({
@@ -261,7 +259,7 @@ export default function ContactForms({
       {/* 1. DEMO CONSULTATION BOOKING */}
       <div 
         id="demo-booking"
-        className="rounded-[32px] p-8 bg-arcadia-dark border border-white/5 shadow-2xl relative overflow-hidden flex flex-col justify-between"
+        className="rounded-3xl p-8 bg-arcadia-dark border border-white/5 shadow-2xl relative overflow-hidden flex flex-col justify-between"
       >
         <div className="absolute top-[-5%] right-[-5%] w-[150px] h-[150px] bg-arcadia-blue/10 rounded-full blur-3xl pointer-events-none" />
         
@@ -368,7 +366,7 @@ export default function ContactForms({
 
             <div>
               <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1.5 font-bold">Meeting Mode</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {(["Google Meet", "Zoom", "Phone"] as const).map(mode => (
                   <AnimatedButton
                     key={mode}
@@ -417,7 +415,7 @@ export default function ContactForms({
       {/* 2. ORDER PLACEMENT FLOW */}
       <div 
         id="order-portal"
-        className="rounded-[32px] p-8 bg-arcadia-dark border border-white/5 shadow-2xl relative overflow-hidden flex flex-col justify-between"
+        className="rounded-3xl p-8 bg-arcadia-dark border border-white/5 shadow-2xl relative overflow-hidden flex flex-col justify-between"
       >
         <div className="absolute top-[-5%] left-[-5%] w-[150px] h-[150px] bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -449,7 +447,7 @@ export default function ContactForms({
               </p>
 
               {/* Company Contact Details Section */}
-              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 text-left space-y-3">
+              <div className="p-5 rounded-3xl bg-white/[0.02] border border-white/5 text-left space-y-3">
                 <h5 className="font-display font-bold text-xs text-purple-400 uppercase tracking-widest">ARCADIA CONTACT SPECIFICATIONS</h5>
                 <div className="space-y-1.5 font-sans text-[11px] text-gray-300">
                   <div>📧 <span className="text-white font-semibold">arcadiadevelopers07@gmail.com</span> (Priority Support Desk)</div>
@@ -458,7 +456,7 @@ export default function ContactForms({
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 space-y-2 text-left text-[11px] font-sans">
+              <div className="p-4 rounded-3xl bg-white/[0.01] border border-white/5 space-y-2 text-left text-[11px] font-sans">
                 <div className="flex justify-between border-b border-white/5 pb-2">
                   <span className="text-gray-400">Requested Service:</span>
                   <span className="text-white font-semibold">{placedOrder.service}</span>
@@ -540,8 +538,9 @@ export default function ContactForms({
               </div>
             </div>
 
+            {/* Company Contact Details card */}
             <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
-              <h4 className="font-display font-bold text-sm text-white">ARCADIA REGIONAL HEADQUARTERS</h4>
+              <h4 className="font-display font-bold text-sm text-white">ARCADIA ADMINISTRATIVE REGIONAL HEADQUARTERS</h4>
               <div className="space-y-2.5 text-xs font-sans text-gray-400">
                 <div className="flex items-center gap-2">
                   <span className="text-arcadia-cyan font-mono text-[10px] w-16">SUPPORT:</span>
@@ -563,12 +562,12 @@ export default function ContactForms({
             </div>
 
             {/* Terms and conditions and Policy links / snippet */}
-            <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 space-y-2 text-[10px] text-gray-500">
+            <div className="p-4 rounded-3xl bg-white/[0.01] border border-white/5 space-y-2 text-[10px] text-gray-500">
               <p className="font-sans font-semibold text-gray-400 uppercase tracking-widest text-[8px] mb-1">
                 ARCADIA DEVELOPMENT COMPLIANCE
               </p>
               <p className="leading-relaxed">
-                By maintaining an active order, you remain bound to our <strong>Secure Development Terms & Conditions</strong> and <strong>Co-development Privacy Policy</strong>. All code artifacts, intellectual properties, and server staging variables are fully secure and governed under Noida high-tech jurisdiction.
+                By maintaining an active order, you remain bound to our <strong>Secure Development Terms & Conditions</strong> and <strong>Co-development Privacy Protocols</strong>. All code artifacts, intellectual properties, and server staging variables are fully sandboxed and governed under Noida high-tech jurisdiction.
               </p>
               <div className="flex gap-4 pt-1 border-t border-white/5 text-[9px]">
                 <a href="#terms" className="text-arcadia-cyan hover:underline">TERMS OF COMPLIANCE</a>
@@ -612,24 +611,22 @@ export default function ContactForms({
             <div className="flex-grow">
               {!isClientLoggedIn ? (
                 <div className="flex flex-col items-center justify-center text-center p-8 bg-black/40 border border-white/5 rounded-3xl space-y-6 my-4">
-                  <div className="p-3.5 bg-purple-500/10 border border-purple-500/20 rounded-2xl text-purple-400">
+                  <div className="p-3.5 bg-purple-500/10 border border-purple-500/20 rounded-3xl text-purple-400">
                     <Lock className="w-8 h-8 animate-pulse" />
                   </div>
                   <div>
                     <h4 className="font-display font-black text-sm text-white uppercase tracking-wider">Authentication Required</h4>
                     <p className="font-sans text-[11px] text-gray-500 mt-2 leading-relaxed max-w-sm">
-                      Only authenticated users can place project orders. Please log in or register a corporate client account to proceed.
+                      Only authenticated users can place project orders and make co-development payments. Please log in or establish a client profile to unlock our secure development pipeline.
                     </p>
                   </div>
-                  <div className="w-full max-w-xs flex justify-center">
-                    <button
-                      type="button"
-                      onClick={onNavigateToLogin}
-                      className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-display text-[10px] font-bold uppercase tracking-wider transition cursor-pointer shadow-[0_4px_12px_rgba(147,51,234,0.3)] flex items-center justify-center"
-                    >
-                      Go to Login Portal
-                    </button>
-                  </div>
+                  <AnimatedButton
+                    type="button"
+                    onClick={onNavigateToLogin}
+                    className="w-full max-w-xs py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-display text-[10px] font-bold uppercase tracking-wider transition cursor-pointer shadow-[0_4px_12px_rgba(147,51,234,0.3)]"
+                  >
+                    Go to Client Login Portal
+                  </AnimatedButton>
                 </div>
               ) : (
                 <>
@@ -637,7 +634,7 @@ export default function ContactForms({
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
                       {/* Logged in badge */}
                       <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 text-[10px] text-purple-300 font-mono flex items-center justify-between">
-                        <span>🔐 SECURED PORTAL SESSION</span>
+                        <span>🔐 SECURE CO-DEVELOPMENT SESSION</span>
                         <span className="font-bold">{clientEmail}</span>
                       </div>
 
@@ -762,7 +759,7 @@ export default function ContactForms({
               {orderStep === 3 && (
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                   {/* Checkout summary */}
-                  <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                  <div className="p-4 rounded-3xl bg-white/[0.02] border border-white/5 space-y-2">
                     <div className="flex justify-between text-xs text-gray-400">
                       <span>Billed Item:</span>
                       <span className="text-white font-semibold">{orderData.service} Setup</span>
@@ -773,14 +770,14 @@ export default function ContactForms({
                     </div>
                   </div>
 
-                  {/* Project Review Info card */}
-                  <div className="text-center p-6 rounded-2xl bg-arcadia-black border border-white/10 space-y-4">
+                  {/* Administrative Review Info card */}
+                  <div className="text-center p-6 rounded-3xl bg-arcadia-black border border-white/10 space-y-4">
                     <div className="p-3 bg-purple-500/10 rounded-full w-fit mx-auto border border-purple-500/20 text-purple-400">
                       <ShieldCheck className="w-6 h-6 animate-pulse" />
                     </div>
-                    <h4 className="font-display font-extrabold text-sm text-white">Project Review & Roadmap Setup</h4>
+                    <h4 className="font-display font-extrabold text-sm text-white">Administrative Review Setup</h4>
                     <p className="font-sans text-[11px] text-gray-400 leading-relaxed">
-                      Arcadia operates on an approved milestone payment architecture. Once your order request is submitted, our review panel inspects specifications and issues authorized payment links directly to your Client Dashboard. No upfront payment is required today.
+                      Arcadia operates on an approved milestone payment architecture. Once your order request is submitted, our administrative panel reviews specifications and issues authorized payment links directly to your Client Dashboard. No upfront payment is required today.
                     </p>
                     <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-1.5 text-left font-mono text-[9px] text-gray-400">
                       <div className="flex justify-between">

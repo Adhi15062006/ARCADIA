@@ -184,7 +184,7 @@ export default function Hero({ onStartProject, onBookDemo, onNavigateToServices,
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ duration: 0.6, delay: 0.2 + idx * 0.1 }}
                   whileHover={{ y: -4, borderColor: "rgba(47, 128, 255, 0.3)" }}
-                  className="rounded-2xl p-5 border border-white/5 bg-arcadia-black/60 backdrop-blur-md transition-all duration-300"
+                  className="rounded-3xl p-5 border border-white/5 bg-arcadia-black/60 backdrop-blur-md transition-all duration-300"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-white">

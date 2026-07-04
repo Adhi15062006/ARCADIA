@@ -47,7 +47,7 @@ export function CylinderCarousel({ images, onCardClick }: CylinderCarouselProps)
             return (
               <motion.div
                 key={i}
-                className="absolute w-[240px] h-[320px] rounded-[24px] overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.65)] cursor-pointer bg-arcadia-dark"
+                className="absolute w-[240px] h-[320px] rounded-3xl overflow-hidden border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.65)] cursor-pointer bg-arcadia-dark"
                 style={{
                   transformStyle: "preserve-3d",
                   backfaceVisibility: "hidden",

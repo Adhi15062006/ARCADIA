@@ -3,120 +3,78 @@ import path from "path";
 import fs from "fs";
 import jwt from "jsonwebtoken";
 import bcryptjs from "bcryptjs";
-import rateLimit from "express-rate-limit";
-import { z } from "zod";
-
+import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const app = express();
-const PORT = Number(process.env.PORT) || 5713;
-// Use RSA keys if provided, otherwise fallback to secret
-const JWT_PRIVATE_KEY = process.env.JWT_PRIVATE_KEY ? fs.readFileSync(process.env.JWT_PRIVATE_KEY, "utf8") : null;
-const JWT_PUBLIC_KEY = process.env.JWT_PUBLIC_KEY ? fs.readFileSync(process.env.JWT_PUBLIC_KEY, "utf8") : null;
+const PORT = 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "arcadia_secret_key_2026_futuristic_studio";
 
+// Vercel serverless gateway url rewrite middleware
+app.use((req, res, next) => {
+  const matchedPath = req.headers["x-matched-path"] as string;
+  if (matchedPath) {
+    const urlObj = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+    req.url = matchedPath + urlObj.search;
+  }
+  next();
+});
 
 // Increase limit for base64 file uploads
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// Normalize Vercel serverless requests if "/api" prefix was stripped by platform routing
-app.use((req, res, next) => {
-  if (req.url && !req.url.startsWith("/api") && !req.url.startsWith("/auth") && !req.url.startsWith("/assets") && !req.url.includes(".")) {
-    req.url = "/api" + (req.url.startsWith("/") ? "" : "/") + req.url;
+// Ensure data folder exists
+const DATA_DIR = path.join(process.cwd(), "data");
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
   }
-  next();
-});
+} catch (err) {
+  console.warn("Could not create data directory (read-only filesystem). Using in-memory database.");
+}
 
-// Try multiple possible data dir locations (compatible with local dev and Vercel serverless)
-const DATA_DIR = (() => {
-  const localDir = typeof __dirname !== "undefined" ? __dirname : process.cwd();
-  const candidates = [
-    path.join(localDir, "data"),
-    path.join(localDir, "..", "data"),
-    path.join(process.cwd(), "data"),
-    path.join(process.cwd(), "..", "data"),
-    "/var/task/data",
-    "/var/task/api/data",
-    path.join("/tmp", "arcadia_data")
-  ];
-  for (const dir of candidates) {
-    if (fs.existsSync(dir)) return dir;
-  }
-  // Default: try to create at cwd
-  const fallback = path.join(process.cwd(), "data");
-  try { fs.mkdirSync(fallback, { recursive: true }); } catch { }
-  return fallback;
-})();
-
-// In-memory cache for serverless container state persistence
-const memoryStore: Record<string, any> = {};
+// In-memory cache for database files when filesystem is read-only
+const memoryDB: Record<string, any> = {};
 
 // Helper for JSON Database Persistence
 function getDB<T>(filename: string, defaultData: T): T {
-  if (memoryStore[filename]) {
-    return memoryStore[filename] as T;
+  if (memoryDB[filename] !== undefined) {
+    return memoryDB[filename];
   }
 
-  const primaryPath = path.join(DATA_DIR, filename);
-  const tmpPath = path.join("/tmp", "arcadia_data", filename);
-
-  // Try reading from /tmp first (in case serverless container modified it earlier)
-  for (const filepath of [tmpPath, primaryPath]) {
-    if (fs.existsSync(filepath)) {
-      try {
-        const raw = fs.readFileSync(filepath, "utf8");
-        const parsed = JSON.parse(raw);
-        // If file exists but array is empty, fall back to seed data
-        if (Array.isArray(parsed) && parsed.length === 0 && Array.isArray(defaultData) && (defaultData as any[]).length > 0) {
-          memoryStore[filename] = defaultData;
-          return defaultData;
-        }
-        memoryStore[filename] = parsed;
-        return parsed as T;
-      } catch (err) {
-        console.error(`Error reading database file from ${filepath}:`, err);
-      }
-    }
-  }
-
-  // If not found or failed, store and try writing defaultData
-  memoryStore[filename] = defaultData;
-  try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(primaryPath, JSON.stringify(defaultData, null, 2), "utf8");
-  } catch (err) {
-    // Read-only filesystem on Vercel; try writing to /tmp/arcadia_data instead
+  const filepath = path.join(DATA_DIR, filename);
+  if (!fs.existsSync(filepath)) {
     try {
-      const tmpDir = path.join("/tmp", "arcadia_data");
-      if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-      fs.writeFileSync(tmpPath, JSON.stringify(defaultData, null, 2), "utf8");
-    } catch { }
+      fs.writeFileSync(filepath, JSON.stringify(defaultData, null, 2));
+    } catch (err) {
+      console.warn(`Writing default database file ${filename} failed (read-only filesystem). Using in-memory fallback.`);
+    }
+    memoryDB[filename] = defaultData;
+    return defaultData;
   }
-  return defaultData;
+  try {
+    const raw = fs.readFileSync(filepath, "utf8");
+    const parsed = JSON.parse(raw);
+    memoryDB[filename] = parsed;
+    return parsed;
+  } catch (err) {
+    console.error(`Error reading database file: ${filename}`, err);
+    memoryDB[filename] = defaultData;
+    return defaultData;
+  }
 }
 
 function saveDB<T>(filename: string, data: T) {
-  // Update in-memory store immediately so running server instance sees new changes
-  memoryStore[filename] = data;
-
-  const primaryPath = path.join(DATA_DIR, filename);
+  memoryDB[filename] = data;
+  const filepath = path.join(DATA_DIR, filename);
   try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(primaryPath, JSON.stringify(data, null, 2), "utf8");
+    fs.writeFileSync(filepath, JSON.stringify(data, null, 2), "utf8");
   } catch (err) {
-    // If primary path is read-only (Vercel serverless), write to /tmp/arcadia_data
-    try {
-      const tmpDir = path.join("/tmp", "arcadia_data");
-      const tmpPath = path.join(tmpDir, filename);
-      if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-      fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), "utf8");
-    } catch (tmpErr) {
-      console.error(`Could not write database file ${filename} to disk or /tmp:`, tmpErr);
-    }
+    console.warn(`Writing database file ${filename} failed (read-only filesystem). Saving in-memory only.`);
   }
 }
 
@@ -178,51 +136,7 @@ const dbOrders = () => getDB<any[]>("orders.json", []);
 const dbInquiries = () => getDB<any[]>("inquiries.json", []);
 const dbVacancies = () => getDB<any[]>("vacancies.json", seedVacancies);
 const dbApplications = () => getDB<any[]>("applications.json", []);
-const dbUsers = () => {
-  const users = getDB<any[]>("users.json", []);
-  
-  // Seed default admin in database (no hardcoding in auth handler)
-  if (!users.find(u => u.email === "arcadia")) {
-    users.push({
-      id: "u_admin",
-      email: "arcadia",
-      name: "Arcadia Director",
-      passwordHash: bcryptjs.hashSync("findme@arcadia1509", 12),
-      role: "admin",
-      emailVerified: true,
-      createdAt: new Date().toISOString()
-    });
-    saveDB("users.json", users);
-  }
-  
-  // Seed default clients
-  if (!users.find(u => u.email === "vikram@zenix.com")) {
-    users.push({
-      id: "u_vikram",
-      email: "vikram@zenix.com",
-      name: "Vikram Malhotra",
-      passwordHash: bcryptjs.hashSync("clientpassword123", 12),
-      role: "client",
-      emailVerified: true,
-      createdAt: new Date().toISOString()
-    });
-    saveDB("users.json", users);
-  }
-  if (!users.find(u => u.email === "priyanka@aura.com")) {
-    users.push({
-      id: "u_priyanka",
-      email: "priyanka@aura.com",
-      name: "Priyanka Sen",
-      passwordHash: bcryptjs.hashSync("clientpassword123", 12),
-      role: "client",
-      emailVerified: true,
-      createdAt: new Date().toISOString()
-    });
-    saveDB("users.json", users);
-  }
-  
-  return users;
-};
+const dbUsers = () => getDB<any[]>("users.json", []);
 const dbNotifications = () => getDB<any[]>("notifications.json", []);
 const dbLogs = () => getDB<any[]>("logs.json", [
   { id: "l1", action: "System Init", details: "Arcadia core platform initiated successfully on port 3000.", timestamp: new Date().toISOString() }
@@ -245,8 +159,8 @@ function logActivity(action: string, details: string) {
   saveDB("logs.json", logs.slice(0, 100)); // Keep last 100 logs
 }
 
-function sendOutboundEmail(to: string, subject: string, body: string, type: string) {
-  const emails = getDB<any[]>("sent_emails.json", []);
+function sendMockEmail(to: string, subject: string, body: string, type: string) {
+  const emails = getDB<any[]>("mock_emails.json", []);
   const newEmail = {
     id: "mail_" + Math.random().toString(36).substr(2, 9),
     to,
@@ -256,45 +170,32 @@ function sendOutboundEmail(to: string, subject: string, body: string, type: stri
     sentAt: new Date().toISOString()
   };
   emails.unshift(newEmail);
-  saveDB("sent_emails.json", emails);
-  logActivity("Email Dispatch", `Email dispatched to: ${to} (Subject: ${subject})`);
+  saveDB("mock_emails.json", emails);
+  logActivity("Email Simulation", `Mock email dispatched to: ${to} (Subject: ${subject})`);
 }
 
 // REST API Endpoints
 
 // Authentication API
-// Rate limiting for auth routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
-  message: { error: "Too many login attempts, please try again later." }
-});
-
-// Input validation schemas
-const adminLoginSchema = z.object({
-  email: z.string().min(1),
-  password: z.string().min(1)
-});
-
-app.post("/api/auth/login", authLimiter, (req, res) => {
-  const parseResult = adminLoginSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return res.status(400).json({ error: "Invalid input data." });
+app.post("/api/auth/login", (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required." });
   }
-  const { email, password } = parseResult.data;
 
   const normalizedEmail = email.toLowerCase().trim();
-  const users = dbUsers();
-  const user = users.find(u => u.email === normalizedEmail && u.role === "admin");
-
-  if (user && user.passwordHash && bcryptjs.compareSync(password, user.passwordHash)) {
-    const signOptions = JWT_PRIVATE_KEY ? { algorithm: "RS256" as const } : {};
-    const token = jwt.sign({ email: normalizedEmail, role: "admin" }, JWT_PRIVATE_KEY || JWT_SECRET, { expiresIn: "24h", ...signOptions });
-    logActivity("Admin Login", `Admin logged in successfully: ${normalizedEmail}`);
+  if (
+    (normalizedEmail === "arcadia" && password === "findme@arcadia1509") ||
+    ((normalizedEmail === DEFAULT_ADMIN_EMAIL.toLowerCase().trim() || 
+      normalizedEmail === BACKUP_ADMIN_EMAIL) && 
+     bcryptjs.compareSync(password, ADMIN_PASSWORD_HASH))
+  ) {
+    const token = jwt.sign({ email: normalizedEmail, role: "admin" }, JWT_SECRET, { expiresIn: "24h" });
+    logActivity("Admin Login", `Admin logged in successfully from: ${email}`);
     return res.json({ token, email: normalizedEmail });
   }
 
-  return res.status(401).json({ error: "Invalid administrative credentials." });
+  return res.status(401).json({ error: "Invalid credentials." });
 });
 
 // Middleware to verify JWT token
@@ -305,8 +206,7 @@ const authenticateJWT = (req: any, res: any, next: any) => {
   }
   const token = authHeader.split(" ")[1];
   try {
-    const verifyKey = JWT_PUBLIC_KEY || JWT_SECRET;
-    const decoded = jwt.verify(token, verifyKey, JWT_PUBLIC_KEY ? { algorithms: ["RS256"] } : undefined);
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
@@ -314,13 +214,13 @@ const authenticateJWT = (req: any, res: any, next: any) => {
   }
 };
 
-// Outbound Email Log API
-app.get("/api/sent-emails", authenticateJWT, (req, res) => {
-  res.json(getDB<any[]>("sent_emails.json", []));
+// Mock Emails API
+app.get("/api/mock-emails", authenticateJWT, (req, res) => {
+  res.json(getDB<any[]>("mock_emails.json", []));
 });
 
-app.post("/api/sent-emails/clear", authenticateJWT, (req, res) => {
-  saveDB("sent_emails.json", []);
+app.post("/api/mock-emails/clear", authenticateJWT, (req, res) => {
+  saveDB("mock_emails.json", []);
   res.json({ success: true });
 });
 
@@ -328,96 +228,49 @@ app.post("/api/sent-emails/clear", authenticateJWT, (req, res) => {
 // Client Authentication & Portal Routes
 // ============================================
 
-// Email verification endpoint
-app.get("/api/auth/verify-email", (req, res) => {
-  const { token, email } = req.query as { token?: string; email?: string };
-  if (!token || !email) {
-    return res.status(400).json({ error: "Invalid verification link." });
+// Client Signup
+app.post("/api/auth/client-register", (req, res) => {
+  const { email, name, password } = req.body;
+  if (!email || !name || !password) {
+    return res.status(400).json({ error: "Email, name, and password are required." });
   }
-  const normalizedEmail = email.toLowerCase().trim();
-  const users = dbUsers();
-  const user = users.find(u => u.email === normalizedEmail && u.verificationToken === token);
-  if (!user) {
-    return res.status(400).json({ error: "Invalid token or email." });
-  }
-  if (Date.now() > (user.verificationExpires || 0)) {
-    return res.status(400).json({ error: "Verification token expired." });
-  }
-  user.emailVerified = true;
-  delete user.verificationToken;
-  delete user.verificationExpires;
-  saveDB("users.json", users);
-  logActivity("Email Verified", `User ${normalizedEmail} verified email.`);
-  return res.json({ success: true, message: "Email successfully verified." });
-});
-
-// Input validation schema for client registration
-const clientRegisterSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1),
-  password: z.string().min(6)
-});
-
-app.post("/api/auth/client-register", authLimiter, (req, res) => {
-  const parseResult = clientRegisterSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return res.status(400).json({ error: "Invalid registration data." });
-  }
-  const { email, name, password } = parseResult.data;
 
   const normalizedEmail = email.toLowerCase().trim();
   const users = dbUsers();
 
-  if (users.find(u => u.email === normalizedEmail)) {
+  const existingUser = users.find(u => u.email === normalizedEmail);
+  if (existingUser) {
     return res.status(400).json({ error: "An account with this email already exists." });
   }
 
-  const hashedPassword = bcryptjs.hashSync(password, 12);
-  const verificationToken = Math.random().toString(36).substr(2, 12);
-  const verificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24h
-
+  const hashedPassword = bcryptjs.hashSync(password, 10);
   const newUser = {
     id: "u_" + Math.random().toString(36).substr(2, 9),
     email: normalizedEmail,
     name,
     passwordHash: hashedPassword,
     avatar: `https://images.unsplash.com/photo-${["1534528741775-53994a69daeb", "1507003211169-0a1dd7228f2d", "1494790108377-be9c29b29330", "1500648767791-00dcc994a43e"][Math.floor(Math.random() * 4)]}?auto=format&fit=crop&w=150&q=80`,
-    emailVerified: true,
-    verificationToken,
-    verificationExpires,
     createdAt: new Date().toISOString()
   };
 
   users.push(newUser);
   saveDB("users.json", users);
 
-  // Dispatch verification email
-  const verifyLink = `${process.env.BASE_URL || "http://localhost:3000"}/verify-email?token=${verificationToken}&email=${encodeURIComponent(normalizedEmail)}`;
-  const emailBody = `Please verify your email by clicking the following link: ${verifyLink}`;
-  sendOutboundEmail(normalizedEmail, "Email Verification", emailBody, "verification");
-
-  const signOptions = JWT_PRIVATE_KEY ? { algorithm: "RS256" as const } : {};
-  const token = jwt.sign({ email: normalizedEmail, name, role: "client" }, JWT_PRIVATE_KEY || JWT_SECRET, { expiresIn: "24h", ...signOptions });
+  const token = jwt.sign({ email: normalizedEmail, name, role: "client" }, JWT_SECRET, { expiresIn: "24h" });
   logActivity("Client Registered", `New client account registered: ${name} (${normalizedEmail})`);
 
   return res.json({
     token,
-    user: { email: normalizedEmail, name, avatar: newUser.avatar, emailVerified: false }
+    user: { email: normalizedEmail, name, avatar: newUser.avatar }
   });
 });
 
-// Input validation schema for client login
-const clientLoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6)
-});
-
-app.post("/api/auth/client-login", authLimiter, (req, res) => {
-  const parseResult = clientLoginSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return res.status(400).json({ error: "Invalid login data." });
+// Client Login
+app.post("/api/auth/client-login", (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required." });
   }
-  const { email, password } = parseResult.data;
 
   const normalizedEmail = email.toLowerCase().trim();
   const users = dbUsers();
@@ -427,32 +280,33 @@ app.post("/api/auth/client-login", authLimiter, (req, res) => {
     return res.status(401).json({ error: "Invalid email or password." });
   }
 
-  if (!user.emailVerified) {
-    return res.status(403).json({ error: "Email not verified. Please check your inbox." });
-  }
-
-  const signOptions = JWT_PRIVATE_KEY ? { algorithm: "RS256" as const } : {};
-  const token = jwt.sign({ email: normalizedEmail, name: user.name, role: "client" }, JWT_PRIVATE_KEY || JWT_SECRET, { expiresIn: "24h", ...signOptions });
+  const token = jwt.sign({ email: normalizedEmail, name: user.name, role: "client" }, JWT_SECRET, { expiresIn: "24h" });
   logActivity("Client Login", `Client logged in successfully: ${user.name} (${normalizedEmail})`);
 
   return res.json({
     token,
-    user: { email: normalizedEmail, name: user.name, avatar: user.avatar, emailVerified: user.emailVerified }
+    user: { email: normalizedEmail, name: user.name, avatar: user.avatar }
   });
 });
 
 // Client Forgot Password - Request Reset Code
-app.post("/api/auth/client-forgot", authLimiter, (req, res) => {
+app.post("/api/auth/client-forgot", (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: "Email is required." });
   }
 
   const normalizedEmail = email.toLowerCase().trim();
+  const users = dbUsers();
+  const user = users.find(u => u.email === normalizedEmail);
+
+  if (!user) {
+    return res.status(404).json({ error: "No account found with this email address." });
+  }
 
   // Generate a mock code
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-
+  
   if (!(global as any).resetCodes) {
     (global as any).resetCodes = {};
   }
@@ -481,12 +335,12 @@ app.post("/api/auth/client-forgot", authLimiter, (req, res) => {
          <p style="color: #ef4444; font-size: 11px; margin: 0; font-family: monospace;">🚨 This verification session expires in exactly 15 minutes.</p>
       </div>
       <div style="text-align: center; margin-top: 30px; font-size: 11px; color: #4b5563;">
-        <p>© 2026 ARCADIA HUB. All systems operational on secure connection systems.</p>
+        <p>© 2026 ARCADIA CO-DEV HUB. All systems operational on secure sandbox protocols.</p>
       </div>
     </div>
   `;
 
-  sendOutboundEmail(normalizedEmail, "ARCADIA Security Ticket: Password Reset Authorization", passwordResetHTML, "password_reset");
+  sendMockEmail(normalizedEmail, "ARCADIA Security Ticket: Password Reset Authorization", passwordResetHTML, "password_reset");
 
   logActivity("Client Forgot Password", `Forgot password code requested for: ${normalizedEmail}. Code: ${code}`);
 
@@ -726,7 +580,40 @@ app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
   }
 });
 
+// Sandbox Fast-Access Session Generator
+app.post("/api/auth/social-sandbox", (req, res) => {
+  const { email, name } = req.body;
+  if (!email || !name) {
+    return res.status(400).json({ error: "Email and name are required for sandbox." });
+  }
 
+  const normalizedEmail = email.toLowerCase().trim();
+  const users = dbUsers();
+  let user = users.find(u => u.email === normalizedEmail);
+
+  if (!user) {
+    user = {
+      id: "u_" + Math.random().toString(36).substr(2, 9),
+      email: normalizedEmail,
+      name,
+      avatar: normalizedEmail.includes("vikram") 
+        ? "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
+        : "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+      createdAt: new Date().toISOString()
+    };
+    users.push(user);
+    saveDB("users.json", users);
+    logActivity("Sandbox Register", `Registered Sandbox Emulator Client: ${name}`);
+  }
+
+  const token = jwt.sign({ email: normalizedEmail, name: user.name, role: "client" }, JWT_SECRET, { expiresIn: "24h" });
+  logActivity("Sandbox Login", `Logged in Sandbox Emulator Client: ${name}`);
+
+  return res.json({
+    token,
+    user: { email: normalizedEmail, name: user.name, avatar: user.avatar }
+  });
+});
 
 // Admin Users List Endpoint
 app.get("/api/users", authenticateJWT, (req: any, res) => {
@@ -754,7 +641,7 @@ app.put("/api/orders/:id/approve-request", authenticateJWT, (req: any, res) => {
     const firstMilestone = order.milestones[0];
     if (firstMilestone.status === "Pending" || firstMilestone.status === "Link Sent") {
       firstMilestone.status = "Link Sent";
-      firstMilestone.paymentLink = `https://rzp.io/i/pay_arcadia_${order.id}_${firstMilestone.id}`;
+      firstMilestone.paymentLink = `https://rzp.io/i/mock_arcadia_${order.id}_${firstMilestone.id}`;
     }
 
     const paymentReqHTML = `
@@ -793,16 +680,16 @@ app.put("/api/orders/:id/approve-request", authenticateJWT, (req: any, res) => {
             <a href="${firstMilestone.paymentLink}" style="background-color: #2f80ff; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-size: 14px; font-weight: bold; display: inline-block; box-shadow: 0 4px 12px rgba(47, 128, 255, 0.3);">
               Authorize Milestone Payment Securely
             </a>
-            <span style="display: block; font-size: 10px; color: #6b7280; margin-top: 10px;">Powered by Razorpay Secure Payments</span>
+            <span style="display: block; font-size: 10px; color: #6b7280; margin-top: 10px;">Powered by Razorpay Secure Sandbox Protocol</span>
           </div>
         </div>
         <div style="text-align: center; margin-top: 30px; font-size: 11px; color: #4b5563;">
-          <p>© 2026 ARCADIA HUB. All systems operational on secure connection systems.</p>
+          <p>© 2026 ARCADIA CO-DEV HUB. All systems operational on secure sandbox protocols.</p>
         </div>
       </div>
     `;
 
-    sendOutboundEmail(order.email.toLowerCase().trim(), `ARCADIA Payment Request: ${firstMilestone.label}`, paymentReqHTML, "payment_request");
+    sendMockEmail(order.email.toLowerCase().trim(), `ARCADIA Payment Request: ${firstMilestone.label}`, paymentReqHTML, "payment_request");
   }
 
   // Create active notification for client portal
@@ -829,16 +716,7 @@ app.put("/api/orders/:id/approve-request", authenticateJWT, (req: any, res) => {
   res.json(order);
 });
 
-// Ownership check helper for client resources
-function ensureOwner(resourceEmail: string, userEmail: string, res: any): boolean {
-  if (resourceEmail.toLowerCase().trim() !== userEmail.toLowerCase().trim()) {
-    res.status(403).json({ error: "Access denied. Resource does not belong to the authenticated user." });
-    return false;
-  }
-  return true;
-}
-
-// Secured Client Data Endpoints with ownership verification
+// Secured Client Data Endpoints
 app.get("/api/client/notifications", authenticateJWT, (req: any, res) => {
   const userEmail = req.user.email;
   const notifications = dbNotifications();
@@ -900,7 +778,7 @@ app.put("/api/services/:id", authenticateJWT, (req, res) => {
   const services = dbServices();
   const idx = services.findIndex(s => s.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Service not found." });
-
+  
   services[idx] = { ...services[idx], ...req.body };
   saveDB("services.json", services);
   logActivity("Update Service", `Updated service: ${services[idx].title}`);
@@ -911,7 +789,7 @@ app.delete("/api/services/:id", authenticateJWT, (req, res) => {
   const services = dbServices();
   const idx = services.findIndex(s => s.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Service not found." });
-
+  
   const title = services[idx].title;
   services.splice(idx, 1);
   saveDB("services.json", services);
@@ -940,7 +818,7 @@ app.put("/api/projects/:id", authenticateJWT, (req, res) => {
   const projects = dbProjects();
   const idx = projects.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Project not found." });
-
+  
   projects[idx] = { ...projects[idx], ...req.body };
   saveDB("projects.json", projects);
   logActivity("Update Project", `Updated portfolio project: ${projects[idx].title}`);
@@ -951,7 +829,7 @@ app.delete("/api/projects/:id", authenticateJWT, (req, res) => {
   const projects = dbProjects();
   const idx = projects.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Project not found." });
-
+  
   const title = projects[idx].title;
   projects.splice(idx, 1);
   saveDB("projects.json", projects);
@@ -985,7 +863,7 @@ app.get("/api/orders", authenticateJWT, (req, res) => {
 app.post("/api/orders", (req, res) => {
   const orders = dbOrders();
   const budget = parseInt(req.body.budget) || 0;
-
+  
   const m1Amt = Math.round(budget * 0.3);
   const m2Amt = Math.round(budget * 0.5);
   const m3Amt = budget - m1Amt - m2Amt;
@@ -1032,7 +910,7 @@ app.put("/api/orders/:id/status", authenticateJWT, (req, res) => {
   const orders = dbOrders();
   const idx = orders.findIndex(o => o.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Order not found." });
-
+  
   orders[idx].status = req.body.status;
   saveDB("orders.json", orders);
   logActivity("Order Status Change", `Order status updated to '${req.body.status}' for client ${orders[idx].name}`);
@@ -1054,7 +932,7 @@ app.put("/api/orders/:id/milestones/:mid/request", authenticateJWT, (req, res) =
   if (!milestone) return res.status(404).json({ error: "Milestone not found." });
 
   milestone.status = "Link Sent";
-  milestone.paymentLink = `https://rzp.io/i/pay_arcadia_${order.id}_${milestone.id}`;
+  milestone.paymentLink = `https://rzp.io/i/mock_arcadia_${order.id}_${milestone.id}`;
 
   const paymentReqHTML = `
     <div style="font-family: sans-serif; background-color: #0d0f12; color: #f3f4f6; padding: 40px 20px; border-radius: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #1f2937;">
@@ -1092,17 +970,17 @@ app.put("/api/orders/:id/milestones/:mid/request", authenticateJWT, (req, res) =
           <a href="${milestone.paymentLink}" style="background-color: #2f80ff; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-size: 14px; font-weight: bold; display: inline-block; box-shadow: 0 4px 12px rgba(47, 128, 255, 0.3);">
             Authorize Milestone Payment Securely
           </a>
-          <span style="display: block; font-size: 10px; color: #6b7280; margin-top: 10px;">Powered by Razorpay Secure Payments</span>
+          <span style="display: block; font-size: 10px; color: #6b7280; margin-top: 10px;">Powered by Razorpay Secure Sandbox Protocol</span>
         </div>
       </div>
       <div style="text-align: center; margin-top: 30px; font-size: 11px; color: #4b5563;">
-        <p>© 2026 ARCADIA HUB. All systems operational on secure connection systems.</p>
+        <p>© 2026 ARCADIA CO-DEV HUB. All systems operational on secure sandbox protocols.</p>
       </div>
     </div>
   `;
 
-  sendOutboundEmail(order.email.toLowerCase().trim(), `ARCADIA Payment Request: ${milestone.label}`, paymentReqHTML, "payment_request");
-
+  sendMockEmail(order.email.toLowerCase().trim(), `ARCADIA Payment Request: ${milestone.label}`, paymentReqHTML, "payment_request");
+  
   // Create active notification for client portal
   const notifications = dbNotifications();
   const newNotification = {
@@ -1175,7 +1053,7 @@ app.put("/api/orders/:id/pay", (req, res) => {
   const orders = dbOrders();
   const idx = orders.findIndex(o => o.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Order not found." });
-
+  
   orders[idx].isPaid = true;
   orders[idx].paymentAmount = req.body.amount || 5000;
   // Set all milestones to paid if paying full
@@ -1214,7 +1092,7 @@ app.put("/api/blogs/:id", authenticateJWT, (req, res) => {
   const blogs = dbBlogs();
   const idx = blogs.findIndex(b => b.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Blog post not found." });
-
+  
   blogs[idx] = { ...blogs[idx], ...req.body };
   saveDB("blogs.json", blogs);
   logActivity("Update Blog", `Updated blog: ${blogs[idx].title}`);
@@ -1225,7 +1103,7 @@ app.delete("/api/blogs/:id", authenticateJWT, (req, res) => {
   const blogs = dbBlogs();
   const idx = blogs.findIndex(b => b.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Blog post not found." });
-
+  
   const title = blogs[idx].title;
   blogs.splice(idx, 1);
   saveDB("blogs.json", blogs);
@@ -1254,7 +1132,7 @@ app.put("/api/faqs/:id", authenticateJWT, (req, res) => {
   const faqs = dbFAQs();
   const idx = faqs.findIndex(f => f.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "FAQ not found." });
-
+  
   faqs[idx] = { ...faqs[idx], ...req.body };
   saveDB("faqs.json", faqs);
   logActivity("Update FAQ", `Updated FAQ: ${faqs[idx].question}`);
@@ -1265,7 +1143,7 @@ app.delete("/api/faqs/:id", authenticateJWT, (req, res) => {
   const faqs = dbFAQs();
   const idx = faqs.findIndex(f => f.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "FAQ not found." });
-
+  
   const question = faqs[idx].question;
   faqs.splice(idx, 1);
   saveDB("faqs.json", faqs);
@@ -1456,38 +1334,36 @@ Be friendly, and answer in English (or Hindi if they speak Hindi, representing m
 
       const text = response.text || "I apologize, but I couldn't generate a response right now. Please feel free to ask again.";
       return res.json({ text });
+    } else {
+      // Fallback Simulator mode if Gemini API key is missing
+      const lower = message.toLowerCase();
+      let responseText = "";
+      if (lower.includes("price") || lower.includes("rate") || lower.includes("cost") || lower.includes("catalog")) {
+        responseText = "Arcadia offers highly transparent, award-winning pricing. Some of our popular solutions are:\n" +
+          "- **Landing Pages**: ₹2,999\n" +
+          "- **Business Websites**: ₹7,999\n" +
+          "- **E-Commerce Web Apps**: ₹19,999\n" +
+          "- **AI Chatbots**: ₹7,999\n" +
+          "- **Android / iOS Apps**: Starting from ₹29,999\n\n" +
+          "Would you like me to guide you to our order system?";
+      } else if (lower.includes("book") || lower.includes("demo") || lower.includes("consultation") || lower.includes("call")) {
+        responseText = "I'd be absolutely thrilled to assist you with booking a free 30-minute consultation! You can complete the 'Book Free Demo' form below directly, or give me your details (Name, Email, Phone, Preferred Mode) and our elite architects will connect with you.";
+      } else if (lower.includes("services") || lower.includes("what do you do") || lower.includes("develop")) {
+        responseText = "ARCADIA is an elite, multi-disciplinary engineering agency providing:\n" +
+          "1. **Modern Web Development** (SaaS platforms, E-Commerce, Portfolios)\n" +
+          "2. **Advanced AI Solutions** (Custom LLM systems, Gemini Chatbots, voice-agents)\n" +
+          "3. **Native Mobile App Engineering** (iOS & Android)\n" +
+          "4. **Brand Design & SEO Strategy** (Figma wireframing, core identity, performance audit)";
+      } else {
+        responseText = "Thank you for connecting with ARCADIA AI Solutions. We are an Indian web development and artificial intelligence studio focused on building high-performance digital legacies.\n\n" +
+          "Whether you need a custom landing page (₹2,999), e-commerce setup, or custom AI chatbots (₹7,999), we deliver next-generation performance. How can I empower your project today?";
+      }
+      return res.json({ text: responseText, note: "AI running in adaptive offline preview mode" });
     }
   } catch (err: any) {
-    console.error("Gemini API server-side error (falling back to simulator):", err.message);
-    // Fall through to simulator mode below
+    console.error("Gemini API server-side error:", err);
+    return res.status(500).json({ error: "Gemini server-side communication failed.", details: err.message });
   }
-
-  // Fallback Simulator mode if Gemini API key is missing or call failed
-  const lower = message.toLowerCase();
-  let responseText = "";
-  if (lower.includes("price") || lower.includes("rate") || lower.includes("cost") || lower.includes("catalog")) {
-    responseText = "Arcadia offers highly transparent, award-winning pricing. Some of our popular solutions are:\n" +
-      "- **Landing Pages**: ₹2,999\n" +
-      "- **Business Websites**: ₹7,999\n" +
-      "- **E-Commerce Web Apps**: ₹19,999\n" +
-      "- **AI Chatbots**: ₹7,999\n" +
-      "- **Android / iOS Apps**: Starting from ₹29,999\n\n" +
-      "Would you like me to guide you to our order system?";
-  } else if (lower.includes("order") || lower.includes("buy") || lower.includes("purchase") || lower.includes("start")) {
-    responseText = "Absolutely! You can start your project right away through our 'Start Your Project' section. Simply select a service, fill in your details, and we'll get back to you within 24 hours with a personalized proposal. Click the **Order** button on any service card to begin!";
-  } else if (lower.includes("book") || lower.includes("demo") || lower.includes("consultation") || lower.includes("call")) {
-    responseText = "I'd be absolutely thrilled to assist you with booking a free 30-minute consultation! You can complete the 'Book Free Demo' form below directly, or give me your details (Name, Email, Phone, Preferred Mode) and our elite architects will connect with you.";
-  } else if (lower.includes("services") || lower.includes("what do you do") || lower.includes("develop")) {
-    responseText = "ARCADIA is an elite, multi-disciplinary engineering agency providing:\n" +
-      "1. **Modern Web Development** (SaaS platforms, E-Commerce, Portfolios)\n" +
-      "2. **Advanced AI Solutions** (Custom LLM systems, Gemini Chatbots, voice-agents)\n" +
-      "3. **Native Mobile App Engineering** (iOS & Android)\n" +
-      "4. **Brand Design & SEO Strategy** (Figma wireframing, core identity, performance audit)";
-  } else {
-    responseText = "Thank you for connecting with ARCADIA AI Solutions. We are an Indian web development and artificial intelligence studio focused on building high-performance digital legacies.\n\n" +
-      "Whether you need a custom landing page (₹2,999), e-commerce setup, or custom AI chatbots (₹7,999), we deliver next-generation performance. How can I empower your project today?";
-  }
-  return res.json({ text: responseText, note: "AI running in adaptive offline preview mode" });
 });
 
 // Real-Time Dev System Health & Latency Endpoint
@@ -1498,7 +1374,7 @@ app.get("/api/health", (req, res) => {
     timestamp: new Date().toISOString(),
     database: "Active JSON DB persistence",
     hmrStatus: "disabled",
-    containerPort: 5713,
+    containerPort: 3000,
     nodeVersion: process.version,
     platform: "Cloud Run Container"
   });
@@ -1506,8 +1382,9 @@ app.get("/api/health", (req, res) => {
 
 // Configure Vite middleware in development
 async function startServer() {
-  if (process.env.NODE_ENV !== "production" && process.env.PORT !== "3000") {
-    const { createServer: createViteServer } = await import("vite");
+  if (process.env.NO_VITE === "true") {
+    console.log("Starting server in API-only mode (NO_VITE = true)");
+  } else if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -1516,10 +1393,12 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    // SPA Fallback for production
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    // SPA Fallback for production (only if not running on Vercel serverless function)
+    if (!process.env.VERCEL) {
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
   }
 
   if (!process.env.VERCEL) {
@@ -1529,10 +1408,6 @@ async function startServer() {
   }
 }
 
-// Start server only when running directly (not imported by Vite config or Vercel serverless)
-if (!process.env.VERCEL && !process.env.SERVER_STARTED && process.argv[1] && !process.argv[1].toLowerCase().includes("vite")) {
-  process.env.SERVER_STARTED = "true";
-  startServer();
-}
+startServer();
 
 export default app;

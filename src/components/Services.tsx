@@ -30,19 +30,11 @@ interface ServicesProps {
 export default function Services({ services, onSelectService, lang }: ServicesProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showAllMobile, setShowAllMobile] = useState(false);
 
   React.useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedQuery(searchQuery);
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [searchQuery]);
-
-  React.useEffect(() => {
     setShowAllMobile(false);
-  }, [selectedCategory, debouncedQuery]);
+  }, [selectedCategory, searchQuery]);
 
   const categories = ["All", "Web Development", "AI Solutions", "Design & Marketing"];
 
@@ -68,25 +60,23 @@ export default function Services({ services, onSelectService, lang }: ServicesPr
   // Filter and search logic
   const filteredServices = services.filter(service => {
     const matchesCategory = selectedCategory === "All" || service.category === selectedCategory;
-    const q = debouncedQuery.toLowerCase().trim();
-    if (!q) return matchesCategory;
-    const matchesSearch = service.title.toLowerCase().includes(q) || 
-                          service.description.toLowerCase().includes(q);
+    const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          service.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   return (
     <section 
       id="services" 
-      className="py-24 relative w-full bg-[#050505]/40 backdrop-blur-md border-y border-white/5 overflow-hidden animate-fade-in"
+      className="py-12 sm:py-24 relative w-full bg-[#050505]/40 backdrop-blur-md border-y border-white/5 overflow-hidden animate-fade-in"
     >
       <div className="glow-bg glow-blue w-[400px] h-[400px] top-[10%] right-[5%] opacity-30" />
       <div className="glow-bg glow-cyan w-[400px] h-[400px] bottom-[10%] left-[5%] opacity-20" />
 
-      <div className="container mx-auto px-6 relative z-10 w-full max-w-7xl">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10 w-full max-w-7xl">
         
         {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-16">
+        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}

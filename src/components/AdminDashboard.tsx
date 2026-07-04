@@ -69,7 +69,6 @@ export default function AdminDashboard({
   const [authError, setAuthError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showBypassVault, setShowBypassVault] = useState(false);
 
   // Dashboard content states (REST fetched)
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -79,7 +78,7 @@ export default function AdminDashboard({
   const [vacancies, setVacancies] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
-  const [sentEmails, setSentEmails] = useState<any[]>([]);
+  const [mockEmails, setMockEmails] = useState<any[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<any | null>(null);
 
   // Selected tab state
@@ -200,7 +199,7 @@ export default function AdminDashboard({
         fetch("/api/vacancies"),
         fetch("/api/applications", { headers }),
         fetch("/api/users", { headers }),
-        fetch("/api/sent-emails", { headers })
+        fetch("/api/mock-emails", { headers })
       ]);
 
       if (bRes.ok && oRes.ok && iRes.ok && lRes.ok) {
@@ -211,7 +210,7 @@ export default function AdminDashboard({
         if (vRes && vRes.ok) setVacancies(await vRes.json());
         if (aRes && aRes.ok) setApplications(await aRes.json());
         if (uRes && uRes.ok) setUsersList(await uRes.json());
-        if (eRes && eRes.ok) setSentEmails(await eRes.json());
+        if (eRes && eRes.ok) setMockEmails(await eRes.json());
       } else {
         // Token expired/invalid, clear auth
         handleLogout();
@@ -257,14 +256,14 @@ export default function AdminDashboard({
     }
   };
 
-  const handleClearSentEmails = async () => {
+  const handleClearMockEmails = async () => {
     try {
-      const res = await fetch("/api/sent-emails/clear", {
+      const res = await fetch("/api/mock-emails/clear", {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        onShowToast?.("success", "Outbound email dispatch ledger cleared successfully!");
+        onShowToast?.("success", "Simulation dispatch ledger cleared successfully!");
         fetchAdminData();
         setSelectedEmail(null);
       } else {
@@ -272,7 +271,7 @@ export default function AdminDashboard({
       }
     } catch (err) {
       console.error(err);
-      onShowToast?.("error", "Database synchronization failed. Please check your network and try again.");
+      onShowToast?.("error", "Database link failed.");
     }
   };
 
@@ -325,20 +324,6 @@ export default function AdminDashboard({
     } catch (err) {
       console.error(err);
     }
-  };
-
-  // File upload helper for image conversion to base64
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, target: "project" | "service") => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      if (target === "project") {
-        setProjectForm(prev => ({ ...prev, imageUrl: base64 }));
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   // CRUD Actions
@@ -479,10 +464,10 @@ export default function AdminDashboard({
         {!token ? (
           <div className="max-w-md mx-auto relative group">
             {/* Ambient cyber-glow backdrop behind card */}
-            <div className="absolute inset-0 bg-gradient-to-r from-arcadia-cyan/10 via-arcadia-blue/10 to-purple-500/10 rounded-[32px] blur-3xl opacity-80 pointer-events-none transition-all duration-1000 group-hover:opacity-100" />
+            <div className="absolute inset-0 bg-gradient-to-r from-arcadia-cyan/10 via-arcadia-blue/10 to-purple-500/10 rounded-3xl blur-3xl opacity-80 pointer-events-none transition-all duration-1000 group-hover:opacity-100" />
             
             {/* Core container card */}
-            <div className="relative rounded-[32px] p-8 bg-arcadia-dark/95 border border-white/10 shadow-[0_0_50px_rgba(47,128,255,0.12)] overflow-hidden backdrop-blur-xl">
+            <div className="relative rounded-3xl p-8 bg-arcadia-dark/95 border border-white/10 shadow-[0_0_50px_rgba(47,128,255,0.12)] overflow-hidden backdrop-blur-xl">
               
               {/* Animated cyber scanner line representing visual token verification */}
               <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-arcadia-cyan to-transparent animate-pulse pointer-events-none" />
@@ -559,7 +544,7 @@ export default function AdminDashboard({
                     <input
                       type="text"
                       required
-                      placeholder="admin"
+                      placeholder="username"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       className="w-full pl-4 pr-10 py-3 bg-white/[0.02] border border-white/10 rounded-xl text-xs text-white placeholder-gray-600 focus:outline-none focus:border-arcadia-cyan focus:ring-1 focus:ring-arcadia-cyan/30 transition-all font-mono"
@@ -611,6 +596,9 @@ export default function AdminDashboard({
                   )}
                 </AnimatedButton>
               </form>
+
+
+
             </div>
           </div>
         ) : (
@@ -634,14 +622,14 @@ export default function AdminDashboard({
                   { id: "overview", label: "Overview", icon: BarChart2 },
                   { id: "orders", label: "Client Orders", icon: ListOrdered },
                   { id: "users", label: "Registered Clients", icon: Users },
-                  { id: "bookings", label: "Consultations", icon: Calendar },
+                  { id: "bookings", label: "Demo Bookings", icon: Calendar },
                   { id: "catalog", label: "Catalog Editor", icon: Layers },
-                  { id: "projects", label: "Digital Footprints (Projects)", icon: BookOpen },
+                  { id: "projects", label: "Projects Panel", icon: BookOpen },
                   { id: "vacancies", label: "Vacancies", icon: Briefcase },
                   { id: "applications", label: "Job Applications", icon: UserCheck },
                   { id: "inquiries", label: "Inquiries", icon: MessageSquare },
                   { id: "logs", label: "Activity Logs", icon: Activity },
-                  { id: "emails", label: "Outbound Email Log", icon: Mail }
+                  { id: "emails", label: "Email Dispatcher", icon: Mail }
                 ] as const).map(tab => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
@@ -1308,15 +1296,15 @@ export default function AdminDashboard({
                 <div className="space-y-6">
                   <div className="flex justify-between items-center border-b border-white/5 pb-4">
                     <div>
-                      <h3 className="font-display font-black text-lg text-white">DIGITAL FOOTPRINTS (PORTFOLIO PROJECTS)</h3>
-                      <p className="font-sans text-xs text-gray-500">Add, edit, or remove Our Digital Footprints showcased on the frontend.</p>
+                      <h3 className="font-display font-black text-lg text-white">PROJECTS PANEL</h3>
+                      <p className="font-sans text-xs text-gray-500">Edit, add or prune portfolio entries.</p>
                     </div>
                     <AnimatedButton
                       onClick={() => setIsCreatingNew("project")}
                       className="px-3.5 py-1.5 rounded-full bg-arcadia-blue hover:bg-blue-600 text-white text-xs font-bold tracking-wide flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(47,128,255,0.3)]"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>New Digital Footprint</span>
+                      <span>New Project</span>
                     </AnimatedButton>
                   </div>
 
@@ -1324,7 +1312,7 @@ export default function AdminDashboard({
                   {(isCreatingNew === "project" || (isEditing && isEditing.type === "project")) && (
                     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-6 rounded-2xl bg-[#0d111c] border border-arcadia-blue/30 mb-6">
                       <h4 className="font-display font-bold text-sm text-white mb-4">
-                        {isCreatingNew === "project" ? "Create New Digital Footprint" : `Edit Digital Footprint: ${isEditing.data.title}`}
+                        {isCreatingNew === "project" ? "Create New Portfolio Project" : `Edit Portfolio Project: ${isEditing.data.title}`}
                       </h4>
                       <form onSubmit={handleSaveProject} className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-gray-300">
                         <div>
@@ -1353,21 +1341,15 @@ export default function AdminDashboard({
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1 font-bold">Preview Image (URL or Upload File)</label>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              required
-                              placeholder="Unsplash image URL..."
-                              value={projectForm.imageUrl}
-                              onChange={e => setProjectForm({ ...projectForm, imageUrl: e.target.value })}
-                              className="flex-1 px-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-lg text-xs text-white"
-                            />
-                            <label className="px-3 py-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white font-mono text-[10px] cursor-pointer flex items-center shrink-0">
-                              <span>Upload File</span>
-                              <input type="file" accept="image/*" className="hidden" onChange={e => handleFileUpload(e, "project")} />
-                            </label>
-                          </div>
+                          <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1 font-bold">Preview Image URL</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Unsplash image URL..."
+                            value={projectForm.imageUrl}
+                            onChange={e => setProjectForm({ ...projectForm, imageUrl: e.target.value })}
+                            className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-lg text-xs text-white"
+                          />
                         </div>
                         <div>
                           <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1 font-bold">Live Demo URL</label>
@@ -1796,17 +1778,17 @@ export default function AdminDashboard({
                 </div>
               )}
 
-              {/* TAB OUTBOUND EMAIL LOG */}
+              {/* TAB EMAIL DISPATCHER */}
               {activeTab === "emails" && (
                 <div className="space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
                     <div>
-                      <h3 className="font-display font-black text-lg text-white uppercase tracking-tight">Outbound Email Log</h3>
-                      <p className="font-sans text-xs text-gray-500">Real-time log records for dispatched verification tokens and milestone payment requests.</p>
+                      <h3 className="font-display font-black text-lg text-white uppercase tracking-tight">Email Dispatcher Simulator</h3>
+                      <p className="font-sans text-xs text-gray-500">Real-time simulation logs for dispatched verification tokens and milestone payment requests.</p>
                     </div>
-                    {sentEmails.length > 0 && (
+                    {mockEmails.length > 0 && (
                       <AnimatedButton
-                        onClick={handleClearSentEmails}
+                        onClick={handleClearMockEmails}
                         className="px-3.5 py-1.5 rounded-full border border-red-500/20 text-red-400 text-xs font-semibold hover:bg-red-500/10 transition-all flex items-center gap-1.5 shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1818,12 +1800,12 @@ export default function AdminDashboard({
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Panel: List of Sent Emails */}
                     <div className="lg:col-span-4 space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-                      {sentEmails.length === 0 ? (
+                      {mockEmails.length === 0 ? (
                         <div className="text-center py-12 text-gray-500 font-mono text-xs border border-white/5 rounded-2xl bg-white/[0.005]">
-                          NO OUTBOUND EMAILS DISPATCHED YET
+                          NO SIMULATED EMAILS SENT YET
                         </div>
                       ) : (
-                        sentEmails.map((mail) => {
+                        mockEmails.map((mail) => {
                           const isSelected = selectedEmail?.id === mail.id;
                           return (
                             <AnimatedButton

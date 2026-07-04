@@ -58,7 +58,10 @@ export default function LoginPortal({
   const [showOAuthGuide, setShowOAuthGuide] = useState(false);
   const [guideProvider, setGuideProvider] = useState<"Google" | "GitHub">("Google");
 
-
+  // Simulated Social OAuth states
+  const [socialPromptProvider, setSocialPromptProvider] = useState<"google" | "github" | null>(null);
+  const [socialName, setSocialName] = useState("Aura Client");
+  const [socialEmail, setSocialEmail] = useState("godesportsfreefire@gmail.com");
 
   // Client Forgot Password states
   const [isClientForgot, setIsClientForgot] = useState(false);
@@ -88,7 +91,7 @@ export default function LoginPortal({
         setClientAuthError(data.error || "Failed to process reset request.");
       }
     } catch (err) {
-      setClientAuthError("Could not connect to the security service. Please check your network and try again.");
+      setClientAuthError("Connection to security service failed.");
     } finally {
       setIsForgotLoading(false);
     }
@@ -121,7 +124,7 @@ export default function LoginPortal({
         setClientAuthError(data.error || "Reset validation failed.");
       }
     } catch (err) {
-      setClientAuthError("Could not connect to the security service. Please check your network and try again.");
+      setClientAuthError("Connection to security service failed.");
     } finally {
       setIsForgotLoading(false);
     }
@@ -158,7 +161,7 @@ export default function LoginPortal({
         setClientAuthError(data.error || "Authentication failed. Double check credentials.");
       }
     } catch (err) {
-      setClientAuthError("Could not connect to the authentication gateway. Please check your network and try again.");
+      setClientAuthError("Could not connect to authentication gateway.");
     } finally {
       setIsClientLoading(false);
     }
@@ -184,65 +187,43 @@ export default function LoginPortal({
         setAdminAuthError(data.error || "Access denied. Token verification failed.");
       }
     } catch (err) {
-      setAdminAuthError("Administrative authentication connection failed. Please check your connection to the server.");
+      setAdminAuthError("Administrative bridge handshake failed.");
     } finally {
       setIsAdminLoading(false);
     }
   };
 
-
-
   // Popup-based Social Authentication
-  const handleSocialAuth = async (provider: "google" | "github") => {
-    setClientAuthError("");
-    try {
-      const res = await fetch(`/api/auth/social-url?provider=${provider}`);
-      const data = await res.json();
+  const handleSocialAuth = (provider: "google" | "github") => {
+    setSocialPromptProvider(provider);
+  };
 
-      if (!res.ok) {
-        throw new Error(data.error || "Authentication is not configured.");
-      }
-
-      if (data.configNeeded) {
-        setGuideProvider(provider === "google" ? "Google" : "GitHub");
-        setShowOAuthGuide(true);
-        return;
-      }
-
-      const authWindow = window.open(
-        data.url,
-        "oauth_popup",
-        "width=600,height=700"
-      );
-
-      if (!authWindow) {
-        onShowToast("error", "Popup blocked! Please allow popups to sign in with social networks.");
-        return;
-      }
-
-      const handlePopupMessage = (event: MessageEvent) => {
-        const origin = event.origin;
-        if (!origin.endsWith(".run.app") && !origin.includes("localhost")) {
-          return;
-        }
-
-        if (event.data?.type === "OAUTH_AUTH_SUCCESS") {
-          const payload = event.data.user;
+  // Sandbox login
+  const handleSandboxLogin = (emailPreset: string, namePreset: string) => {
+    setIsClientLoading(true);
+    setTimeout(async () => {
+      try {
+        const res = await fetch("/api/auth/social-sandbox", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: emailPreset, name: namePreset })
+        });
+        const data = await res.json();
+        if (res.ok) {
           onClientLoginSuccess(
-            payload.name,
-            payload.email,
-            event.data.token,
-            payload.avatar || ""
+            data.user.name,
+            data.user.email,
+            data.token,
+            data.user.avatar || ""
           );
-          onShowToast("success", `Successfully authenticated via ${provider === "google" ? "Google" : "GitHub"}!`);
-          window.removeEventListener("message", handlePopupMessage);
+          onShowToast("success", `Sandbox access approved for ${namePreset}!`);
         }
-      };
-
-      window.addEventListener("message", handlePopupMessage);
-    } catch (err: any) {
-      setClientAuthError(err.message || "Social login failed.");
-    }
+      } catch (err) {
+        onShowToast("error", "Sandbox gateway connection failed.");
+      } finally {
+        setIsClientLoading(false);
+      }
+    }, 400);
   };
 
   return (
@@ -250,12 +231,12 @@ export default function LoginPortal({
       <div className="w-full max-w-md mx-auto px-4 relative group">
         
         {/* Ambient background glow matching our cyber style */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-arcadia-blue/10 via-purple-500/5 to-arcadia-cyan/15 rounded-[32px] blur-3xl opacity-80 pointer-events-none transition-all duration-700 group-hover:opacity-100" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-arcadia-blue/10 via-purple-500/5 to-arcadia-cyan/15 rounded-3xl blur-3xl opacity-80 pointer-events-none transition-all duration-700 group-hover:opacity-100" />
         
-        <div className="relative rounded-[32px] p-8 bg-arcadia-dark/95 border border-white/10 shadow-2xl backdrop-blur-xl">
+        <div className="relative rounded-3xl p-8 bg-arcadia-dark/95 border border-white/10 shadow-2xl backdrop-blur-xl">
           
           {/* Header tabs select sector */}
-          <div className="flex p-1.5 bg-black/40 border border-white/5 rounded-2xl mb-8">
+          <div className="flex p-1.5 bg-black/40 border border-white/5 rounded-3xl mb-8">
             <AnimatedButton
               onClick={() => setActiveTab("client")}
               className={`flex-1 py-2.5 rounded-xl font-display text-xs font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer ${
@@ -309,8 +290,8 @@ export default function LoginPortal({
                     </h3>
                     <p className="font-sans text-[11px] text-gray-500 mt-2 leading-relaxed">
                       {forgotStep === "email" 
-                        ? "Enter your client business email address to generate a password reset code."
-                        : "Verify your verification code and specify your new password."}
+                        ? "Enter your client business email address to generate a sandbox security reset ticket code."
+                        : "Verify your sandbox security code and specify your new corporate security key pass."}
                     </p>
                   </div>
 
@@ -357,10 +338,10 @@ export default function LoginPortal({
                   ) : (
                     <form onSubmit={handleResetSubmit} className="space-y-4">
                       {forgotCodeReceived && (
-                        <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 space-y-1.5 text-left">
-                          <span className="block text-[8px] font-mono text-amber-500 uppercase tracking-widest font-bold">Verification Ticket Dispatch</span>
+                        <div className="p-3.5 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-300 space-y-1.5 text-left">
+                          <span className="block text-[8px] font-mono text-amber-500 uppercase tracking-widest font-bold">Sandbox Dispatch Simulator</span>
                           <p className="text-[10px] font-sans">
-                            A verification code has been dispatched. For staging, it is outputted here:
+                            Since you are in developer sandbox mode, we have securely outputted your reset code below:
                           </p>
                           <div className="flex items-center justify-between pt-1 font-mono text-xs font-bold text-white bg-black/40 p-2 rounded-lg border border-amber-500/10">
                             <span>Verification Code:</span>
@@ -439,11 +420,11 @@ export default function LoginPortal({
                 >
                   <div className="text-center">
                     <h3 className="font-display font-black text-xl text-white tracking-tight uppercase">
-                      {isClientSignUp ? "Create Client Account" : "Client Portal Access"}
+                      {isClientSignUp ? "Establish Portal Account" : "Access Co-Dev Hub"}
                     </h3>
                     <p className="font-sans text-[11px] text-gray-500 mt-2 leading-relaxed">
                       {isClientSignUp 
-                        ? "Create a dedicated account to track project orders, verify milestones, and download invoices."
+                        ? "Create a dedicated digital workspace to co-author custom system code, track orders, and download receipts."
                         : "Login to verify milestones, request payment details, download company-signed invoices, and track logs."}
                     </p>
                   </div>
@@ -577,7 +558,7 @@ export default function LoginPortal({
                           <span>Processing Session...</span>
                         </>
                       ) : (
-                        <span>{isClientSignUp ? "Create Account" : "Log In"}</span>
+                        <span>{isClientSignUp ? "Create Workspace account" : "Initialize Secure Client Session"}</span>
                       )}
                     </AnimatedButton>
                   </form>
@@ -601,6 +582,36 @@ export default function LoginPortal({
                     )}
                   </div>
 
+                  {/* FAST SANDBOX ACCREDITED LOGIN */}
+                  <div className="pt-4 border-t border-white/5 text-center">
+                    <div className="flex items-center justify-center gap-1 mb-2">
+                      <Info className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                      <span className="text-[8px] font-mono text-amber-400 uppercase tracking-widest font-bold">
+                        Corporate Sandbox Presets
+                      </span>
+                    </div>
+                    <p className="text-[9px] text-gray-500 mb-3 leading-relaxed">
+                      Simulate instant logins with predefined test client dossiers below. No register setup required.
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-1.5">
+                      <AnimatedButton
+                        type="button"
+                        onClick={() => handleSandboxLogin("vikram@zenix.com", "Vikram Malhotra")}
+                        className="px-2 py-1.5 bg-white/[0.02] border border-white/5 rounded-lg font-mono text-[8px] text-gray-400 hover:text-white hover:border-arcadia-cyan/40 transition-all cursor-pointer flex items-center gap-1"
+                      >
+                        <span>👤 Vikram Malhotra (Zenix)</span>
+                        <ArrowRight className="w-2.5 h-2.5 text-arcadia-cyan" />
+                      </AnimatedButton>
+                      <AnimatedButton
+                        type="button"
+                        onClick={() => handleSandboxLogin("priyanka@aura.com", "Priyanka Sen")}
+                        className="px-2 py-1.5 bg-white/[0.02] border border-white/5 rounded-lg font-mono text-[8px] text-gray-400 hover:text-white hover:border-arcadia-cyan/40 transition-all cursor-pointer flex items-center gap-1"
+                      >
+                        <span>👤 Priyanka Sen (Aura)</span>
+                        <ArrowRight className="w-2.5 h-2.5 text-arcadia-cyan" />
+                      </AnimatedButton>
+                    </div>
+                  </div>
                 </motion.div>
               )
             ) : (
@@ -640,7 +651,7 @@ export default function LoginPortal({
                       <input
                         type="text"
                         required
-                        placeholder="arcadia"
+                        placeholder="username"
                         value={adminEmail}
                         onChange={e => setAdminEmail(e.target.value)}
                         className="w-full pl-4 pr-10 py-2.5 bg-white/[0.02] border border-white/10 rounded-xl text-xs text-white placeholder-gray-600 focus:outline-none focus:border-arcadia-cyan focus:ring-1 focus:ring-arcadia-cyan/30 transition-all font-mono"
@@ -694,7 +705,98 @@ export default function LoginPortal({
         </div>
       </div>
 
+      {/* Branded Social OAuth Simulator Modal */}
+      <AnimatePresence>
+        {socialPromptProvider && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-[130] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className={`w-full max-w-md rounded-3xl p-6 relative space-y-6 border ${
+                socialPromptProvider === "google" 
+                  ? "bg-[#1A1A1A] border-blue-500/20 shadow-[0_0_40px_rgba(59,130,246,0.15)]" 
+                  : "bg-[#0D1117] border-purple-500/20 shadow-[0_0_40px_rgba(147,51,234,0.15)]"
+              }`}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2.5">
+                  <div className={`p-2 rounded-xl ${
+                    socialPromptProvider === "google" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"
+                  }`}>
+                    {socialPromptProvider === "google" ? <Globe className="w-5 h-5" /> : <Github className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <h3 className="font-display font-black text-xs text-white uppercase tracking-wider">
+                      {socialPromptProvider === "google" ? "Google" : "GitHub"} Authentication
+                    </h3>
+                    <p className="text-[8px] font-mono text-gray-500 uppercase tracking-widest mt-0.5">Sandboxed Federated OAuth</p>
+                  </div>
+                </div>
+                <AnimatedButton
+                  onClick={() => setSocialPromptProvider(null)}
+                  className="p-1 rounded-full hover:bg-white/5 text-gray-400 hover:text-white cursor-pointer transition"
+                >
+                  <X className="w-4 h-4" />
+                </AnimatedButton>
+              </div>
 
+              <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl text-[10px] text-gray-400 leading-relaxed">
+                <span className="text-white font-bold block mb-1">ℹ️ Browser Sandbox Bridge active</span>
+                Due to standard iframe sandboxing restrictions in the workspace development panel, live social auth windows are securely simulated. Please enter your email and profile name below to initiate your secure corporate client dossier instantly.
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[8px] uppercase font-mono text-gray-500 mb-1.5 font-bold tracking-wider">Profile Username / Full Name</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={socialName}
+                      onChange={e => setSocialName(e.target.value)}
+                      placeholder="e.g. Priyesh Patel"
+                      className="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[8px] uppercase font-mono text-gray-500 mb-1.5 font-bold tracking-wider">Federated Account Email</label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={socialEmail}
+                      onChange={e => setSocialEmail(e.target.value)}
+                      placeholder="e.g. user@gmail.com"
+                      className="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
+                    />
+                  </div>
+                </div>
+
+                <AnimatedButton
+                  onClick={() => {
+                    handleSandboxLogin(socialEmail, socialName);
+                    setSocialPromptProvider(null);
+                  }}
+                  className={`w-full py-3 rounded-xl font-display text-[10px] font-bold uppercase tracking-wider transition duration-300 cursor-pointer flex items-center justify-center gap-2 ${
+                    socialPromptProvider === "google"
+                      ? "bg-blue-600 hover:bg-blue-500 text-white shadow-[0_4px_12px_rgba(59,130,246,0.25)]"
+                      : "bg-purple-600 hover:bg-purple-500 text-white shadow-[0_4px_12px_rgba(147,51,234,0.25)]"
+                  }`}
+                >
+                  {socialPromptProvider === "google" ? <Globe className="w-3.5 h-3.5" /> : <Github className="w-3.5 h-3.5" />}
+                  <span>Sign In with {socialPromptProvider === "google" ? "Google Sandbox" : "GitHub Sandbox"}</span>
+                </AnimatedButton>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Social login popup OAuth configuration guide */}
       <AnimatePresence>
@@ -714,7 +816,7 @@ export default function LoginPortal({
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-5 h-5 text-arcadia-cyan shrink-0 animate-pulse" />
-                  <h3 className="font-display font-black text-sm text-white uppercase">{guideProvider} OAuth Config Required</h3>
+                  <h3 className="font-display font-black text-sm text-white uppercase">{guideProvider} Sandbox Config Needed</h3>
                 </div>
                 <AnimatedButton
                   onClick={() => setShowOAuthGuide(false)}
@@ -725,7 +827,7 @@ export default function LoginPortal({
               </div>
 
               <p className="font-sans text-[11px] text-gray-400 leading-relaxed">
-                To link live production social authorization profiles on {guideProvider}, you must provision official client keys using Arcadia Platform settings.
+                To link live production social authorization profiles on {guideProvider}, you must provision official client keys using AI Studio settings.
               </p>
 
               <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl font-mono text-[9px] text-gray-400 space-y-1.5">
@@ -736,10 +838,28 @@ export default function LoginPortal({
                 <div>{guideProvider === "Google" ? "GOOGLE_CLIENT_SECRET" : "GITHUB_CLIENT_SECRET"}=...</div>
               </div>
 
+              <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 text-[10px] text-gray-400 leading-relaxed">
+                <span className="text-white font-bold block mb-0.5">💡 Interactive Fast Bypass Sandbox available!</span>
+                You don't need to configure anything. Click the 'Bypass & Simulate' button below to instantly trigger an active authenticated sandbox token.
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <AnimatedButton
+                  onClick={() => {
+                    setShowOAuthGuide(false);
+                    if (guideProvider === "Google") {
+                      handleSandboxLogin("vikram@zenix.com", "Vikram Malhotra");
+                    } else {
+                      handleSandboxLogin("priyanka@aura.com", "Priyanka Sen");
+                    }
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-display text-[10px] font-bold uppercase transition cursor-pointer text-center"
+                >
+                  Bypass & Sandbox Simulate
+                </AnimatedButton>
+                <AnimatedButton
                   onClick={() => setShowOAuthGuide(false)}
-                  className="w-full py-2.5 rounded-xl bg-arcadia-blue text-white font-display text-xs font-bold tracking-wider uppercase hover:shadow-[0_0_15px_rgba(47,128,255,0.3)] transition cursor-pointer text-center"
+                  className="flex-1 py-2 rounded-xl border border-white/10 hover:border-white/20 text-gray-300 font-display text-[10px] font-bold uppercase transition cursor-pointer text-center"
                 >
                   I Understand
                 </AnimatedButton>
