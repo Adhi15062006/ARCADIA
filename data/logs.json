@@ -1,5 +1,71 @@
 [
   {
+    "id": "l_m3c0ll90b",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Vikram Malhotra",
+    "timestamp": "2026-07-04T18:22:36.244Z"
+  },
+  {
+    "id": "l_4vvbw5uy1",
+    "action": "Order Status Change",
+    "details": "Order status updated to 'In Progress' for client Vikram Malhotra",
+    "timestamp": "2026-07-04T18:22:27.023Z"
+  },
+  {
+    "id": "l_k8l0sdt3i",
+    "action": "Order Status Change",
+    "details": "Order status updated to 'Accepted' for client Vikram Malhotra",
+    "timestamp": "2026-07-04T18:22:19.017Z"
+  },
+  {
+    "id": "l_phmc1fioy",
+    "action": "Admin Login",
+    "details": "Admin logged in successfully from: Arcadia",
+    "timestamp": "2026-07-04T18:22:08.835Z"
+  },
+  {
+    "id": "l_r5ax4n24c",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Vikram Malhotra",
+    "timestamp": "2026-07-04T18:20:31.309Z"
+  },
+  {
+    "id": "l_ub3owgyoq",
+    "action": "Order Approved & Payment Requested",
+    "details": "Order ord_x43prnttj approved. Kickoff Deposit requested (₹2400)",
+    "timestamp": "2026-07-04T18:20:15.544Z"
+  },
+  {
+    "id": "l_63if86ip4",
+    "action": "Email Simulation",
+    "details": "Mock email dispatched to: vikram@zenix.com (Subject: ARCADIA Payment Request: Kickoff Booking Deposit (30%))",
+    "timestamp": "2026-07-04T18:20:15.543Z"
+  },
+  {
+    "id": "l_adjtf2evn",
+    "action": "Admin Login",
+    "details": "Admin logged in successfully from: Arcadia",
+    "timestamp": "2026-07-04T18:19:56.829Z"
+  },
+  {
+    "id": "l_bc1wg6iu2",
+    "action": "New Project Order",
+    "details": "New order submitted by Vikram Malhotra for: Business Website (Awaiting Approval)",
+    "timestamp": "2026-07-04T18:19:39.793Z"
+  },
+  {
+    "id": "l_bwabkjrb9",
+    "action": "Sandbox Login",
+    "details": "Logged in Sandbox Emulator Client: Vikram Malhotra",
+    "timestamp": "2026-07-04T18:19:20.676Z"
+  },
+  {
+    "id": "l_kalt3dwyg",
+    "action": "Sandbox Register",
+    "details": "Registered Sandbox Emulator Client: Vikram Malhotra",
+    "timestamp": "2026-07-04T18:19:20.676Z"
+  },
+  {
     "id": "l_a24q0dk83",
     "action": "Sandbox Login",
     "details": "Logged in Sandbox Emulator Client: Aura Client",

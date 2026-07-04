@@ -1,5 +1,45 @@
 [
   {
+    "id": "ord_x43prnttj",
+    "status": "In Progress",
+    "isPaid": false,
+    "name": "Vikram Malhotra",
+    "company": "",
+    "email": "vikram@zenix.com",
+    "phone": "+919090067979",
+    "service": "Business Website",
+    "budget": "7999",
+    "deadline": "10 Days",
+    "description": "",
+    "fileUrl": "",
+    "paymentScreenshot": "",
+    "milestones": [
+      {
+        "id": "m1",
+        "label": "Kickoff Booking Deposit (30%)",
+        "percentage": 30,
+        "amount": 2400,
+        "status": "Link Sent",
+        "paymentLink": "https://rzp.io/i/mock_arcadia_ord_x43prnttj_m1"
+      },
+      {
+        "id": "m2",
+        "label": "Mid-Project Development Phase (50%)",
+        "percentage": 50,
+        "amount": 4000,
+        "status": "Pending"
+      },
+      {
+        "id": "m3",
+        "label": "Project Handover & Settlement (20%)",
+        "percentage": 20,
+        "amount": 1599,
+        "status": "Pending"
+      }
+    ],
+    "createdAt": "2026-07-04T18:19:39.792Z"
+  },
+  {
     "id": "ord_41y41cfk3",
     "status": "Completed",
     "isPaid": false,

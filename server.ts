@@ -3,7 +3,6 @@ import path from "path";
 import fs from "fs";
 import jwt from "jsonwebtoken";
 import bcryptjs from "bcryptjs";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 
@@ -1407,6 +1406,7 @@ async function startServer() {
   if (process.env.NO_VITE === "true") {
     console.log("Starting server in API-only mode (NO_VITE = true)");
   } else if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

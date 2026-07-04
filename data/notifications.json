@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": "notif_yfwkahy8i",
+    "userEmail": "vikram@zenix.com",
+    "title": "Project Approved & Deposit Requested",
+    "message": "Your project 'Business Website' has been approved! Please authorize the Kickoff Booking Deposit of ₹2,400 via your Project Hub.",
+    "read": true,
+    "createdAt": "2026-07-04T18:20:15.544Z",
+    "orderId": "ord_x43prnttj",
+    "milestoneId": "m1",
+    "type": "Payment Required",
+    "deadline": "2026-07-09T18:20:15.544Z"
+  }
+]
