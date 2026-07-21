@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=api/server-bundle.cjs",
-    "start": "node api/server-bundle.cjs",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server-bundle.cjs",
+    "start": "node dist/server-bundle.cjs",
     "preview": "vite preview",
-    "clean": "rm -rf dist api/server-bundle.cjs api/server-bundle.cjs.map",
+    "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

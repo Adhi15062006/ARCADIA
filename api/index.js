@@ -4,7 +4,7 @@ let loadError = null;
 export default async function handler(req, res) {
   if (!app) {
     try {
-      const bundlePath = "./server-bundle.cjs";
+      const bundlePath = "../dist/server-bundle.cjs";
       const serverModule = await import(bundlePath);
       app = serverModule.default || serverModule;
     } catch (err) {
