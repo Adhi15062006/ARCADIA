@@ -5069,7 +5069,8 @@ app.get(["/firebase-config.js", "/api/firebase-config.js"], (req, res) => {
 // Configure Vite middleware in development
 async function startServer() {
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL && !process.env.STANDALONE_VITE) {
-    const { createServer: createViteServer } = await import("vite");
+    const viteModuleName = "vite";
+    const { createServer: createViteServer } = await import(viteModuleName);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
