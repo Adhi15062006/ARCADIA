@@ -3,6 +3,18 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "overrides": {
+    "protobufjs": "^7.6.3",
+    "uuid": "^11.1.1",
+    "@grpc/grpc-js": "^1.9.16",
+    "jose": "5.9.6",
+    "jwks-rsa": {
+      "jose": "5.9.6"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server-bundle.cjs",
@@ -20,6 +32,7 @@
     "express": "^4.21.2",
     "firebase": "^12.15.0",
     "firebase-admin": "^14.1.0",
+    "jose": "5.9.6",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.546.0",
@@ -43,10 +56,5 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3"
-  },
-  "overrides": {
-    "protobufjs": "^7.6.3",
-    "uuid": "^11.1.1",
-    "@grpc/grpc-js": "^1.9.16"
   }
 }
