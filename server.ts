@@ -5,7 +5,6 @@ import https from "https";
 import jwt from "jsonwebtoken";
 import bcryptjs from "bcryptjs";
 import Razorpay from "razorpay";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { initializeApp } from "firebase/app";
@@ -5070,6 +5069,7 @@ app.get(["/firebase-config.js", "/api/firebase-config.js"], (req, res) => {
 // Configure Vite middleware in development
 async function startServer() {
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL && !process.env.STANDALONE_VITE) {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
