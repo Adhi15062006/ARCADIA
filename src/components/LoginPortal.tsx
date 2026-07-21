@@ -654,12 +654,12 @@ export default function LoginPortal({
         </AnimatePresence>
 
         {/* Preconfigured Demo Accounts Helper */}
-        <div className="mt-6 p-4 bg-gray-50 border border-gray-100 rounded-xl space-y-3">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
-            <Info className="w-3.5 h-3.5 text-black" />
-            <span>Interactive Demo Accounts</span>
-          </div>
-          {activeTab === "client" ? (
+        {activeTab === "client" && (
+          <div className="mt-6 p-4 bg-gray-50 border border-gray-100 rounded-xl space-y-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+              <Info className="w-3.5 h-3.5 text-black" />
+              <span>Interactive Demo Accounts</span>
+            </div>
             <div className="space-y-2 text-xs">
               <div 
                 className="p-2.5 bg-white rounded-lg border border-gray-200 flex justify-between items-center cursor-pointer hover:border-black hover:bg-gray-50 transition duration-150"
@@ -690,25 +690,8 @@ export default function LoginPortal({
                 <span className="text-[10px] bg-black text-white px-2 py-1 rounded font-medium select-none">Fill</span>
               </div>
             </div>
-          ) : (
-            <div className="space-y-2 text-xs">
-              <div 
-                className="p-2.5 bg-white rounded-lg border border-gray-200 flex justify-between items-center cursor-pointer hover:border-black hover:bg-gray-50 transition duration-150"
-                onClick={() => {
-                  setAdminEmail("admin");
-                  setAdminPassword("findme@arcadia1509");
-                  onShowToast("info", "Filled Super Admin credentials");
-                }}
-              >
-                <div>
-                  <span className="font-semibold block text-gray-800 text-[11px]">Super Admin Profile</span>
-                  <span className="font-mono text-gray-400 text-[10px]">admin / findme@arcadia1509</span>
-                </div>
-                <span className="text-[10px] bg-black text-white px-2 py-1 rounded font-medium select-none">Fill</span>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Dynamic Privacy notice matching footer styling from the uploaded image */}
         <p className="text-[11px] text-gray-400 text-center max-w-[320px] mx-auto leading-relaxed mt-6">

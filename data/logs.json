@@ -1,5 +1,11 @@
 [
   {
+    "id": "l_gueix3bsi",
+    "action": "Admin Login (Root) (Success)",
+    "details": "Root admin logged in successfully: arcadiadevelopers07@gmail.com [Affected: auth] [User: System] [Role: System]",
+    "timestamp": "2026-07-21T02:41:17.837Z"
+  },
+  {
     "id": "l_b2xpo473f",
     "action": "Admin Login (Root) (Success)",
     "details": "Root admin logged in successfully: arcadiadevelopers07@gmail.com [Affected: auth] [User: System] [Role: System]",
@@ -108,9 +114,9 @@
     "id": "l_6zmm5xrlx"
   },
   {
-    "action": "Admin Login (Root) (Success)",
-    "id": "l_0xve89sy0",
-    "details": "Root admin logged in successfully: arcadiadevelopers07@gmail.com [Affected: auth] [User: System] [Role: System]",
-    "timestamp": "2026-07-10T07:37:59.775Z"
+    "action ": "\"Admin Login (Root) (Success)\"",
+    "id ": "\"l_0xve89sy0\"",
+    "details ": "\"Root admin logged in successfully: arcadiadevelopers07@gmail.com [Affected: auth] [User: System] [Role: System]\"",
+    "timestamp ": "\"2026-07-10T07:37:59.775Z\""
   }
 ]

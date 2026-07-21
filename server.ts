@@ -1020,48 +1020,6 @@ app.post("/api/auth/login", authRateLimiter, async (req, res) => {
     return res.json({ token, firebaseToken, email: normalizedEmail, role: userRole });
   }
 
-  // 2. Default root admin fallback
-  if (
-    (normalizedEmail === normalizeEmail(DEFAULT_ADMIN_EMAIL) || normalizedEmail === "admin") && 
-    bcryptjs.compareSync(password, ADMIN_PASSWORD_HASH)
-  ) {
-    const adminEmailToUse = normalizedEmail === "admin" ? normalizeEmail(DEFAULT_ADMIN_EMAIL) : normalizedEmail;
-    
-    // Ensure Firebase Admin Auth has this user and generate custom token
-    let fbUid = "root_admin";
-    try {
-      const fbUser = await getAdminAuth().getUserByEmail(adminEmailToUse);
-      fbUid = fbUser.uid;
-      await getAdminAuth().setCustomUserClaims(fbUid, { role: "Super Admin", status: "active" });
-    } catch (err: any) {
-      if (err.code === "auth/user-not-found") {
-        try {
-          const newFbUser = await getAdminAuth().createUser({
-            uid: "root_admin",
-            email: adminEmailToUse,
-            password: password,
-            displayName: "Root Admin"
-          });
-          fbUid = newFbUser.uid;
-          await getAdminAuth().setCustomUserClaims(fbUid, { role: "Super Admin", status: "active" });
-        } catch (createErr) {
-          console.warn("Failed to auto-create firebase root admin in login:", createErr);
-        }
-      }
-    }
-
-    let firebaseToken = "";
-    try {
-      firebaseToken = await getAdminAuth().createCustomToken(fbUid, { role: "Super Admin" });
-    } catch (tokErr: any) {
-      console.log(`[Firebase Auth] Custom token generation deferred (Service account lacks signBlob/IAM permissions).`);
-    }
-
-    const token = jwt.sign({ uid: "root_admin", email: adminEmailToUse, role: "Super Admin" }, JWT_SECRET, { expiresIn: "24h" });
-    await logAudit(req, "Admin Login (Root)", "auth", "Success", `Root admin logged in successfully: ${adminEmailToUse}`);
-    await logAdminSessionActivity(req, "root_admin", adminEmailToUse, "login", "Success", "Root admin session established");
-    return res.json({ token, firebaseToken, email: adminEmailToUse, role: "Super Admin" });
-  }
 
   await logAudit(req, "Failed Login", "auth", "Failure", `Failed admin login attempt for: ${normalizedEmail}`);
   await logAdminSessionActivity(req, "unknown", normalizedEmail, "failed_login", "Failure", "Invalid email or non-existent account");

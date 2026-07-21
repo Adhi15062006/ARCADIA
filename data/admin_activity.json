@@ -1,5 +1,19 @@
 [
   {
+    "id": "act_lyy8uhi13_1784601678474",
+    "userId": "root_admin",
+    "email": "arcadiadevelopers07@gmail.com",
+    "timestamp": "2026-07-21T02:41:18.474Z",
+    "action": "login",
+    "status": "Success",
+    "ip": "127.0.0.1",
+    "device": "Desktop",
+    "browser": "Chrome",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+    "details": "Root admin session established",
+    "lastActive": "2026-07-21T02:41:18.474Z"
+  },
+  {
     "id": "act_jv78ewcfe_1784598917071",
     "userId": "root_admin",
     "email": "arcadiadevelopers07@gmail.com",
