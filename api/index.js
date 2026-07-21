@@ -10,6 +10,4 @@ app.post("/api/auth/login", (req, res) => {
   res.json({ success: true, message: "Login mock succeeds!" });
 });
 
-export default function handler(req, res) {
-  return app(req, res);
-}
+export default app;
