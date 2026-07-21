@@ -1,66 +1,34 @@
 {
   "version": 2,
   "functions": {
-    "api/index.ts": {
-      "includeFiles": ["data/**", "firebase-applet-config.json"]
+    "api/index.js": {
+      "includeFiles": ["data/**", "firebase-applet-config.json", "dist/server.cjs"]
     }
   },
   "rewrites": [
     {
-      "source": "/api/test1",
-      "destination": "/api/test1.ts"
-    },
-    {
-      "source": "/api/test2",
-      "destination": "/api/test2.ts"
-    },
-    {
-      "source": "/api/test3",
-      "destination": "/api/test3.ts"
-    },
-    {
-      "source": "/api/test4",
-      "destination": "/api/test4.ts"
-    },
-    {
-      "source": "/api/test5",
-      "destination": "/api/test5.ts"
-    },
-    {
-      "source": "/api/test6",
-      "destination": "/api/test6.ts"
-    },
-    {
-      "source": "/api/test7",
-      "destination": "/api/test7.ts"
-    },
-    {
-      "source": "/api/test",
-      "destination": "/api/test.ts"
-    },
-    {
       "source": "/api/:path*",
-      "destination": "/api/index.ts"
+      "destination": "/api/index.js"
     },
     {
       "source": "/firebase-config.js",
-      "destination": "/api/index.ts"
+      "destination": "/api/index.js"
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/api/index.ts"
+      "destination": "/api/index.js"
     },
     {
       "source": "/robots.txt",
-      "destination": "/api/index.ts"
+      "destination": "/api/index.js"
     },
     {
       "source": "/auth/callback",
-      "destination": "/api/index.ts"
+      "destination": "/api/index.js"
     },
     {
       "source": "/auth/callback/",
-      "destination": "/api/index.ts"
+      "destination": "/api/index.js"
     },
     {
       "source": "/:path*",
