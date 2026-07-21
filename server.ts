@@ -143,12 +143,12 @@ function validateBase64File(base64Data: string, allowedMimes: string[], maxBytes
 
 // Resolve the Firebase Config and database ID dynamically, prioritizing environment variables
 const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || "",
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "",
-  projectId: process.env.FIREBASE_PROJECT_ID || "",
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: process.env.FIREBASE_APP_ID || "",
+  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyCRsDYK1bAoCSaMEk8NE-eidvD6qt6Tvi8",
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "arcadia-developers.firebaseapp.com",
+  projectId: process.env.FIREBASE_PROJECT_ID || "arcadia-developers",
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "arcadia-developers.firebasestorage.app",
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "122899421269",
+  appId: process.env.FIREBASE_APP_ID || "1:122899421269:web:c392ff7ae9346773f81cdc",
   adminEmail: process.env.ADMIN_EMAIL || "arcadiadevelopers07@gmail.com"
 };
 
