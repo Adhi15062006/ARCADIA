@@ -1,0 +1,23 @@
+[
+  {
+    "id": "v1",
+    "title": "Senior AI Solutions Engineer",
+    "location": "Bangalore (Hybrid)",
+    "salary": "₹18L - ₹24L",
+    "type": "Full-Time"
+  },
+  {
+    "id": "v2",
+    "title": "Lead React & Frontend Architect",
+    "location": "Gurugram (Remote)",
+    "salary": "₹14L - ₹18L",
+    "type": "Full-Time"
+  },
+  {
+    "id": "v3",
+    "title": "Creative UI/UX Designer & Prototyper",
+    "location": "Mumbai (Hybrid)",
+    "salary": "₹8L - ₹12L",
+    "type": "Full-Time"
+  }
+]

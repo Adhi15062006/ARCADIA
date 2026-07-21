@@ -1,0 +1,18 @@
+[
+  {
+    "id": "pay_sim_init_12hlndm2q",
+    "orderId": "order_sim_375xdntxj",
+    "amount": 1800,
+    "currency": "INR",
+    "milestoneId": "m1",
+    "clientId": "vikram@zenix.com",
+    "clientName": "Vikram Malhotra",
+    "projectId": "ord_o4latxx9x",
+    "projectName": "Website Redesign",
+    "status": "Payment Initiated",
+    "createdAt": "2026-07-21T01:54:01.973Z",
+    "refundedAmount": 0,
+    "refundStatus": "None",
+    "notes": "Initiated payment sequence for milestone: Kickoff Booking Deposit (30%)"
+  }
+]

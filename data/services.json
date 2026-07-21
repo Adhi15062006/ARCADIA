@@ -1,0 +1,197 @@
+[
+  {
+    "category": "Web Development",
+    "id": "s1",
+    "features": [
+      "1 Custom Layout",
+      "Responsive Design",
+      "Basic SEO Optimization",
+      "Contact Form Integration",
+      "3-Day Delivery"
+    ],
+    "price": "5999",
+    "title": "Landing Page",
+    "description": "Sleek single-page visual experience, perfectly aligned for rapid conversion.",
+    "isFeatured": false
+  },
+  {
+    "category": "Web Development",
+    "features": [
+      "Interactive Masonry",
+      "Animations (Motion)",
+      "Custom Theme Style",
+      "Resume/Download Section",
+      "5-Day Delivery"
+    ],
+    "isFeatured": false,
+    "id": "s2",
+    "price": "4999",
+    "title": "Portfolio Website",
+    "description": "A high-performance modern digital showroom to spotlight your professional legacy."
+  },
+  {
+    "features": [
+      "Up to 5 Pages",
+      "CMS for Blogs/FAQs",
+      "Google Maps Platform",
+      "Custom Lead Capture",
+      "10-Day Delivery"
+    ],
+    "category": "Web Development",
+    "title": "Business Website",
+    "price": "7999",
+    "description": "Fully integrated multi-page presentation, showcasing corporate core services.",
+    "isFeatured": true,
+    "id": "s3"
+  },
+  {
+    "description": "Complete brand uplift with responsive modernization and faster performance.",
+    "price": "5999",
+    "title": "Website Redesign",
+    "id": "s4",
+    "isFeatured": false,
+    "features": [
+      "Speed Optimization",
+      "Fresh UI/UX Style",
+      "SEO Audit & Migration",
+      "Accessible Layout",
+      "7-Day Delivery"
+    ],
+    "category": "Web Development"
+  },
+  {
+    "features": [
+      "Cart & Product Search",
+      "Stripe/Razorpay Gateways",
+      "Customer Accounts",
+      "Order Management Dashboard",
+      "15-Day Delivery"
+    ],
+    "category": "Web Development",
+    "description": "Secure, highly performant online store with optimized inventory and checkouts.",
+    "price": "19999",
+    "title": "E-Commerce Website",
+    "id": "s5",
+    "isFeatured": true
+  },
+  {
+    "category": "Web Development",
+    "features": [
+      "Tailored Architecture",
+      "JWT Authentication",
+      "Interactive Dashboards",
+      "Relational Database Structure",
+      "25-Day Delivery"
+    ],
+    "id": "s6",
+    "isFeatured": true,
+    "description": "Bespoke SaaS platform with custom schemas, business logic, and dashboards.",
+    "title": "Custom Web App",
+    "price": "29999"
+  },
+  {
+    "title": "AI Chatbot",
+    "category": "AI Solutions",
+    "features": [
+      "Gemini 3.5 Integration",
+      "Custom Knowledge Base",
+      "Lead Capture Automation",
+      "Floating Client Widget",
+      "5-Day Delivery"
+    ],
+    "id": "s7",
+    "isFeatured": true,
+    "description": "Server-side Gemini AI chatbot tailored to capture leads, answer FAQs, and engage users.",
+    "price": "7999"
+  },
+  {
+    "category": "AI Solutions",
+    "description": "Futuristic automated tele-agents designed for booking, customer support, or follow-ups.",
+    "title": "AI Voice Calling Agent",
+    "price": "24999",
+    "id": "s8",
+    "isFeatured": false,
+    "features": [
+      "Real-time Conversational TTS",
+      "Google Cloud Speech-to-Text",
+      "Integration with CRM",
+      "Call Log Analytics",
+      "12-Day Delivery"
+    ]
+  },
+  {
+    "id": "s11",
+    "isFeatured": false,
+    "description": "Bento-style wireframes and high-fidelity mockups that set visual design standards.",
+    "price": "5999",
+    "title": "UI/UX Design",
+    "category": "Design & Marketing",
+    "features": [
+      "Figma Working Files",
+      "Inter/Space Grotesk Typography",
+      "Dark/Light Modes Check",
+      "Clickable Interactive Prototype",
+      "5-Day Delivery"
+    ]
+  },
+  {
+    "category": "Design & Marketing",
+    "features": [
+      "Vector Formats (SVG/EPS)",
+      "3 Creative Alternatives",
+      "Brand Guideline Sheet",
+      "Commercial Rights",
+      "2-Day Delivery"
+    ],
+    "id": "s12",
+    "price": "1499",
+    "isFeatured": false,
+    "description": "Minimalist brand mark that captures corporate essence with mathematical precision.",
+    "title": "Logo Design"
+  },
+  {
+    "category": "Design & Marketing",
+    "features": [
+      "Logo System",
+      "Color Palette Rules",
+      "Typography Styling Guides",
+      "Letterhead & Card Layouts",
+      "7-Day Delivery"
+    ],
+    "id": "s13",
+    "isFeatured": false,
+    "description": "A total identity suite containing custom patterns, social assets, templates, and logos.",
+    "price": "4999",
+    "title": "Branding Package"
+  },
+  {
+    "title": "SEO Optimization",
+    "price": "4999",
+    "category": "Design & Marketing",
+    "description": "Complete technical search setup focusing on perfect Lighthouse scores and indexes.",
+    "isFeatured": false,
+    "id": "s14",
+    "features": [
+      "Google Search Console Sync",
+      "Sitemap & Robots Creation",
+      "Schema.org Structure",
+      "Page Speed Optimizations",
+      "5-Day Delivery"
+    ]
+  },
+  {
+    "category": "Other",
+    "features": [
+      "24/7 Server Status Check",
+      "Weekly Data Backups",
+      "Minor Content Updates (1hr/mo)",
+      "Framework Package Upgrades",
+      "Monthly Report"
+    ],
+    "id": "s15",
+    "isFeatured": false,
+    "description": "Monthly peace-of-mind support, server monitoring, security updates, and performance tuning.",
+    "price": "999",
+    "title": "Website Maintenance"
+  }
+]

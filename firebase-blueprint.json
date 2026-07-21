@@ -1,0 +1,915 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account registration details and role-based permissions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier matching the Auth UID" },
+        "email": { "type": "string", "format": "email", "description": "Primary communication email" },
+        "name": { "type": "string", "maxLength": 100, "description": "Display name of the user" },
+        "phone": { "type": "string", "pattern": "^\\+?[1-9]\\d{1,14}$", "description": "E.164 formatted telephone number" },
+        "role": { "type": "string", "enum": ["Super Admin", "Admin", "Manager", "Employee", "Client"] },
+        "status": { "type": "string", "enum": ["Active", "Suspended", "Pending"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "role", "status", "createdAt", "updatedAt"]
+    },
+    "Service": {
+      "title": "Service Offering",
+      "description": "Technical services offered by Arcadia Web Development.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "categoryId": { "type": "string" },
+        "icon": { "type": "string" },
+        "basePrice": { "type": "number" },
+        "status": { "type": "string", "enum": ["Active", "Draft", "Archived"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "categoryId", "basePrice", "status"]
+    },
+    "Category": {
+      "title": "Service Category",
+      "description": "Category for classifying different digital offerings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "status"]
+    },
+    "PricingPlan": {
+      "title": "Pricing Plan",
+      "description": "Tiered licensing or engagement plans for services.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "serviceId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "price": { "type": "number" },
+        "features": { "type": "array" },
+        "billingCycle": { "type": "string", "enum": ["One-time", "Monthly", "Annual"] },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "serviceId", "name", "price", "billingCycle", "status"]
+    },
+    "MaintenancePlan": {
+      "title": "Maintenance Plan",
+      "description": "Service level agreements for website maintenance and technical support.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "price": { "type": "number" },
+        "hoursPerMonth": { "type": "number" },
+        "sla": { "type": "string", "maxLength": 200 },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "price", "status"]
+    },
+    "Order": {
+      "title": "Client Order",
+      "description": "Purchase transaction requesting digital work or subscriptions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "serviceId": { "type": "string" },
+        "planId": { "type": "string" },
+        "price": { "type": "number" },
+        "gst": { "type": "number" },
+        "discount": { "type": "number" },
+        "coupon": { "type": "string" },
+        "paymentStatus": { "type": "string", "enum": ["Unpaid", "Partial", "Paid", "Refunded"] },
+        "orderStatus": { "type": "string", "enum": ["Pending", "Processing", "In Progress", "Completed", "Cancelled"] },
+        "deadline": { "type": "string", "format": "date-time" },
+        "progress": { "type": "number" },
+        "invoiceId": { "type": "string" },
+        "files": { "type": "array" },
+        "notes": { "type": "string", "maxLength": 5000 },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "customerId", "price", "paymentStatus", "orderStatus", "createdAt", "updatedAt"]
+    },
+    "Project": {
+      "title": "Development Project",
+      "description": "Active delivery workspace mapped to clients and assigned employees.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "assignedEmployees": { "type": "array" },
+        "milestones": { "type": "array" },
+        "progressPercentage": { "type": "number" },
+        "sourceCodeLink": { "type": "string" },
+        "liveWebsiteLink": { "type": "string" },
+        "documents": { "type": "array" },
+        "screenshots": { "type": "array" },
+        "revisionHistory": { "type": "array" },
+        "timeline": { "type": "object" },
+        "comments": { "type": "array" },
+        "status": { "type": "string", "enum": ["Planning", "Design", "Development", "Testing", "Review", "Completed", "On Hold"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clientId", "progressPercentage", "status", "createdAt", "updatedAt"]
+    },
+    "Payment": {
+      "title": "Payment Transaction",
+      "description": "Financial ledger record of transaction events.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "customerId": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "gateway": { "type": "string", "enum": ["Razorpay", "Stripe", "PayPal", "Mock"] },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "status": { "type": "string", "enum": ["Success", "Pending", "Failed"] },
+        "invoiceId": { "type": "string" },
+        "receiptUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "amount", "currency", "status", "createdAt", "updatedAt"]
+    },
+    "Invoice": {
+      "title": "Invoice Details",
+      "description": "Legally binding invoice billing statement.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "customerId": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "amount": { "type": "number" },
+        "gstAmount": { "type": "number" },
+        "discountAmount": { "type": "number" },
+        "pdfUrl": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Unpaid", "Paid", "Overdue", "Cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "invoiceNumber", "amount", "status", "createdAt", "updatedAt"]
+    },
+    "Quotation": {
+      "title": "Project Quotation",
+      "description": "Pre-order quotation calculations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "serviceDetails": { "type": "object" },
+        "estimatedCost": { "type": "number" },
+        "expirationDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Declined", "Expired"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "estimatedCost", "status", "createdAt", "updatedAt"]
+    },
+    "ContactMessage": {
+      "title": "Contact Form Submission",
+      "description": "Inbound queries from the public contact form.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "subject": { "type": "string", "maxLength": 200 },
+        "message": { "type": "string", "maxLength": 3000 },
+        "status": { "type": "string", "enum": ["New", "Read", "Replied", "Archived"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "message", "status", "createdAt"]
+    },
+    "Portfolio": {
+      "title": "Portfolio Work Showcase",
+      "description": "Completed work samples of client websites.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 3000 },
+        "thumbnail": { "type": "string" },
+        "images": { "type": "array" },
+        "clientName": { "type": "string" },
+        "tags": { "type": "array" },
+        "projectLink": { "type": "string" },
+        "status": { "type": "string", "enum": ["Published", "Draft"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "status", "createdAt", "updatedAt"]
+    },
+    "Review": {
+      "title": "Customer Review",
+      "description": "Review feedback received directly on service outcomes.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "number" },
+        "feedback": { "type": "string", "maxLength": 1000 },
+        "approved": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "rating", "status", "createdAt"]
+    },
+    "Blog": {
+      "title": "Blog Article",
+      "description": "Company engineering and technology articles.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "tags": { "type": "array" },
+        "status": { "type": "string", "enum": ["Published", "Draft", "Archived"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "content", "status", "createdAt"]
+    },
+    "BlogCategory": {
+      "title": "Blog Category",
+      "description": "Classification group for corporate blog articles.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "status"]
+    },
+    "TeamMember": {
+      "title": "Team Member Profile",
+      "description": "Bio and details of engineering agency staff.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string" },
+        "bio": { "type": "string", "maxLength": 500 },
+        "photoUrl": { "type": "string" },
+        "socials": { "type": "object" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "role", "status"]
+    },
+    "Career": {
+      "title": "Career Vacancy",
+      "description": "Job openings and career listings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["Full-Time", "Part-Time", "Contract", "Remote"] },
+        "location": { "type": "string" },
+        "requirements": { "type": "array" },
+        "status": { "type": "string", "enum": ["Open", "Closed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "type", "status"]
+    },
+    "JobApplication": {
+      "title": "Job Application",
+      "description": "Inbound application submissions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "careerId": { "type": "string" },
+        "applicantName": { "type": "string" },
+        "applicantEmail": { "type": "string", "format": "email" },
+        "resumeUrl": { "type": "string" },
+        "coverLetter": { "type": "string" },
+        "status": { "type": "string", "enum": ["Applied", "Reviewing", "Interviewed", "Offered", "Rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "careerId", "applicantName", "applicantEmail", "status", "createdAt"]
+    },
+    "SupportTicket": {
+      "title": "Support Ticket",
+      "description": "Technical support tickets logged by clients.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "subject": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+        "status": { "type": "string", "enum": ["Open", "In Progress", "Resolved", "Closed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clientId", "subject", "priority", "status", "createdAt"]
+    },
+    "TicketReply": {
+      "title": "Ticket Reply",
+      "description": "Thread replies inside support tickets.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ticketId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "message": { "type": "string" },
+        "attachments": { "type": "array" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ticketId", "senderId", "message", "createdAt"]
+    },
+    "Notification": {
+      "title": "User Notification",
+      "description": "Event alerts dispatched to clients or team members.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 150 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "read": { "type": "boolean" },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "message", "read", "createdAt"]
+    },
+    "ChatRoom": {
+      "title": "Chat Room",
+      "description": "Instant messaging channels.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array" },
+        "lastMessage": { "type": "object" },
+        "status": { "type": "string", "enum": ["Active", "Archived"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "participants", "status", "createdAt"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "Individual instant message documents.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "roomId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "readBy": { "type": "array" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "roomId", "senderId", "text", "createdAt"]
+    },
+    "Newsletter": {
+      "title": "Newsletter Subscription",
+      "description": "Subscribers signed up for digital digests.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "status": { "type": "string", "enum": ["Subscribed", "Unsubscribed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "status", "createdAt"]
+    },
+    "FAQ": {
+      "title": "FAQ Entry",
+      "description": "Frequently asked questions listing.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string", "maxLength": 250 },
+        "answer": { "type": "string", "maxLength": 3000 },
+        "category": { "type": "string" },
+        "status": { "type": "string", "enum": ["Published", "Draft"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "question", "answer", "status"]
+    },
+    "SEOSettings": {
+      "title": "SEO Metadata Settings",
+      "description": "General search indexing metadata for system routes.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "route": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "keywords": { "type": "array" },
+        "ogImage": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "route", "title"]
+    },
+    "WebsiteSettings": {
+      "title": "General Website Settings",
+      "description": "General configurations of the Arcadia client interface.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "brandName": { "type": "string" },
+        "supportEmail": { "type": "string" },
+        "maintenanceMode": { "type": "boolean" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "brandName", "supportEmail"]
+    },
+    "Analytics": {
+      "title": "Analytics Data Point",
+      "description": "Dynamic tracking of client interface interactions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "eventType": { "type": "string" },
+        "metadata": { "type": "object" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "eventType", "createdAt"]
+    },
+    "ActivityLog": {
+      "title": "System Activity Log",
+      "description": "Dynamic transactional audit log of administrative operations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "action", "createdAt"]
+    },
+    "Coupon": {
+      "title": "Discount Coupon",
+      "description": "Discount coupon codes for promotional transactions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string", "maxLength": 30 },
+        "discountType": { "type": "string", "enum": ["Percentage", "Fixed"] },
+        "value": { "type": "number" },
+        "status": { "type": "string", "enum": ["Active", "Inactive", "Expired"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "code", "discountType", "value", "status"]
+    },
+    "Upload": {
+      "title": "Uploaded Asset",
+      "description": "References to uploaded documents, logos, or banners.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "mimeType": { "type": "string" },
+        "size": { "type": "number" },
+        "folder": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "fileName", "fileUrl", "mimeType", "size", "createdAt"]
+    },
+    "Testimonial": {
+      "title": "Client Testimonial",
+      "description": "Verified client reviews and endorsements for our team.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientCompany": { "type": "string" },
+        "feedback": { "type": "string" },
+        "status": { "type": "string", "enum": ["Approved", "Pending"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clientName", "feedback", "status"]
+    },
+    "Banner": {
+      "title": "Promotional Banner",
+      "description": "Promotional slide layouts displayable across client pages.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "ctaLink": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "imageUrl", "status"]
+    },
+    "Homepage": {
+      "title": "Homepage Dynamic Settings",
+      "description": "Configurations for home page layout assets.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "heroTitle": { "type": "string" },
+        "heroSubtitle": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "heroTitle"]
+    },
+    "AboutPage": {
+      "title": "About Page Content",
+      "description": "Bio and information for corporate pages.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyBio": { "type": "string" },
+        "mission": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "companyBio"]
+    },
+    "PrivacyPolicy": {
+      "title": "Privacy Policy",
+      "description": "General privacy standards document content.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "content": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "content"]
+    },
+    "TermsConditions": {
+      "title": "Terms and Conditions",
+      "description": "Legal user agreement stipulations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "content": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "content"]
+    },
+    "RefundPolicy": {
+      "title": "Refund Policy Document",
+      "description": "Legal purchase dispute framework.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "content": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "deleted": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "content"]
+    },
+    "CrashReport": {
+      "title": "Firebase Web Crashlytics Report",
+      "description": "Log records of application exceptions and uncaught runtime rejections",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "message": { "type": "string" },
+        "stack": { "type": "string" },
+        "url": { "type": "string" },
+        "route": { "type": "string" },
+        "userAgent": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "severity": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "message", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Client and administrator user profiles"
+    },
+    "/services/{serviceId}": {
+      "schema": "Service",
+      "description": "Digital service catalog"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Classification tags for services"
+    },
+    "/pricingPlans/{planId}": {
+      "schema": "PricingPlan",
+      "description": "Subscription or milestone service pricing tiers"
+    },
+    "/maintenancePlans/{mPlanId}": {
+      "schema": "MaintenancePlan",
+      "description": "Monthly continuous upkeep plans"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer purchase transaction orders"
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Active design and development projects"
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Financial ledger transactions"
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Statements of client payment dues"
+    },
+    "/quotations/{quoteId}": {
+      "schema": "Quotation",
+      "description": "Price estimations for prospective users"
+    },
+    "/contactMessages/{messageId}": {
+      "schema": "ContactMessage",
+      "description": "Submissions via contact request form"
+    },
+    "/portfolio/{portfolioId}": {
+      "schema": "Portfolio",
+      "description": "Arcadia portfolio projects gallery items"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Validated client outcome ratings"
+    },
+    "/blogs/{blogId}": {
+      "schema": "Blog",
+      "description": "Agency tech articles and releases"
+    },
+    "/blogCategories/{catId}": {
+      "schema": "BlogCategory",
+      "description": "Categories for separating corporate blog content"
+    },
+    "/teamMembers/{memberId}": {
+      "schema": "TeamMember",
+      "description": "Company personnel biological cards"
+    },
+    "/careers/{jobId}": {
+      "schema": "Career",
+      "description": "Available openings at Arcadia"
+    },
+    "/jobApplications/{appId}": {
+      "schema": "JobApplication",
+      "description": "Inbound resumes and details submitted"
+    },
+    "/supportTickets/{ticketId}": {
+      "schema": "SupportTicket",
+      "description": "Logged customer issues"
+    },
+    "/supportTickets/{ticketId}/ticketReplies/{replyId}": {
+      "schema": "TicketReply",
+      "description": "Individual thread messages on support inquiries"
+    },
+    "/notifications/{notifId}": {
+      "schema": "Notification",
+      "description": "System and transaction notification cards"
+    },
+    "/chatRooms/{roomId}": {
+      "schema": "ChatRoom",
+      "description": "Secure text channels"
+    },
+    "/chatRooms/{roomId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Live message entries inside secure chats"
+    },
+    "/newsletter/{subId}": {
+      "schema": "Newsletter",
+      "description": "Subscribed users mailing lists"
+    },
+    "/faq/{faqId}": {
+      "schema": "FAQ",
+      "description": "Curated questions and answers list"
+    },
+    "/seoSettings/{seoId}": {
+      "schema": "SEOSettings",
+      "description": "Sitemap page routes descriptions and search words"
+    },
+    "/websiteSettings/{settingId}": {
+      "schema": "WebsiteSettings",
+      "description": "General system setup metadata"
+    },
+    "/analytics/{analyticId}": {
+      "schema": "Analytics",
+      "description": "Anonymized page visitor operations counts"
+    },
+    "/activityLogs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Secure log records of operator clicks"
+    },
+    "/coupons/{couponId}": {
+      "schema": "Coupon",
+      "description": "Operational promotion discounts codes"
+    },
+    "/uploads/{uploadId}": {
+      "schema": "Upload",
+      "description": "Dynamic cloud assets log details"
+    },
+    "/testimonials/{testId}": {
+      "schema": "Testimonial",
+      "description": "Aesthetic client quotations"
+    },
+    "/banners/{bannerId}": {
+      "schema": "Banner",
+      "description": "Aesthetic interface slider configurations"
+    },
+    "/homepage/{homeDocId}": {
+      "schema": "Homepage",
+      "description": "Hero text layout properties details"
+    },
+    "/aboutPage/{aboutDocId}": {
+      "schema": "AboutPage",
+      "description": "Company biography visual setup variables"
+    },
+    "/privacyPolicy/{policyDocId}": {
+      "schema": "PrivacyPolicy",
+      "description": "Primary safety legal details"
+    },
+    "/termsConditions/{termsDocId}": {
+      "schema": "TermsConditions",
+      "description": "Primary contract rules document text"
+    },
+    "/refundPolicy/{refundDocId}": {
+      "schema": "RefundPolicy",
+      "description": "Primary money-back legal terms document content"
+    },
+    "/crashReports/{reportId}": {
+      "schema": "CrashReport",
+      "description": "App crash logs for debugging"
+    }
+  }
+}

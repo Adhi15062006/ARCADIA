@@ -1,0 +1,42 @@
+[
+  {
+    "id": "ord_o4latxx9x",
+    "status": "Payment Pending",
+    "isPaid": false,
+    "name": "Vikram Malhotra",
+    "company": "",
+    "email": "vikram@zenix.com",
+    "phone": "9090067979",
+    "service": "Website Redesign",
+    "budget": "5999",
+    "deadline": "10 Days",
+    "description": "",
+    "fileUrl": "",
+    "paymentScreenshot": "",
+    "milestones": [
+      {
+        "id": "m1",
+        "label": "Kickoff Booking Deposit (30%)",
+        "percentage": 30,
+        "amount": 1800,
+        "status": "Link Sent",
+        "paymentLink": "https://rzp.io/i/mock_arcadia_ord_o4latxx9x_m1"
+      },
+      {
+        "id": "m2",
+        "label": "Mid-Project Development Phase (50%)",
+        "percentage": 50,
+        "amount": 3000,
+        "status": "Pending"
+      },
+      {
+        "id": "m3",
+        "label": "Project Handover & Settlement (20%)",
+        "percentage": 20,
+        "amount": 1199,
+        "status": "Pending"
+      }
+    ],
+    "createdAt": "2026-07-21T01:52:54.662Z"
+  }
+]

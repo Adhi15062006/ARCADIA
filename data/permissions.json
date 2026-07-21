@@ -1,0 +1,82 @@
+[
+  {
+    "id": "users",
+    "name": "Users Management",
+    "group": "Core"
+  },
+  {
+    "id": "products",
+    "name": "Products Management",
+    "group": "Catalog"
+  },
+  {
+    "id": "services",
+    "name": "Services Management",
+    "group": "Catalog"
+  },
+  {
+    "id": "orders",
+    "name": "Orders Control",
+    "group": "Finance"
+  },
+  {
+    "id": "bookings",
+    "name": "Demo Bookings",
+    "group": "Scheduling"
+  },
+  {
+    "id": "portfolio",
+    "name": "Portfolio",
+    "group": "Content"
+  },
+  {
+    "id": "blog",
+    "name": "Blog Posts",
+    "group": "Content"
+  },
+  {
+    "id": "seo",
+    "name": "SEO Optimization",
+    "group": "Marketing"
+  },
+  {
+    "id": "analytics",
+    "name": "Analytics & Traffic",
+    "group": "Reporting"
+  },
+  {
+    "id": "homepage",
+    "name": "Homepage Builder",
+    "group": "Content"
+  },
+  {
+    "id": "settings",
+    "name": "Global Settings",
+    "group": "System"
+  },
+  {
+    "id": "reports",
+    "name": "Financial Reports",
+    "group": "Reporting"
+  },
+  {
+    "id": "notifications",
+    "name": "System Alerts",
+    "group": "System"
+  },
+  {
+    "id": "media_library",
+    "name": "Media Assets",
+    "group": "Content"
+  },
+  {
+    "id": "roles",
+    "name": "RBAC Controls",
+    "group": "System"
+  },
+  {
+    "id": "admins",
+    "name": "Admin Management",
+    "group": "System"
+  }
+]

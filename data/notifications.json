@@ -1,0 +1,14 @@
+[
+  {
+    "id": "notif_9hiaa7jvj",
+    "userEmail": "vikram@zenix.com",
+    "title": "Project Approved & Deposit Requested",
+    "message": "Your project 'Website Redesign' has been approved! Please authorize the Kickoff Booking Deposit of ₹1,800 via your Project Hub.",
+    "read": false,
+    "createdAt": "2026-07-21T01:53:35.259Z",
+    "orderId": "ord_o4latxx9x",
+    "milestoneId": "m1",
+    "type": "Payment Required",
+    "deadline": "2026-07-26T01:53:35.259Z"
+  }
+]

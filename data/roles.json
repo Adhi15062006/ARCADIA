@@ -1,0 +1,66 @@
+[
+  {
+    "role": "Super Admin",
+    "permissions": [
+      "users",
+      "products",
+      "services",
+      "orders",
+      "bookings",
+      "portfolio",
+      "blog",
+      "seo",
+      "analytics",
+      "homepage",
+      "settings",
+      "reports",
+      "notifications",
+      "media_library",
+      "roles",
+      "admins"
+    ]
+  },
+  {
+    "role": "Admin",
+    "permissions": [
+      "users",
+      "products",
+      "services",
+      "orders",
+      "bookings",
+      "portfolio",
+      "blog",
+      "seo",
+      "analytics",
+      "homepage",
+      "settings",
+      "reports",
+      "notifications",
+      "media_library"
+    ]
+  },
+  {
+    "role": "Manager",
+    "permissions": [
+      "products",
+      "services",
+      "orders",
+      "bookings",
+      "portfolio",
+      "blog",
+      "analytics",
+      "reports",
+      "notifications",
+      "media_library"
+    ]
+  },
+  {
+    "role": "Staff",
+    "permissions": [
+      "services",
+      "bookings",
+      "orders",
+      "blog"
+    ]
+  }
+]

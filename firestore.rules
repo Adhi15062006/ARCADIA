@@ -1,0 +1,393 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Catch-all safety gate (First rule defined)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- REUSABLE SECURITY PRIMITIVES ---
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check for trusted backend server key to allow system syncs
+    function isServerKey(data) {
+      return data != null && 
+        data.keys().hasAll(['server_key']) && 
+        data.server_key == 'arcadia_secure_server_key_2026_futuristic_studio_token';
+    }
+
+    // Safely retrieve the user's role from their database document
+    function getUserRole() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : 'Client';
+    }
+
+    // Role Hierarchy Definitions
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        getUserRole() == 'Super Admin' ||
+        request.auth.token.email == 'godesportsfreefire@gmail.com'
+      );
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        getUserRole() == 'Admin'
+      );
+    }
+
+    function isManager() {
+      return isAuthenticated() && (
+        isAdmin() ||
+        getUserRole() == 'Manager'
+      );
+    }
+
+    function isEmployee() {
+      return isAuthenticated() && (
+        isManager() ||
+        getUserRole() == 'Employee'
+      );
+    }
+
+    // String validation for document ID sanity
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Helper shortcuts
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- COLLECTION MATCHES ---
+
+    // 1. Users Profile Collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isEmployee();
+      // Clients can write/update their own profile but cannot alter role or status (prevents privilege escalation)
+      allow create: if isEmployee() || isOwner(userId) || isServerKey(incoming());
+      allow update: if isEmployee() || (isOwner(userId) && (!incoming().keys().hasAny(['role', 'status']) || incoming().role == existing().role)) || isServerKey(incoming());
+      allow delete: if isAdmin() || isServerKey(existing());
+    }
+
+    // 2. Services Catalog
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 3. Service Categories
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 4. Pricing Plans
+    match /pricingPlans/{planId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 5. Maintenance Plans
+    match /maintenancePlans/{mPlanId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 6. Orders Collection
+    match /orders/{orderId} {
+      allow read: if isEmployee() || (isAuthenticated() && existing().customerId == request.auth.uid);
+      allow create: if isAuthenticated() && (incoming().customerId == request.auth.uid || isServerKey(incoming()));
+      // Clients can update their own order comments/files, but cannot change price or critical order/payment status
+      allow update: if isEmployee() || (
+        isAuthenticated() && 
+        existing().customerId == request.auth.uid && 
+        !incoming().keys().hasAny(['price', 'status', 'paymentStatus', 'orderStatus'])
+      ) || isServerKey(incoming());
+      allow delete: if isAdmin() || isServerKey(existing());
+    }
+
+    // 7. Projects Delivery Collection
+    match /projects/{projectId} {
+      allow read: if isEmployee() || (isAuthenticated() && existing().clientId == request.auth.uid);
+      allow write: if isEmployee() || isServerKey(incoming());
+    }
+
+    // 8. Financial Payments Ledger
+    match /payments/{paymentId} {
+      allow read: if isEmployee() || (isAuthenticated() && existing().customerId == request.auth.uid);
+      allow write: if isAdmin() || isServerKey(incoming());
+    }
+
+    // 9. Billing Invoices
+    match /invoices/{invoiceId} {
+      allow read: if isEmployee() || (isAuthenticated() && existing().customerId == request.auth.uid);
+      allow write: if isAdmin() || isServerKey(incoming());
+    }
+
+    // 10. Quotations Estimation
+    match /quotations/{quoteId} {
+      allow read: if isEmployee() || (isAuthenticated() && existing().customerId == request.auth.uid);
+      allow write: if isEmployee() || isServerKey(incoming());
+    }
+
+    // 11. Inbound Public Contact Messages
+    match /contactMessages/{msgId} {
+      allow read: if isEmployee();
+      allow create: if true; // Unauthenticated message submission allowed
+      allow update, delete: if isEmployee();
+    }
+
+    // 12. Portfolio Showcase
+    match /portfolio/{portfolioId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 13. Customer Reviews Feedback
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && (incoming().userId == request.auth.uid || isServerKey(incoming()));
+      allow update, delete: if isEmployee() || (isAuthenticated() && existing().userId == request.auth.uid) || isServerKey(incoming());
+    }
+
+    // 14. Blogs Articles
+    match /blogs/{blogId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 15. Blog Categories
+    match /blogCategories/{catId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 16. Agency Team Members Bio
+    match /teamMembers/{memberId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 17. Careers Vacancies
+    match /careers/{jobId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 18. Inbound Job Applications
+    match /jobApplications/{appId} {
+      allow read: if isEmployee();
+      allow create: if true; // Inbound submissions
+      allow update, delete: if isEmployee();
+    }
+
+    // 19. Customer Support Tickets
+    match /supportTickets/{ticketId} {
+      allow read: if isEmployee() || (isAuthenticated() && existing().clientId == request.auth.uid);
+      allow create: if isAuthenticated() && (incoming().clientId == request.auth.uid || isServerKey(incoming()));
+      allow update: if isEmployee() || (isAuthenticated() && existing().clientId == request.auth.uid) || isServerKey(incoming());
+      allow delete: if isAdmin() || isServerKey(existing());
+    }
+
+    // 20. Support Ticket Reply Threads
+    match /supportTickets/{ticketId}/ticketReplies/{replyId} {
+      allow read: if isEmployee() || (isAuthenticated() && get(/databases/$(database)/documents/supportTickets/$(ticketId)).data.clientId == request.auth.uid);
+      allow create: if isAuthenticated() && (incoming().senderId == request.auth.uid || isEmployee() || isServerKey(incoming()));
+      allow update, delete: if isEmployee() || (isAuthenticated() && existing().senderId == request.auth.uid);
+    }
+
+    // 21. Actionable Notifications Logs
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() && existing().userId == request.auth.uid;
+      allow create: if isEmployee() || isServerKey(incoming());
+      allow update: if isAuthenticated() && existing().userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+      allow delete: if isAuthenticated() && existing().userId == request.auth.uid;
+    }
+
+    // 22. Secure Chat Rooms
+    match /chatRooms/{roomId} {
+      allow read: if isAuthenticated() && (request.auth.uid in existing().participants || isEmployee());
+      allow write: if isAuthenticated() && (request.auth.uid in incoming().participants || isEmployee() || isServerKey(incoming()));
+    }
+
+    // 23. Chat Messages Channel
+    match /chatRooms/{roomId}/messages/{messageId} {
+      allow read: if isAuthenticated() && (request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(roomId)).data.participants || isEmployee());
+      allow create: if isAuthenticated() && (incoming().senderId == request.auth.uid || isServerKey(incoming()));
+      allow update, delete: if isEmployee() || (isAuthenticated() && existing().senderId == request.auth.uid);
+    }
+
+    // 24. Newsletter Subscriber Lists
+    match /newsletter/{subId} {
+      allow read: if isEmployee();
+      allow create: if true; // Public subscription
+      allow update, delete: if isEmployee();
+    }
+
+    // 25. Frequently Asked Questions (FAQ)
+    match /faq/{faqId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 26. SEO Routing Settings
+    match /seoSettings/{seoId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 27. General Global Website Settings
+    match /websiteSettings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin() || isServerKey(incoming());
+    }
+
+    // 28. Interaction Analytics Counters
+    match /analytics/{analyticId} {
+      allow read: if isManager();
+      allow write: if true; // Client operations reporting
+    }
+
+    // 29. Secure Audit Activity Logging
+    match /activityLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if true; // Allow logging
+      allow update, delete: if false; // Immutable logs
+    }
+
+    // 30. Discount Coupons
+    match /coupons/{couponId} {
+      allow read: if isAuthenticated();
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 31. Document Assets Catalog
+    match /uploads/{uploadId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 32. Client Testimonials
+    match /testimonials/{testId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 33. Slider/Banner Configuration
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 34. Homepage Customizer Settings
+    match /homepage/{homeDocId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 35. About Page Settings
+    match /aboutPage/{aboutDocId} {
+      allow read: if true;
+      allow write: if isManager() || isServerKey(incoming());
+    }
+
+    // 36. Privacy Policy Content Document
+    match /privacyPolicy/{policyDocId} {
+      allow read: if true;
+      allow write: if isAdmin() || isServerKey(incoming());
+    }
+
+    // 37. Terms and Conditions Document
+    match /termsConditions/{termsDocId} {
+      allow read: if true;
+      allow write: if isAdmin() || isServerKey(incoming());
+    }
+
+    // 38. Refund Policy Document
+    match /refundPolicy/{refundDocId} {
+      allow read: if true;
+      allow write: if isAdmin() || isServerKey(incoming());
+    }
+
+    // --- LEGACY BACKWARD COMPATIBLE & AUDITING PATHS ---
+
+    match /arcadia_system_db/{document} {
+      allow read: if true;
+      allow write: if isAdmin() || isServerKey(incoming());
+    }
+
+    match /settings/{docId} {
+      allow read: if isEmployee();
+      allow write: if isAdmin();
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isServerKey(incoming());
+      allow update, delete: if false;
+    }
+
+    match /admins/{adminId} {
+      allow read: if isEmployee();
+      allow write: if isSuperAdmin() || isServerKey(incoming());
+    }
+
+    match /roles/{roleId} {
+      allow read: if isEmployee();
+      allow write: if isSuperAdmin() || isServerKey(incoming());
+    }
+
+    match /permissions/{permId} {
+      allow read: if isEmployee();
+      allow write: if isSuperAdmin() || isServerKey(incoming());
+    }
+
+    match /adminActivity/{activityId} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin() || isServerKey(incoming());
+    }
+
+    match /adminAuditLogs/{logId} {
+      allow read: if isSuperAdmin();
+      allow create: if isSuperAdmin() || isServerKey(incoming());
+      allow update, delete: if false;
+    }
+
+    match /adminNotifications/{notifId} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin() || isServerKey(incoming());
+    }
+
+    match /adminSettings/{docId} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin() || isServerKey(incoming());
+    }
+
+    match /emailLogs/{logId} {
+      allow read: if isEmployee();
+      allow create: if isSuperAdmin() || isServerKey(incoming());
+      allow update, delete: if false;
+    }
+
+    match /crashReports/{reportId} {
+      allow create: if true;
+      allow read, update, delete: if isEmployee();
+    }
+  }
+}

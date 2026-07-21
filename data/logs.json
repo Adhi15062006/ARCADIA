@@ -1,0 +1,116 @@
+[
+  {
+    "id": "l_b2xpo473f",
+    "action": "Admin Login (Root) (Success)",
+    "details": "Root admin logged in successfully: arcadiadevelopers07@gmail.com [Affected: auth] [User: System] [Role: System]",
+    "timestamp": "2026-07-21T01:55:16.634Z"
+  },
+  {
+    "id": "l_vyeyzg6nn",
+    "action": "Payment Order Created",
+    "details": "Razorpay Order order_sim_375xdntxj created for ₹1800 (Project: ord_o4latxx9x, Milestone: m1)",
+    "timestamp": "2026-07-21T01:54:01.975Z"
+  },
+  {
+    "id": "l_rq1ac2j2a",
+    "action": "Client Login (Success)",
+    "details": "Client logged in successfully: Vikram Malhotra (vikram@zenix.com) [Affected: auth] [User: System] [Role: System]",
+    "timestamp": "2026-07-21T01:53:50.589Z"
+  },
+  {
+    "id": "l_waj46zjc2",
+    "action": "Order Approved & Payment Requested",
+    "details": "Order ord_o4latxx9x approved. Kickoff Deposit requested (₹1800)",
+    "timestamp": "2026-07-21T01:53:35.260Z"
+  },
+  {
+    "id": "l_tv1lebcvb",
+    "action": "Email Simulation",
+    "details": "Mock email dispatched to: vikram@zenix.com (Subject: ARCADIA Payment Request: Kickoff Booking Deposit (30%))",
+    "timestamp": "2026-07-21T01:53:35.258Z"
+  },
+  {
+    "id": "l_j9vg9gsyl",
+    "action": "Admin Login (Root) (Success)",
+    "details": "Root admin logged in successfully: arcadiadevelopers07@gmail.com [Affected: auth] [User: System] [Role: System]",
+    "timestamp": "2026-07-21T01:53:21.208Z"
+  },
+  {
+    "id": "l_mhu2vmfx4",
+    "action": "New Project Order",
+    "details": "New order submitted by Vikram Malhotra for: Website Redesign (Awaiting Approval)",
+    "timestamp": "2026-07-21T01:52:54.671Z"
+  },
+  {
+    "action": "Client Login (Success)",
+    "id": "l_ljsd2lu67",
+    "details": "Client logged in successfully: Vikram Malhotra (vikram@zenix.com) [Affected: auth] [User: System] [Role: System]",
+    "timestamp": "2026-07-20T15:53:25.488Z"
+  },
+  {
+    "timestamp": "2026-07-20T15:38:07.513Z",
+    "details": "Client logged in successfully: Vikram Malhotra (vikram@zenix.com) [Affected: auth] [User: System] [Role: System]",
+    "id": "l_5zsoli0th",
+    "action": "Client Login (Success)"
+  },
+  {
+    "action": "Admin Login (Root) (Success)",
+    "id": "l_t4qnuu0sm",
+    "timestamp": "2026-07-20T15:24:24.842Z",
+    "details": "Root admin logged in successfully: arcadiadevelopers07@gmail.com [Affected: auth] [User: System] [Role: System]"
+  },
+  {
+    "details": "Vacancy edited: Senior AI Solutions Engineer",
+    "timestamp": "2026-07-14T09:44:03.831Z",
+    "action": "Edit Vacancy",
+    "id": "l_klfm3p988"
+  },
+  {
+    "id": "l_507luj4s9",
+    "action": "Update Service",
+    "details": "Updated service: standard",
+    "timestamp": "2026-07-14T09:39:35.250Z"
+  },
+  {
+    "timestamp": "2026-07-14T09:37:36.277Z",
+    "details": "Root admin logged in successfully: arcadiadevelopers07@gmail.com [Affected: auth] [User: System] [Role: System]",
+    "action": "Admin Login (Root) (Success)",
+    "id": "l_orjlixqae"
+  },
+  {
+    "action": "Client Registration (Success)",
+    "id": "l_ryzx3x6kb",
+    "timestamp": "2026-07-14T07:51:28.889Z",
+    "details": "New customer registered: Final Test (final_test@example.com) [Affected: users] [User: System] [Role: System]"
+  },
+  {
+    "action": "Client Login (Success)",
+    "id": "l_bya7pal5o",
+    "timestamp": "2026-07-14T07:42:42.318Z",
+    "details": "Client logged in successfully: Vikram Malhotra (vikram@zenix.com) [Affected: auth] [User: System] [Role: System]"
+  },
+  {
+    "id": "l_mek8kwbtk",
+    "action": "Client Login (Success)",
+    "timestamp": "2026-07-14T07:41:51.980Z",
+    "details": "Client logged in successfully: Test User (unique_user_999@example.com) [Affected: auth] [User: System] [Role: System]"
+  },
+  {
+    "timestamp": "2026-07-14T07:41:15.944Z",
+    "details": "New customer registered: Test User (unique_user_999@example.com) [Affected: users] [User: System] [Role: System]",
+    "id": "l_xifo8twax",
+    "action": "Client Registration (Success)"
+  },
+  {
+    "details": "New customer registered: Test User (test@example.com) [Affected: users] [User: System] [Role: System]",
+    "timestamp": "2026-07-14T07:39:44.776Z",
+    "action": "Client Registration (Success)",
+    "id": "l_6zmm5xrlx"
+  },
+  {
+    "action ": "\"Admin Login (Root) (Success)\"",
+    "id ": "\"l_0xve89sy0\"",
+    "details ": "\"Root admin logged in successfully: arcadiadevelopers07@gmail.com [Affected: auth] [User: System] [Role: System]\"",
+    "timestamp ": "\"2026-07-10T07:37:59.775Z\""
+  }
+]

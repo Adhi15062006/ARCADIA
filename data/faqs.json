@@ -1,0 +1,26 @@
+[
+  {
+    "id": "f1",
+    "question": "What is ARCADIA's typical project timeline?",
+    "answer": "Landing pages and portfolios are typically completed in 3-5 days. Complex business websites take 7-10 days, while custom SaaS web applications and fully native mobile apps require 15-25 days depending on features.",
+    "category": "General"
+  },
+  {
+    "id": "f2",
+    "question": "Do you integrate local payment gateways like Razorpay?",
+    "answer": "Yes, absolutely! We configure real-time payment checkouts with Razorpay, Stripe, or Paytm, including automated invoicing and receipt emails.",
+    "category": "Technical"
+  },
+  {
+    "id": "f3",
+    "question": "Is the AI Chatbot customized to my specific business data?",
+    "answer": "Yes. Our AI chatbots utilize the server-side Gemini 3.5 model with a custom-engineered system knowledge base specific to your products, services, and pricing rules.",
+    "category": "AI Solutions"
+  },
+  {
+    "id": "f4",
+    "question": "Do I own 100% of the project code after completion?",
+    "answer": "Yes. Once payment is finalized, we hand over full commercial rights and access to the GitHub repository, files, and deployment containers.",
+    "category": "General"
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "name": "ARCADIA",
+  "description": "An award-winning, futuristic digital legacy and SaaS platform for ARCADIA, offering custom modern websites, AI chatbots, voice-agents, and responsive apps.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
