@@ -1,83 +1,83 @@
 [
   {
-    "status ": "\"active\"",
-    "avatar ": "\"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80\"",
-    "createdAt": " \"2026-07-05T16:20:05.581Z\"",
-    "role ": "\"Customer\"",
-    "email": " \"vikram@zenix.com\"",
-    "passwordHash": "\"$2b$10$Z14fpvM8JiP7syhoiiemBuyVyOS9Vz.ELV0NhVWf27jVNW9lDkPVG\"\n",
-    "name ": "\"Vikram Malhotra\"",
-    "id ": "\"u_vikram\""
+    "status": "active",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+    "createdAt": "2026-07-05T16:20:05.581Z",
+    "role": "Customer",
+    "email": "vikram@zenix.com",
+    "passwordHash": "$2b$10$Z14fpvM8JiP7syhoiiemBuyVyOS9Vz.ELV0NhVWf27jVNW9lDkPVG",
+    "name": "Vikram Malhotra",
+    "id": "u_vikram"
   },
   {
-    "createdAt": " \"2026-07-05T16:20:05.692Z\"",
-    "avatar ": "\"https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80\"",
-    "status ": "\"active\"",
-    "name ": "\"Priyanka Sen\"",
-    "id ": "\"u_priyanka\"",
-    "passwordHash ": "\"$2b$10$5fSUgM9tlcGFyNHjzcxDr.X0rEnwIWjpnKYr8zfuJ/TJjMxWWiXlu\"",
-    "email ": "\"priyanka@aura.com\" ",
-    "role ": "\"Customer\""
+    "createdAt": "2026-07-05T16:20:05.692Z",
+    "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+    "status": "active",
+    "name": "Priyanka Sen",
+    "id": "u_priyanka",
+    "passwordHash": "$2b$10$5fSUgM9tlcGFyNHjzcxDr.X0rEnwIWjpnKYr8zfuJ/TJjMxWWiXlu",
+    "email": "priyanka@aura.com",
+    "role": "Customer"
   },
   {
-    "passwordHash": "\"$2b$10$FK.84fEsC/J.9B/BBL6Xg.ns5k2RPUCOVI5yJKOxUrQCv3kKcK3PG\"",
-    "createdAt ": "\"2026-07-06T09:04:36.669Z\" ",
-    "role ": "\"Customer\"",
-    "email ": "\"adhik1506@gmail.com\"",
-    "id ": "\"u_qfb6b5lx7\"",
-    "name ": "\"adhi\"",
-    "avatar ": "\"https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80\"",
-    "status ": "\"active\""
+    "passwordHash": "$2b$10$FK.84fEsC/J.9B/BBL6Xg.ns5k2RPUCOVI5yJKOxUrQCv3kKcK3PG",
+    "createdAt": "2026-07-06T09:04:36.669Z",
+    "role": "Customer",
+    "email": "adhik1506@gmail.com",
+    "id": "u_qfb6b5lx7",
+    "name": "adhi",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+    "status": "active"
   },
   {
-    "id ": "\"ll16NkkzKudTAbQP8qQUHVUqyVu1\"",
-    "avatar": "\"https://lh3.googleusercontent.com/a/ACg8ocIPn_U3xXF_GnsKh2wT_Fkr8jPLcWxJQEqFTJfxRE5jX4PHTWg=s96-c\"",
-    "name ": "\"CALORI SYNC\"",
-    "email ": "\"calorisync06@gmail.com\"",
-    "createdAt ": "\"2026-07-06T16:06:04.724Z\"",
-    "passwordHash": " \"\"",
-    "role ": "\"Customer\"",
-    "status ": "\"active\""
+    "id": "ll16NkkzKudTAbQP8qQUHVUqyVu1",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIPn_U3xXF_GnsKh2wT_Fkr8jPLcWxJQEqFTJfxRE5jX4PHTWg=s96-c",
+    "name": "CALORI SYNC",
+    "email": "calorisync06@gmail.com",
+    "createdAt": "2026-07-06T16:06:04.724Z",
+    "passwordHash": "",
+    "role": "Customer",
+    "status": "active"
   },
   {
-    "avatar ": "\"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80\"",
-    "createdAt": " \"2026-07-08T15:27:41.625Z\"",
-    "status ": "\"active\"",
-    "passwordHash ": "\"$2b$10$jBfVoJ702dbYmsv1YS7sCO4G6CSYxmgC7kikVbUlNsBU0sLFAVchi\"",
-    "name ": "\"Test User\"",
-    "id ": "\"u_zugil0yl5\"",
-    "email ": "\"testuser_fresh@arcadia.com\"",
-    "role ": "\"Customer\""
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+    "createdAt": "2026-07-08T15:27:41.625Z",
+    "status": "active",
+    "passwordHash": "$2b$10$jBfVoJ702dbYmsv1YS7sCO4G6CSYxmgC7kikVbUlNsBU0sLFAVchi",
+    "name": "Test User",
+    "id": "u_zugil0yl5",
+    "email": "testuser_fresh@arcadia.com",
+    "role": "Customer"
   },
   {
-    "avatar ": "\"https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80\"",
-    "status ": "\"active\"",
-    "createdAt ": "\"2026-07-08T15:38:46.926Z\"",
-    "role ": "\"Customer\"",
-    "email ": "\"user_unique_abc_999@arcadia.com\"",
-    "passwordHash ": "\"$2b$10$3NmZ7hGsUwe0h.M7NkvU..kPjf7vWl1ywlU10Kg4XlSE1p2lmQkMC\"\n",
-    "name ": "\"Test User Unique\"\n",
-    "id ": "\"u_3loapbbmw\""
+    "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+    "status": "active",
+    "createdAt": "2026-07-08T15:38:46.926Z",
+    "role": "Customer",
+    "email": "user_unique_abc_999@arcadia.com",
+    "passwordHash": "$2b$10$3NmZ7hGsUwe0h.M7NkvU..kPjf7vWl1ywlU10Kg4XlSE1p2lmQkMC",
+    "name": "Test User Unique",
+    "id": "u_3loapbbmw"
   },
   {
-    "status ": "\"active\"",
-    "avatar ": "\"https://lh3.googleusercontent.com/a/ACg8ocLinRmib25H7CqrqRKM-yhSyrGD96ZIzvfRgW5FrEGbrfsuuUo=s96-c\"",
-    "createdAt ": "\"2026-07-08T16:33:15.226Z\"",
-    "email ": "\"godesportsfreefire@gmail.com\"",
-    "role ": "\"Customer\"",
-    "id ": "\"u62O2DNFdmb4lhzQu3uPzHGOPQR2\"",
-    "name ": "\"God Like Esports (LIONS TOURNAMENT FREEFIRE)\"",
-    "passwordHash ": "\"\""
+    "status": "active",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocLinRmib25H7CqrqRKM-yhSyrGD96ZIzvfRgW5FrEGbrfsuuUo=s96-c",
+    "createdAt": "2026-07-08T16:33:15.226Z",
+    "email": "godesportsfreefire@gmail.com",
+    "role": "Customer",
+    "id": "u62O2DNFdmb4lhzQu3uPzHGOPQR2",
+    "name": "God Like Esports (LIONS TOURNAMENT FREEFIRE)",
+    "passwordHash": ""
   },
   {
-    "avatar ": "\"https://lh3.googleusercontent.com/a/ACg8ocJIZESNLv5EZ8W3WkLBu6xS6_WK2zYrOE8y2LiJ1P2u3Ffo_Q=s96-c\"",
-    "status ": "\"active\"",
-    "name ": "\"Xzoro Luffy\" ",
-    "passwordHash ": "\"\"",
-    "id ": "\"afcWo8hoenQxNrv5x624LGHocSD3\"",
-    "email ": "\"luffyx167@gmail.com\"",
-    "createdAt ": "\"2026-07-08T16:35:03.505Z\"",
-    "role ": "\"Customer\""
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJIZESNLv5EZ8W3WkLBu6xS6_WK2zYrOE8y2LiJ1P2u3Ffo_Q=s96-c",
+    "status": "active",
+    "name": "Xzoro Luffy",
+    "passwordHash": "",
+    "id": "afcWo8hoenQxNrv5x624LGHocSD3",
+    "email": "luffyx167@gmail.com",
+    "createdAt": "2026-07-08T16:35:03.505Z",
+    "role": "Customer"
   },
   {
     "status": "active",
@@ -128,5 +128,15 @@
     "status": "active",
     "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
     "createdAt": "2026-07-14T07:51:28.300Z"
+  },
+  {
+    "id": "u_admin_root_seed",
+    "name": "Super Admin",
+    "email": "arcadiadevelopers07@gmail.com",
+    "passwordHash": "$2b$10$Cq.pfHS5SbdhHFyDQvtr9eR7dI/PpA6XfeIfnC3Gcr1gOJ/99r216",
+    "role": "Super Admin",
+    "status": "active",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+    "createdAt": "2026-07-21T02:39:56.435Z"
   }
 ]

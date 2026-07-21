@@ -108,9 +108,9 @@
     "id": "l_6zmm5xrlx"
   },
   {
-    "action ": "\"Admin Login (Root) (Success)\"",
-    "id ": "\"l_0xve89sy0\"",
-    "details ": "\"Root admin logged in successfully: arcadiadevelopers07@gmail.com [Affected: auth] [User: System] [Role: System]\"",
-    "timestamp ": "\"2026-07-10T07:37:59.775Z\""
+    "action": "Admin Login (Root) (Success)",
+    "id": "l_0xve89sy0",
+    "details": "Root admin logged in successfully: arcadiadevelopers07@gmail.com [Affected: auth] [User: System] [Role: System]",
+    "timestamp": "2026-07-10T07:37:59.775Z"
   }
 ]

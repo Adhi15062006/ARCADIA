@@ -1,23 +1,74 @@
 {
   "hero": {
-    "badge": { "en": "ARCADIA STUDIO v2.6 • ESTABLISHED IN INDIA", "hi": "आर्केडिया स्टूडियो v2.6 • भारत में स्थापित" },
-    "headline": { "en": "Build Your Digital Legacy", "hi": "अपनी डिजिटल विरासत का निर्माण करें" },
-    "subtitle": { "en": "Modern Websites • AI Solutions • Business Automation", "hi": "आधुनिक वेबसाइटें • एआई समाधान • बिजनेस ऑटोमेशन" },
-    "paragraph": { "en": "We engineer award-winning SaaS interfaces, secure full-stack applications, and state-of-the-art server-side generative chatbots. Crafted for high conversions, extreme speed, and ultimate aesthetics.", "hi": "हम पुरस्कार विजेता SaaS इंटरफेस, सुरक्षित फुल-स्टैक एप्लिकेशन और अत्याधुनिक सर्वर-साइड जनरेटिव चैटबॉट्स का निर्माण करते हैं।" },
-    "review": { "en": "Rated 4.9/5 by 120+ Indian and global startups", "hi": "120+ भारतीय और वैश्विक स्टार्टअप्स द्वारा 4.9/5 रेटेड" }
+    "badge": {
+      "en": "ARCADIA STUDIO v2.6 • ESTABLISHED IN INDIA",
+      "hi": "आर्केडिया स्टूडियो v2.6 • भारत में स्थापित"
+    },
+    "headline": {
+      "en": "Build Your Digital Legacy",
+      "hi": "अपनी डिजिटल विरासत का निर्माण करें"
+    },
+    "subtitle": {
+      "en": "Modern Websites • AI Solutions • Business Automation",
+      "hi": "आधुनिक वेबसाइटें • एआई समाधान • बिजनेस ऑटोमेशन"
+    },
+    "paragraph": {
+      "en": "We engineer award-winning SaaS interfaces, secure full-stack applications, and state-of-the-art server-side generative chatbots. Crafted for high conversions, extreme speed, and ultimate aesthetics.",
+      "hi": "हम पुरस्कार विजेता SaaS इंटरफेस, सुरक्षित फुल-स्टैक एप्लिकेशन और अत्याधुनिक सर्वर-साइड जनरेटिव चैटबॉट्स का निर्माण करते हैं।"
+    },
+    "review": {
+      "en": "Rated 4.9/5 by 120+ Indian and global startups",
+      "hi": "120+ भारतीय और वैश्विक स्टार्टअप्स द्वारा 4.9/5 रेटेड"
+    }
   },
   "about": {
-    "title": { "en": "Our Paradigm Shift", "hi": "हमारा प्रतिमान बदलाव" },
-    "description": { "en": "We do not write templates; we construct customized premium software assets that command attention and drive real business scale.", "hi": "हम टेम्प्लेट नहीं लिखते; हम अनुकूलित प्रीमियम सॉफ़्टवेयर परिसंपत्तियों का निर्माण करते हैं।" },
+    "title": {
+      "en": "Our Paradigm Shift",
+      "hi": "हमारा प्रतिमान बदलाव"
+    },
+    "description": {
+      "en": "We do not write templates; we construct customized premium software assets that command attention and drive real business scale.",
+      "hi": "हम टेम्प्लेट नहीं लिखते; हम अनुकूलित प्रीमियम सॉफ़्टवेयर परिसंपत्तियों का निर्माण करते हैं।"
+    },
     "stats": [
-      { "label": { "en": "Active Systems Running", "hi": "सक्रिय प्रणालियाँ" }, "value": "250+" },
-      { "label": { "en": "Global Clients Served", "hi": "वैश्विक ग्राहक" }, "value": "120+" },
-      { "label": { "en": "Average ROI Growth", "hi": "औसत आरओआई वृद्धि" }, "value": "40%" }
+      {
+        "label": {
+          "en": "Active Systems Running",
+          "hi": "सक्रिय प्रणालियाँ"
+        },
+        "value": "250+"
+      },
+      {
+        "label": {
+          "en": "Global Clients Served",
+          "hi": "वैश्विक ग्राहक"
+        },
+        "value": "120+"
+      },
+      {
+        "label": {
+          "en": "Average ROI Growth",
+          "hi": "औसत आरओआई वृद्धि"
+        },
+        "value": "40%"
+      }
     ],
     "team": [
-      { "name": "Aditya Verma", "role": "Principal Web Architect", "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80" },
-      { "name": "Meera Nair", "role": "AI Research Scientist", "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80" },
-      { "name": "Rohan Gupta", "role": "SaaS Platform Engineer", "avatar": "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&q=80" }
+      {
+        "name": "Aditya Verma",
+        "role": "Principal Web Architect",
+        "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
+      },
+      {
+        "name": "Meera Nair",
+        "role": "AI Research Scientist",
+        "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80"
+      },
+      {
+        "name": "Rohan Gupta",
+        "role": "SaaS Platform Engineer",
+        "avatar": "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&q=80"
+      }
     ]
   },
   "contact": {
@@ -32,12 +83,21 @@
     }
   },
   "announcements": {
-    "text": { "en": "ARCADIA CONSOLE v2.6 DEPLOYED — NEW STACK ACTIVE", "hi": "आर्केडिया कंसोल v2.6 तैनात — नया स्टैक सक्रिय" },
+    "text": {
+      "en": "ARCADIA CONSOLE v2.6 DEPLOYED — NEW STACK ACTIVE",
+      "hi": "आर्केडिया कंसोल v2.6 तैनात — नया स्टैक सक्रिय"
+    },
     "active": true
   },
   "footer": {
-    "text": { "en": "Arcadia Studio is an elite Indian tech agency engineering futuristic, ultra-fast web systems.", "hi": "आर्केडिया स्टूडियो एक विशिष्ट भारतीय तकनीकी एजेंसी है जो भविष्य के वेब सिस्टम का निर्माण करती है।" },
-    "copyright": { "en": "© 2026 ARCADIA TECHNOLOGIES PVT. LTD. ALL RIGHTS RESERVED.", "hi": "© 2026 आर्केडिया टेक्नोलॉजीज प्रा. लि. सर्वाधिकार सुरक्षित।" }
+    "text": {
+      "en": "Arcadia Studio is an elite Indian tech agency engineering futuristic, ultra-fast web systems.",
+      "hi": "आर्केडिया स्टूडियो एक विशिष्ट भारतीय तकनीकी एजेंसी है जो भविष्य के वेब सिस्टम का निर्माण करती है।"
+    },
+    "copyright": {
+      "en": "© 2026 ARCADIA TECHNOLOGIES PVT. LTD. ALL RIGHTS RESERVED.",
+      "hi": "© 2026 आर्केडिया टेक्नोलॉजीज प्रा. लि. सर्वाधिकार सुरक्षित।"
+    }
   },
   "seo": {
     "metaTitle": "Arcadia Studio - Build Your Digital Legacy",
@@ -49,7 +109,10 @@
       "name": "Starter",
       "price": "₹4,999",
       "period": "one-time",
-      "desc": { "en": "Ideal for startups, consultants and creators seeking a beautiful digital presentation.", "hi": "स्टार्टअप्स और सलाहकारों के लिए उपयुक्त डिजिटल प्रस्तुति।" },
+      "desc": {
+        "en": "Ideal for startups, consultants and creators seeking a beautiful digital presentation.",
+        "hi": "स्टार्टअप्स और सलाहकारों के लिए उपयुक्त डिजिटल प्रस्तुति।"
+      },
       "features": [
         "1 Premium Landing Page",
         "Fully Responsive UI",
@@ -66,7 +129,10 @@
       "name": "Professional",
       "price": "₹14,999",
       "period": "one-time",
-      "desc": { "en": "Our award-winning package, combining full-stack web architectures with custom CMS structures.", "hi": "पूर्ण स्टैक वेब आर्किटेक्चर और कस्टम सीएमएस संरचनाओं का एक आदर्श पैकेज।" },
+      "desc": {
+        "en": "Our award-winning package, combining full-stack web architectures with custom CMS structures.",
+        "hi": "पूर्ण स्टैक वेब आर्किटेक्चर और कस्टम सीएमएस संरचनाओं का एक आदर्श पैकेज।"
+      },
       "features": [
         "Up to 5 Custom Pages",
         "Vite + React High Speed Engine",
@@ -84,7 +150,10 @@
       "name": "Enterprise",
       "price": "Custom",
       "period": "quote",
-      "desc": { "en": "Bespoke SaaS architectures, advanced AI voice-calling systems, and fully native mobile apps.", "hi": "विशिष्ट सास आर्किटेक्चर, उन्नत एआई कॉलिंग सिस्टम और मोबाइल ऐप्स।" },
+      "desc": {
+        "en": "Bespoke SaaS architectures, advanced AI voice-calling systems, and fully native mobile apps.",
+        "hi": "विशिष्ट सास आर्किटेक्चर, उन्नत एआई कॉलिंग सिस्टम और मोबाइल ऐप्स।"
+      },
       "features": [
         "Infinite Custom Pages",
         "Full Stack (Express + Node + Databases)",
