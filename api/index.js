@@ -1,3 +1,7 @@
-import app from "../dist/server.cjs";
+import appBundle from "../dist/server.cjs";
 
-export default app;
+const app = appBundle.default || appBundle;
+
+export default function handler(req, res) {
+  return app(req, res);
+}
