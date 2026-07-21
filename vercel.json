@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/test-all",
+      "destination": "/api/test-all.js"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/index.ts"
     },
