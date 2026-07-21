@@ -7,6 +7,34 @@
   },
   "rewrites": [
     {
+      "source": "/api/test1",
+      "destination": "/api/test1.ts"
+    },
+    {
+      "source": "/api/test2",
+      "destination": "/api/test2.ts"
+    },
+    {
+      "source": "/api/test3",
+      "destination": "/api/test3.ts"
+    },
+    {
+      "source": "/api/test4",
+      "destination": "/api/test4.ts"
+    },
+    {
+      "source": "/api/test5",
+      "destination": "/api/test5.ts"
+    },
+    {
+      "source": "/api/test6",
+      "destination": "/api/test6.ts"
+    },
+    {
+      "source": "/api/test7",
+      "destination": "/api/test7.ts"
+    },
+    {
       "source": "/api/test",
       "destination": "/api/test.ts"
     },
