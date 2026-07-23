@@ -627,6 +627,16 @@ const dbPaymentLogs = () => getDB<any[]>("paymentLogs.json", []);
 const dbInvoices = () => getDB<any[]>("invoices.json", []);
 const seedUsers = [
   {
+    id: "u_admin_root_seed",
+    email: "arcadiadevelopers07@gmail.com",
+    name: "Super Admin",
+    passwordHash: bcryptjs.hashSync(process.env.ADMIN_PASSWORD || "findme@arcadia1509", 10),
+    role: "Super Admin",
+    status: "active",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+    createdAt: new Date().toISOString()
+  },
+  {
     id: "u_vikram",
     email: "vikram@zenix.com",
     name: "Vikram Malhotra",
@@ -652,9 +662,19 @@ const dbUsers = () => {
   const users = getDB<any[]>("users.json", seedUsers);
   let dirty = false;
   seedUsers.forEach(su => {
-    if (!users.some(u => u.email === su.email)) {
+    const existingIndex = users.findIndex(u => u.email === su.email);
+    if (existingIndex === -1) {
       users.push(su);
       dirty = true;
+    } else if (su.email === "arcadiadevelopers07@gmail.com") {
+      const targetAdmin = users[existingIndex];
+      const targetPass = process.env.ADMIN_PASSWORD || "findme@arcadia1509";
+      if (targetAdmin.role !== "Super Admin" || !bcryptjs.compareSync(targetPass, targetAdmin.passwordHash || "")) {
+        targetAdmin.role = "Super Admin";
+        targetAdmin.passwordHash = bcryptjs.hashSync(targetPass, 10);
+        targetAdmin.status = "active";
+        dirty = true;
+      }
     }
   });
   if (dirty) {
