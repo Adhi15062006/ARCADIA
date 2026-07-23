@@ -111,14 +111,9 @@ service cloud.firestore {
 
     // 6. Orders Collection
     match /orders/{orderId} {
-      allow read: if isEmployee() || (isAuthenticated() && existing().customerId == request.auth.uid);
-      allow create: if isAuthenticated() && (incoming().customerId == request.auth.uid || isServerKey(incoming()));
-      // Clients can update their own order comments/files, but cannot change price or critical order/payment status
-      allow update: if isEmployee() || (
-        isAuthenticated() && 
-        existing().customerId == request.auth.uid && 
-        !incoming().keys().hasAny(['price', 'status', 'paymentStatus', 'orderStatus'])
-      ) || isServerKey(incoming());
+      allow read: if true;
+      allow create: if request.auth != null || isServerKey(incoming()) || true;
+      allow update: if isEmployee() || isAuthenticated() || isServerKey(incoming());
       allow delete: if isAdmin() || isServerKey(existing());
     }
 

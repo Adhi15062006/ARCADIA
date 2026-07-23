@@ -542,6 +542,23 @@ function saveDB<T>(filename: string, data: T) {
     server_key: 'arcadia_secure_server_key_2026_futuristic_studio_token'
   };
 
+  if (filename === "orders.json" && Array.isArray(data)) {
+    data.forEach(orderItem => {
+      const normalized = normalizeOrderSchema(orderItem);
+      const orderDocRef = doc(db, "orders", normalized.id);
+      console.log("[Order System] Before writing order:", normalized.id);
+      setDoc(orderDocRef, normalized)
+        .then(() => console.log("[Order System] Firestore response / Document ID:", normalized.id))
+        .catch(err => {
+          if (adminDb) {
+            adminDb.collection("orders").doc(normalized.id).set(normalized)
+              .then(() => console.log("[Order System] Admin Firestore response / Document ID:", normalized.id))
+              .catch(adminErr => console.error("[Order System] Failed to write order to Firestore orders collection:", adminErr));
+          }
+        });
+    });
+  }
+
   setDoc(doc(db, "arcadia_system_db", filename), payload)
     .then(() => {
       console.log(`[Client Token] Successfully backed up ${filename} to Firebase Firestore.`);
@@ -614,7 +631,87 @@ const dbFAQs = () => getDB<any[]>("faqs.json", seedFAQs);
 const dbTestimonials = () => getDB<any[]>("testimonials.json", seedTestimonials);
 const dbHomepageSettings = () => getDB<any>("homepage_settings.json", {});
 const dbBookings = () => getDB<any[]>("bookings.json", []);
-const dbOrders = () => getDB<any[]>("orders.json", []);
+function normalizeOrderSchema(order: any) {
+  const id = order.id || order.orderId || ("ord_" + Math.random().toString(36).substr(2, 9));
+  const budgetNum = parseInt(order.budget || order.total || 0) || 0;
+  const now = new Date().toISOString();
+  
+  const m1Amt = Math.round(budgetNum * 0.3);
+  const m2Amt = Math.round(budgetNum * 0.5);
+  const m3Amt = budgetNum - m1Amt - m2Amt;
+
+  const defaultMilestones = [
+    { id: "m1", label: "Kickoff Booking Deposit (30%)", percentage: 30, amount: m1Amt, status: order.isPaid ? "Paid" : "Pending" },
+    { id: "m2", label: "Mid-Project Development Phase (50%)", percentage: 50, amount: m2Amt, status: "Pending" },
+    { id: "m3", label: "Project Handover & Settlement (20%)", percentage: 20, amount: m3Amt, status: "Pending" }
+  ];
+
+  return {
+    id,
+    orderId: id,
+    userId: order.userId || order.customerId || order.email || "guest",
+    customerId: order.customerId || order.userId || order.email || "guest",
+    customerName: order.customerName || order.name || "Client",
+    name: order.name || order.customerName || "Client",
+    email: order.email || "",
+    phone: order.phone || "",
+    company: order.company || "",
+    address: order.address || "Digital Online Order",
+    service: order.service || "Web Development & AI Solutions",
+    items: order.items || [{ id: "item_1", name: order.service || "Digital Service", price: budgetNum }],
+    subtotal: order.subtotal !== undefined ? order.subtotal : budgetNum,
+    tax: order.tax || 0,
+    shipping: order.shipping || 0,
+    discount: order.discount || 0,
+    total: order.total !== undefined ? order.total : budgetNum,
+    budget: String(budgetNum),
+    paymentAmount: order.paymentAmount !== undefined ? order.paymentAmount : budgetNum,
+    paymentMethod: order.paymentMethod || "Razorpay Gateway",
+    paymentStatus: order.paymentStatus || (order.isPaid ? "Paid" : "Pending"),
+    orderStatus: order.orderStatus || order.status || "Pending",
+    status: order.status || order.orderStatus || "Pending",
+    isPaid: order.isPaid || order.paymentStatus === "Paid" || false,
+    deadline: order.deadline || "Flexible",
+    description: order.description || "",
+    fileUrl: order.fileUrl || "",
+    paymentScreenshot: order.paymentScreenshot || "",
+    milestones: order.milestones || defaultMilestones,
+    createdAt: order.createdAt || now,
+    updatedAt: now
+  };
+}
+
+const seedOrders = [
+  normalizeOrderSchema({
+    id: "ord_demo_test_101",
+    orderId: "ord_demo_test_101",
+    name: "Alex Vance",
+    customerName: "Alex Vance",
+    email: "alex.vance@arcadia.digital",
+    phone: "+91 9876543210",
+    company: "Vance Technologies",
+    service: "AI Chatbot & E-Commerce Web App",
+    budget: 29999,
+    total: 29999,
+    subtotal: 29999,
+    status: "Pending",
+    orderStatus: "Pending",
+    paymentStatus: "Pending",
+    isPaid: false,
+    paymentMethod: "Razorpay Gateway",
+    description: "Sample test order generated automatically for Admin Dashboard order verification.",
+    createdAt: new Date().toISOString()
+  })
+];
+
+const dbOrders = () => {
+  const orders = getDB<any[]>("orders.json", seedOrders);
+  if (orders.length === 0) {
+    orders.push(seedOrders[0]);
+    saveDB("orders.json", orders);
+  }
+  return orders.map(o => normalizeOrderSchema(o));
+};
 const dbInquiries = () => getDB<any[]>("inquiries.json", []);
 const dbVacancies = () => getDB<any[]>("vacancies.json", seedVacancies);
 const dbApplications = () => getDB<any[]>("applications.json", []);
@@ -2653,13 +2750,15 @@ app.post("/api/bookings", (req, res) => {
 
 // Orders API
 app.get("/api/orders", authenticateJWT, requireAdmin, (req, res) => {
-  res.json(dbOrders());
+  const orders = dbOrders();
+  console.log("[Order System] Admin query count:", orders.length);
+  console.log("[Order System] Orders returned:", orders.length);
+  res.json(orders);
 });
 
 app.post("/api/orders", (req, res) => {
   const { fileUrl, paymentScreenshot } = req.body;
   
-  // Validate Project Specifications File (if uploaded)
   if (fileUrl) {
     const allowedSpecsMimes = [
       "application/pdf", 
@@ -2669,64 +2768,35 @@ app.post("/api/orders", (req, res) => {
       "image/jpeg",
       "image/png"
     ];
-    const validation = validateBase64File(fileUrl, allowedSpecsMimes, 5 * 1024 * 1024); // 5MB limit
+    const validation = validateBase64File(fileUrl, allowedSpecsMimes, 5 * 1024 * 1024);
     if (!validation.valid) {
       return res.status(400).json({ error: `Specifications File Error: ${validation.error}` });
     }
   }
 
-  // Validate Payment Screenshot File (if uploaded)
   if (paymentScreenshot) {
     const allowedScreenshotMimes = ["image/jpeg", "image/png", "image/webp"];
-    const validation = validateBase64File(paymentScreenshot, allowedScreenshotMimes, 5 * 1024 * 1024); // 5MB limit
+    const validation = validateBase64File(paymentScreenshot, allowedScreenshotMimes, 5 * 1024 * 1024);
     if (!validation.valid) {
       return res.status(400).json({ error: `Payment Screenshot Error: ${validation.error}` });
     }
   }
 
   const orders = dbOrders();
-  const budget = parseInt(req.body.budget) || 0;
-  
-  const m1Amt = Math.round(budget * 0.3);
-  const m2Amt = Math.round(budget * 0.5);
-  const m3Amt = budget - m1Amt - m2Amt;
-
-  const milestones = [
-    {
-      id: "m1",
-      label: "Kickoff Booking Deposit (30%)",
-      percentage: 30,
-      amount: m1Amt,
-      status: "Pending"
-    },
-    {
-      id: "m2",
-      label: "Mid-Project Development Phase (50%)",
-      percentage: 50,
-      amount: m2Amt,
-      status: "Pending"
-    },
-    {
-      id: "m3",
-      label: "Project Handover & Settlement (20%)",
-      percentage: 20,
-      amount: m3Amt,
-      status: "Pending"
-    }
-  ];
-
-  const newOrder = {
+  const normalizedOrder = normalizeOrderSchema({
     id: "ord_" + Math.random().toString(36).substr(2, 9),
     status: "Pending",
-    isPaid: false,
+    orderStatus: "Pending",
+    paymentStatus: req.body.isPaid ? "Paid" : "Pending",
+    isPaid: req.body.isPaid || false,
     ...req.body,
-    milestones,
     createdAt: new Date().toISOString()
-  };
-  orders.unshift(newOrder);
+  });
+
+  orders.unshift(normalizedOrder);
   saveDB("orders.json", orders);
-  logActivity("New Project Order", `New order submitted by ${newOrder.name} for: ${newOrder.service} (Awaiting Approval)`);
-  res.status(201).json(newOrder);
+  logActivity("New Project Order", `New order submitted by ${normalizedOrder.name} for: ${normalizedOrder.service} (Awaiting Approval)`);
+  res.status(201).json(normalizedOrder);
 });
 
 app.put("/api/orders/:id/status", authenticateJWT, requireAdmin, (req, res) => {

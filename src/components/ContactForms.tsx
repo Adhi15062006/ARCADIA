@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { generateInvoicePDF } from "../utils/pdfGenerator";
 import { Order } from "../types";
+import { db } from "../firebase/config";
+import { doc, setDoc } from "firebase/firestore";
 
 interface ContactFormsProps {
   prefilledService: string;
@@ -146,7 +148,6 @@ export default function ContactForms({
         }
       };
       checkActiveOrders();
-
       const intervalId = setInterval(checkActiveOrders, 5000);
       return () => clearInterval(intervalId);
     } else {
@@ -154,6 +155,21 @@ export default function ContactForms({
       setActiveOrderDetails(null);
     }
   }, [isClientLoggedIn, clientEmail, clientName, orderStatus]);
+
+  useEffect(() => {
+    if (clientEmail && !orderData.email) {
+      setOrderData(prev => ({ ...prev, email: clientEmail }));
+    }
+    if (clientName && !orderData.name) {
+      setOrderData(prev => ({ ...prev, name: clientName }));
+    }
+    if (clientEmail && !bookingData.email) {
+      setBookingData(prev => ({ ...prev, email: clientEmail }));
+    }
+    if (clientName && !bookingData.name) {
+      setBookingData(prev => ({ ...prev, name: clientName }));
+    }
+  }, [clientEmail, clientName]);
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,20 +184,6 @@ export default function ContactForms({
         const data = await res.json();
         setBookingStatus("success");
         onSuccess("booking", data);
-        setTimeout(() => {
-          setBookingStatus("idle");
-          setBookingData({
-            name: "",
-            email: "",
-            phone: "",
-            businessName: "",
-            service: "",
-            date: "",
-            time: "",
-            meetingMode: "Google Meet",
-            requirements: ""
-          });
-        }, 5000);
       } else {
         setBookingStatus("error");
       }
@@ -190,13 +192,13 @@ export default function ContactForms({
     }
   };
 
-  // Convert files to base64 for submission
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: "fileUrl" | "paymentScreenshot") => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: "fileUrl" | "paymentScreenshot") => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
+    reader.onloadend = () => {
+      if (reader.result) {
         if (field === "fileUrl") {
           setOrderData(prev => ({ ...prev, fileUrl: reader.result as string, fileName: file.name }));
         } else {
@@ -206,6 +208,8 @@ export default function ContactForms({
     };
     reader.readAsDataURL(file);
   };
+
+  const handleFileChange = handleFileUpload;
 
   // Simulated Razorpay payment flow
   const handleRazorpaySimulation = () => {
@@ -218,26 +222,58 @@ export default function ContactForms({
 
   const handleOrderSubmit = async () => {
     setOrderStatus("submitting");
+    const budgetNum = parseInt(orderData.budget) || 0;
+    const now = new Date().toISOString();
+    
+    const payload = {
+      name: orderData.name,
+      customerName: orderData.name,
+      company: orderData.company,
+      email: orderData.email,
+      phone: orderData.phone,
+      address: "Digital Online Order",
+      service: orderData.service,
+      items: [{ id: "s_" + Date.now(), name: orderData.service, price: budgetNum }],
+      budget: String(budgetNum),
+      subtotal: budgetNum,
+      tax: 0,
+      shipping: 0,
+      discount: 0,
+      total: budgetNum,
+      deadline: orderData.deadline,
+      description: orderData.description,
+      fileUrl: orderData.fileUrl,
+      paymentScreenshot: orderData.paymentScreenshot,
+      paymentMethod: "Razorpay Gateway",
+      paymentStatus: orderData.isPaid ? "Paid" : "Pending",
+      orderStatus: "Pending",
+      status: "Pending",
+      isPaid: orderData.isPaid,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    console.log("[Order System] Before writing order:", payload);
+
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: orderData.name,
-          company: orderData.company,
-          email: orderData.email,
-          phone: orderData.phone,
-          service: orderData.service,
-          budget: orderData.budget,
-          deadline: orderData.deadline,
-          description: orderData.description,
-          fileUrl: orderData.fileUrl,
-          paymentScreenshot: orderData.paymentScreenshot,
-          isPaid: orderData.isPaid
-        })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         const data = await res.json();
+        console.log("[Order System] Firestore response / Document ID:", data.id || data.orderId);
+
+        // Also write directly to Firestore orders collection for instant real-time synchronization
+        try {
+          const orderDocRef = doc(db, "orders", data.id || data.orderId);
+          await setDoc(orderDocRef, { ...payload, id: data.id || data.orderId, orderId: data.id || data.orderId });
+          console.log("[Order System] Direct client Firestore write succeeded for order ID:", data.id || data.orderId);
+        } catch (fsErr) {
+          console.warn("[Order System] Direct client Firestore write deferred:", fsErr);
+        }
+
         setPlacedOrder(data);
         setOrderStatus("success");
         onSuccess("order", data);
@@ -245,6 +281,7 @@ export default function ContactForms({
         setOrderStatus("error");
       }
     } catch (err) {
+      console.error("[Order System] Error submitting order:", err);
       setOrderStatus("error");
     }
   };

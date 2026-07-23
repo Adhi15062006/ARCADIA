@@ -568,10 +568,28 @@ export default function AdminDashboard({
           }
         }, (err) => console.error("Error listening to bookings:", err)),
 
+        onSnapshot(collection(db, "orders"), (snapshot) => {
+          console.log("[Order System] Admin query count:", snapshot.size);
+          const ordersList: any[] = [];
+          snapshot.forEach((document) => {
+            ordersList.push(document.data());
+          });
+          console.log("[Order System] Orders returned from Firestore orders collection:", ordersList.length);
+          if (ordersList.length > 0) {
+            setOrders(ordersList);
+          }
+        }, (err) => console.error("[Order System] Error listening to orders collection:", err)),
+
         onSnapshot(doc(db, "arcadia_system_db", "orders.json"), (snapshot) => {
           const data = snapshot.data();
           if (data && Array.isArray(data.data)) {
-            setOrders(data.data);
+            setOrders(prev => {
+              if (prev.length === 0) return data.data;
+              const map = new Map();
+              data.data.forEach((o: any) => map.set(o.id || o.orderId, o));
+              prev.forEach((o: any) => map.set(o.id || o.orderId, o));
+              return Array.from(map.values());
+            });
           }
         }, (err) => console.error("Error listening to orders:", err)),
 

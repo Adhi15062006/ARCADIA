@@ -32,7 +32,7 @@ import {
 import { generateInvoicePDF, generateRefundPDF } from "../utils/pdfGenerator";
 import { Order, Booking, Inquiry } from "../types";
 import { db } from "../firebase/config";
-import { onSnapshot, doc } from "firebase/firestore";
+import { onSnapshot, doc, collection } from "firebase/firestore";
 
 function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
@@ -472,11 +472,35 @@ export default function ClientDashboard({
     const cleanEmail = userEmail.toLowerCase().trim();
 
     const unsubscribes = [
+      onSnapshot(collection(db, "orders"), (snapshot) => {
+        const ordersFromCol: any[] = [];
+        snapshot.forEach((docSnap) => {
+          const item = docSnap.data();
+          if (item.email?.toLowerCase().trim() === cleanEmail || item.userId === cleanEmail || item.customerId === cleanEmail) {
+            ordersFromCol.push(item);
+          }
+        });
+        if (ordersFromCol.length > 0) {
+          setClientOrders(prev => {
+            const map = new Map();
+            prev.forEach((o: any) => map.set(o.id || o.orderId, o));
+            ordersFromCol.forEach((o: any) => map.set(o.id || o.orderId, o));
+            return Array.from(map.values());
+          });
+        }
+      }, (err) => console.error("Error listening to orders collection in client dashboard:", err)),
+
       onSnapshot(doc(db, "arcadia_system_db", "orders.json"), (snapshot) => {
         const data = snapshot.data();
         if (data && Array.isArray(data.data)) {
           const filtered = data.data.filter((o: any) => o.email?.toLowerCase().trim() === cleanEmail);
-          setClientOrders(filtered);
+          setClientOrders(prev => {
+            if (prev.length === 0) return filtered;
+            const map = new Map();
+            filtered.forEach((o: any) => map.set(o.id || o.orderId, o));
+            prev.forEach((o: any) => map.set(o.id || o.orderId, o));
+            return Array.from(map.values());
+          });
         }
       }, (err) => console.error("Error listening to client orders:", err)),
 
