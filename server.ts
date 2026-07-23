@@ -7,7 +7,7 @@ import bcryptjs from "bcryptjs";
 import Razorpay from "razorpay";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps as getClientApps, getApp as getClientApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, getDocs, collection, setLogLevel, deleteDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
@@ -20,7 +20,7 @@ process.on("uncaughtException", (error) => {
 
 setLogLevel("error");
 import admin from "firebase-admin";
-import { getApps as getAdminApps, initializeApp as initializeAdminApp } from "firebase-admin/app";
+import { getApps as getAdminApps, initializeApp as initializeAdminApp, cert } from "firebase-admin/app";
 import { getFirestore as getAdminFirestore } from "firebase-admin/firestore";
 import { getAuth as getAdminAuthSDK } from "firebase-admin/auth";
 
@@ -143,16 +143,16 @@ function validateBase64File(base64Data: string, allowedMimes: string[], maxBytes
 
 // Resolve the Firebase Config and database ID dynamically, prioritizing environment variables
 const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyCRsDYK1bAoCSaMEk8NE-eidvD6qt6Tvi8",
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "arcadia-developers.firebaseapp.com",
-  projectId: process.env.FIREBASE_PROJECT_ID || "arcadia-developers",
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "arcadia-developers.firebasestorage.app",
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "122899421269",
-  appId: process.env.FIREBASE_APP_ID || "1:122899421269:web:c392ff7ae9346773f81cdc",
+  apiKey: process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCRsDYK1bAoCSaMEk8NE-eidvD6qt6Tvi8",
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || process.env.VITE_FIREBASE_AUTH_DOMAIN || process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "arcadia-developers.firebaseapp.com",
+  projectId: process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "arcadia-developers",
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "arcadia-developers.firebasestorage.app",
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "122899421269",
+  appId: process.env.FIREBASE_APP_ID || process.env.VITE_FIREBASE_APP_ID || process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:122899421269:web:c392ff7ae9346773f81cdc",
   adminEmail: process.env.ADMIN_EMAIL || "arcadiadevelopers07@gmail.com"
 };
 
-let firestoreDatabaseId: string | undefined = process.env.FIREBASE_DATABASE_ID || undefined;
+let firestoreDatabaseId: string | undefined = process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID || process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID || undefined;
 
 try {
   const configPath = path.join(process.cwd(), "firebase-applet-config.json");
@@ -175,21 +175,62 @@ console.log(`[Firebase Init] Configuration resolved for project: ${firebaseConfi
 // Initialize Firebase Admin SDK
 let adminDb: any = null;
 try {
-  const adminApp = getAdminApps().length === 0
-    ? initializeAdminApp({ projectId: firebaseConfig.projectId })
-    : getAdminApps()[0];
+  let adminApp: any = null;
+  const existingAdminApps = getAdminApps();
+  if (existingAdminApps.length > 0) {
+    adminApp = existingAdminApps[0];
+  } else {
+    let credentialOption: any = undefined;
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      try {
+        const parsedKey = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        credentialOption = cert(parsedKey);
+        console.log("[Firebase Admin] Credentials loaded from FIREBASE_SERVICE_ACCOUNT_KEY.");
+      } catch (e: any) {
+        console.error("[Firebase Admin] Invalid FIREBASE_SERVICE_ACCOUNT_KEY JSON:", e.message);
+      }
+    } else if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+      try {
+        const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n");
+        credentialOption = cert({
+          projectId: firebaseConfig.projectId,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey
+        });
+        console.log("[Firebase Admin] Credentials loaded from FIREBASE_PRIVATE_KEY & FIREBASE_CLIENT_EMAIL.");
+      } catch (e: any) {
+        console.error("[Firebase Admin] Failed to parse FIREBASE_PRIVATE_KEY cert:", e.message);
+      }
+    }
+
+    const adminOptions: any = { projectId: firebaseConfig.projectId };
+    if (credentialOption) {
+      adminOptions.credential = credentialOption;
+    }
+    adminApp = initializeAdminApp(adminOptions);
+  }
+
   try {
     adminDb = getAdminFirestore(adminApp, firestoreDatabaseId);
-    console.log(`Firebase Admin SDK initialized successfully for custom Firestore DB inside ${firebaseConfig.projectId}.`);
+    console.log(`[Firebase Admin] SDK initialized for custom Firestore DB inside ${firebaseConfig.projectId}.`);
   } catch (dbErr) {
     adminDb = getAdminFirestore(adminApp);
-    console.log(`Firebase Admin SDK initialized successfully with default Firestore DB inside ${firebaseConfig.projectId}.`);
+    console.log(`[Firebase Admin] SDK initialized with default Firestore DB inside ${firebaseConfig.projectId}.`);
   }
-} catch (err) {
-  console.error("Firebase Admin SDK failed to initialize. Falling back to Client SDK:", err);
+} catch (err: any) {
+  console.warn("[Firebase Admin] SDK failed to initialize. Deferred to Client SDK fallback:", err?.message || err);
 }
 
-const getAdminAuth = () => getAdminAuthSDK();
+const getAdminAuth = () => {
+  try {
+    if (getAdminApps().length > 0) {
+      return getAdminAuthSDK();
+    }
+  } catch (err) {
+    // Admin app uninitialized
+  }
+  return null;
+};
 
 let publicKeysCache: { keys: Record<string, string>; expiresAt: number } | null = null;
 
@@ -314,7 +355,7 @@ function verifyRazorpaySignature(orderId: string, paymentId: string, signature: 
   }
 }
 
-const firebaseApp = initializeApp(firebaseConfig);
+const firebaseApp = getClientApps().length === 0 ? initializeApp(firebaseConfig) : getClientApp();
 const db = getFirestore(firebaseApp, firestoreDatabaseId);
 const auth = getAuth(firebaseApp);
 
@@ -390,8 +431,12 @@ async function syncAllLocalDBToFirestore() {
 }
 
 let isInitialized = false;
+let initPromise: Promise<void> | null = null;
+
 async function ensureDBInitialized() {
   if (isInitialized) return;
+  isInitialized = true;
+
   console.log("Synchronizing memoryDB cache with Firebase Firestore...");
 
   let loadedCount = 0;
@@ -433,25 +478,21 @@ async function ensureDBInitialized() {
     }
   }
 
-  // If after both SDK checks, no documents were loaded, it means the database is empty in Firestore!
-  // In this case, we trigger auto-seeding of all JSON files in data/ to Firestore.
+  // If after both SDK checks, no documents were loaded, auto-seed local files if present
   if (loadedCount === 0) {
     console.log("[Database Sync] Firestore is empty or unpopulated. Auto-seeding database from local JSON files...");
     await syncAllLocalDBToFirestore();
   }
-
-  isInitialized = true;
 }
 
-// Global middleware to guarantee DB is loaded before serving requests
-app.use(async (req, res, next) => {
-  try {
-    await ensureDBInitialized();
-    next();
-  } catch (err) {
-    console.error("Failed to initialize Firebase database cache in middleware", err);
-    next();
+// Global middleware to guarantee DB initialization is started non-blockingly
+app.use((req, res, next) => {
+  if (!initPromise) {
+    initPromise = ensureDBInitialized().catch(err => {
+      console.error("[Database Init] Initial sync background error:", err);
+    });
   }
+  next();
 });
 
 // Helper for JSON Database Persistence with Firebase backup
@@ -5068,32 +5109,50 @@ app.get(["/firebase-config.js", "/api/firebase-config.js"], (req, res) => {
 
 // Configure Vite middleware in development
 async function startServer() {
-  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL && !process.env.STANDALONE_VITE) {
-    const viteModuleName = "vite";
-    const { createServer: createViteServer } = await import(viteModuleName);
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+  if (process.env.VERCEL) {
+    console.log("[Serverless] Running on Vercel platform - skipping standalone HTTP listener.");
+    return;
+  }
+  if (process.env.NODE_ENV !== "production" && !process.env.STANDALONE_VITE) {
+    try {
+      const viteModuleName = "vite";
+      const { createServer: createViteServer } = await import(viteModuleName);
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (err) {
+      console.warn("[Vite Middleware] Dev server error:", err);
+    }
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    // SPA Fallback for production (only if not running on Vercel serverless function)
-    if (!process.env.VERCEL) {
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
       app.get("*", (req, res) => {
         res.sendFile(path.join(distPath, "index.html"));
       });
     }
   }
 
-  if (!process.env.VERCEL) {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`ARCADIA Futuristic server running at http://0.0.0.0:${PORT}`);
-    });
-  }
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`ARCADIA Futuristic server running at http://0.0.0.0:${PORT}`);
+  });
 }
 
 startServer();
+
+// Global Express Uncaught Error Handling Middleware
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error(`[Global Express Error] Uncaught failure on ${req.method} ${req.path}:`, err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  return res.status(500).json({
+    error: "Internal Server Error",
+    message: err.message || "An unexpected backend error occurred.",
+    path: req.path
+  });
+});
 
 export default app;

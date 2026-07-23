@@ -1,142 +1,143 @@
 [
   {
-    "status": "active",
-    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
-    "createdAt": "2026-07-05T16:20:05.581Z",
-    "role": "Customer",
+    "id": "u_vikram",
     "email": "vikram@zenix.com",
     "passwordHash": "$2b$10$Z14fpvM8JiP7syhoiiemBuyVyOS9Vz.ELV0NhVWf27jVNW9lDkPVG",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
     "name": "Vikram Malhotra",
-    "id": "u_vikram"
+    "createdAt": "2026-07-05T16:20:05.581Z",
+    "status": "active",
+    "role": "Customer"
   },
   {
-    "createdAt": "2026-07-05T16:20:05.692Z",
-    "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+    "role": "Customer",
     "status": "active",
+    "createdAt": "2026-07-05T16:20:05.692Z",
     "name": "Priyanka Sen",
     "id": "u_priyanka",
-    "passwordHash": "$2b$10$5fSUgM9tlcGFyNHjzcxDr.X0rEnwIWjpnKYr8zfuJ/TJjMxWWiXlu",
     "email": "priyanka@aura.com",
-    "role": "Customer"
-  },
-  {
-    "passwordHash": "$2b$10$FK.84fEsC/J.9B/BBL6Xg.ns5k2RPUCOVI5yJKOxUrQCv3kKcK3PG",
-    "createdAt": "2026-07-06T09:04:36.669Z",
-    "role": "Customer",
-    "email": "adhik1506@gmail.com",
-    "id": "u_qfb6b5lx7",
-    "name": "adhi",
-    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-    "status": "active"
-  },
-  {
-    "id": "ll16NkkzKudTAbQP8qQUHVUqyVu1",
-    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIPn_U3xXF_GnsKh2wT_Fkr8jPLcWxJQEqFTJfxRE5jX4PHTWg=s96-c",
-    "name": "CALORI SYNC",
-    "email": "calorisync06@gmail.com",
-    "createdAt": "2026-07-06T16:06:04.724Z",
-    "passwordHash": "",
-    "role": "Customer",
-    "status": "active"
-  },
-  {
-    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
-    "createdAt": "2026-07-08T15:27:41.625Z",
-    "status": "active",
-    "passwordHash": "$2b$10$jBfVoJ702dbYmsv1YS7sCO4G6CSYxmgC7kikVbUlNsBU0sLFAVchi",
-    "name": "Test User",
-    "id": "u_zugil0yl5",
-    "email": "testuser_fresh@arcadia.com",
-    "role": "Customer"
-  },
-  {
     "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
-    "status": "active",
-    "createdAt": "2026-07-08T15:38:46.926Z",
+    "passwordHash": "$2b$10$5fSUgM9tlcGFyNHjzcxDr.X0rEnwIWjpnKYr8zfuJ/TJjMxWWiXlu"
+  },
+  {
     "role": "Customer",
+    "status": "active",
+    "name": "adhi",
+    "createdAt": "2026-07-06T09:04:36.669Z",
+    "id": "u_qfb6b5lx7",
+    "email": "adhik1506@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+    "passwordHash": "$2b$10$FK.84fEsC/J.9B/BBL6Xg.ns5k2RPUCOVI5yJKOxUrQCv3kKcK3PG"
+  },
+  {
+    "status": "active",
+    "role": "Customer",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIPn_U3xXF_GnsKh2wT_Fkr8jPLcWxJQEqFTJfxRE5jX4PHTWg=s96-c",
+    "passwordHash": "",
+    "email": "calorisync06@gmail.com",
+    "id": "ll16NkkzKudTAbQP8qQUHVUqyVu1",
+    "name": "CALORI SYNC",
+    "createdAt": "2026-07-06T16:06:04.724Z"
+  },
+  {
+    "createdAt": "2026-07-08T15:27:41.625Z",
+    "name": "Test User",
+    "email": "testuser_fresh@arcadia.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+    "passwordHash": "$2b$10$jBfVoJ702dbYmsv1YS7sCO4G6CSYxmgC7kikVbUlNsBU0sLFAVchi",
+    "id": "u_zugil0yl5",
+    "role": "Customer",
+    "status": "active"
+  },
+  {
+    "name": "Test User Unique",
+    "createdAt": "2026-07-08T15:38:46.926Z",
+    "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
     "email": "user_unique_abc_999@arcadia.com",
     "passwordHash": "$2b$10$3NmZ7hGsUwe0h.M7NkvU..kPjf7vWl1ywlU10Kg4XlSE1p2lmQkMC",
-    "name": "Test User Unique",
-    "id": "u_3loapbbmw"
-  },
-  {
-    "status": "active",
-    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocLinRmib25H7CqrqRKM-yhSyrGD96ZIzvfRgW5FrEGbrfsuuUo=s96-c",
-    "createdAt": "2026-07-08T16:33:15.226Z",
-    "email": "godesportsfreefire@gmail.com",
+    "id": "u_3loapbbmw",
     "role": "Customer",
-    "id": "u62O2DNFdmb4lhzQu3uPzHGOPQR2",
-    "name": "God Like Esports (LIONS TOURNAMENT FREEFIRE)",
-    "passwordHash": ""
+    "status": "active"
   },
   {
-    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJIZESNLv5EZ8W3WkLBu6xS6_WK2zYrOE8y2LiJ1P2u3Ffo_Q=s96-c",
-    "status": "active",
-    "name": "Xzoro Luffy",
+    "id": "u62O2DNFdmb4lhzQu3uPzHGOPQR2",
     "passwordHash": "",
-    "id": "afcWo8hoenQxNrv5x624LGHocSD3",
-    "email": "luffyx167@gmail.com",
-    "createdAt": "2026-07-08T16:35:03.505Z",
+    "email": "godesportsfreefire@gmail.com",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocLinRmib25H7CqrqRKM-yhSyrGD96ZIzvfRgW5FrEGbrfsuuUo=s96-c",
+    "name": "God Like Esports (LIONS TOURNAMENT FREEFIRE)",
+    "createdAt": "2026-07-08T16:33:15.226Z",
+    "status": "active",
     "role": "Customer"
   },
   {
+    "role": "Customer",
+    "status": "active",
+    "name": "Xzoro Luffy",
+    "createdAt": "2026-07-08T16:35:03.505Z",
+    "email": "luffyx167@gmail.com",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJIZESNLv5EZ8W3WkLBu6xS6_WK2zYrOE8y2LiJ1P2u3Ffo_Q=s96-c",
+    "passwordHash": "",
+    "id": "afcWo8hoenQxNrv5x624LGHocSD3"
+  },
+  {
     "status": "active",
     "role": "Customer",
+    "id": "u_vikram",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
     "email": "vikram@zenix.com",
     "passwordHash": "$2b$10$ac47fLFI29fnqQMm.PsYku3LqkESlUUToITDjASwD257U8yh1CzCS",
-    "name": "Vikram Malhotra",
-    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
-    "id": "u_vikram",
-    "createdAt": "2026-07-14T07:02:45.681Z"
+    "createdAt": "2026-07-14T07:02:45.681Z",
+    "name": "Vikram Malhotra"
   },
   {
     "role": "Customer",
     "status": "active",
-    "email": "priyanka@aura.com",
-    "passwordHash": "$2b$10$lueuJvm1TQPuzeXMB7URR.87qBu1Klvr5lYtR7vRQkiDRSNWGUIqm",
-    "id": "u_priyanka",
-    "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
     "name": "Priyanka Sen",
-    "createdAt": "2026-07-14T07:02:45.754Z"
+    "createdAt": "2026-07-14T07:02:45.754Z",
+    "id": "u_priyanka",
+    "passwordHash": "$2b$10$lueuJvm1TQPuzeXMB7URR.87qBu1Klvr5lYtR7vRQkiDRSNWGUIqm",
+    "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+    "email": "priyanka@aura.com"
   },
   {
     "role": "Customer",
     "status": "active",
-    "email": "test@example.com",
-    "passwordHash": "$2b$10$HCY7bCSChAUguFyXoAm2f.PX7J4UPgJ.s7Gvi.YH4RwkUlYt/2EyS",
-    "id": "u_3430t2rwf",
+    "createdAt": "2026-07-14T07:39:44.300Z",
+    "name": "Test User",
     "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
-    "name": "Test User",
-    "createdAt": "2026-07-14T07:39:44.300Z"
+    "passwordHash": "$2b$10$HCY7bCSChAUguFyXoAm2f.PX7J4UPgJ.s7Gvi.YH4RwkUlYt/2EyS",
+    "email": "test@example.com",
+    "id": "u_3430t2rwf"
   },
   {
-    "role": "Customer",
     "status": "active",
-    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-    "name": "Test User",
+    "role": "Customer",
     "id": "u_25qskk5by",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
     "email": "unique_user_999@example.com",
     "passwordHash": "$2b$10$AvSOMxsyr35ey23u2ld6p.BI8o9m/YPrvTrdDtzL1Rt4oshAfiJo6",
-    "createdAt": "2026-07-14T07:41:14.434Z"
+    "createdAt": "2026-07-14T07:41:14.434Z",
+    "name": "Test User"
   },
   {
-    "id": "u_6onr2rs3j",
-    "email": "final_test@example.com",
-    "name": "Final Test",
-    "passwordHash": "$2b$10$jyTt7rjZ1npff8cUgvryde8wvHOGAnMCPGZcpY1OLVDWbIar5q.CG",
     "role": "Customer",
     "status": "active",
+    "createdAt": "2026-07-14T07:51:28.300Z",
+    "name": "Final Test",
+    "email": "final_test@example.com",
     "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-    "createdAt": "2026-07-14T07:51:28.300Z"
+    "passwordHash": "$2b$10$jyTt7rjZ1npff8cUgvryde8wvHOGAnMCPGZcpY1OLVDWbIar5q.CG",
+    "id": "u_6onr2rs3j"
   },
   {
-    "id": "u_admin_root_seed",
-    "name": "Super Admin",
-    "email": "arcadiadevelopers07@gmail.com",
-    "passwordHash": "$2b$10$Cq.pfHS5SbdhHFyDQvtr9eR7dI/PpA6XfeIfnC3Gcr1gOJ/99r216",
-    "role": "Super Admin",
     "status": "active",
+    "role": "Super Admin",
+    "id": "u_admin_root_seed",
     "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-    "createdAt": "2026-07-21T02:39:56.435Z"
+    "passwordHash": "$2b$10$Cq.pfHS5SbdhHFyDQvtr9eR7dI/PpA6XfeIfnC3Gcr1gOJ/99r216",
+    "email": "arcadiadevelopers07@gmail.com",
+    "createdAt": "2026-07-21T02:39:56.435Z",
+    "name": "Super Admin",
+    "lastLogin": "2026-07-23T09:41:21.622Z"
   }
 ]

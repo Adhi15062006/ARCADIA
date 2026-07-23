@@ -1,27 +1,37 @@
 let app = null;
-let loadError = null;
 
 export default async function handler(req, res) {
   if (!app) {
     try {
       const bundlePath = "../dist/server-bundle.cjs";
       const serverModule = await import(bundlePath);
-      app = serverModule.default || serverModule;
+      let rawApp = serverModule.default || serverModule;
+      if (rawApp && typeof rawApp === "object" && typeof rawApp.default === "function") {
+        rawApp = rawApp.default;
+      }
+      if (typeof rawApp !== "function" && typeof serverModule === "function") {
+        rawApp = serverModule;
+      }
+      app = rawApp;
     } catch (err) {
-      loadError = {
-        message: err.message,
+      console.error("[Vercel Handler Error] Failed to load backend server bundle:", err);
+      return res.status(500).json({
+        error: "Failed to load backend server bundle",
+        message: err.message || String(err),
         stack: err.stack,
-        code: err.code
-      };
+        code: err.code || "BUNDLE_LOAD_ERROR"
+      });
     }
   }
 
-  if (loadError) {
+  try {
+    return app(req, res);
+  } catch (err) {
+    console.error("[Vercel Execution Error] Error serving API request:", err);
     return res.status(500).json({
-      error: "Failed to load backend server bundle",
-      details: loadError
+      error: "Internal Server Error",
+      message: err.message || String(err)
     });
   }
-
-  return app(req, res);
 }
+
