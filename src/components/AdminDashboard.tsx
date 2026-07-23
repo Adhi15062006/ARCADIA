@@ -602,17 +602,20 @@ export default function AdminDashboard({
 
       // Secondary merge with API fallback if available
       try {
-        const headers = { "Authorization": `Bearer ${token}` };
-        const res = await fetch("/api/orders", { headers });
-        if (res.ok) {
-          const apiData = await res.json();
-          if (Array.isArray(apiData)) {
-            apiData.forEach((apiItem: any) => {
-              const apiId = apiItem.id || apiItem.orderId;
-              if (apiId && !ordersList.some(o => o.id === apiId)) {
-                ordersList.push(apiItem);
-              }
-            });
+        const activeAuthToken = token || sessionStorage.getItem("arcadia_admin_token") || localStorage.getItem("arcadia_admin_token");
+        if (activeAuthToken) {
+          const headers = { "Authorization": `Bearer ${activeAuthToken}` };
+          const res = await fetch("/api/orders", { headers });
+          if (res.ok) {
+            const apiData = await res.json();
+            if (Array.isArray(apiData)) {
+              apiData.forEach((apiItem: any) => {
+                const apiId = apiItem.id || apiItem.orderId;
+                if (apiId && !ordersList.some(o => o.id === apiId)) {
+                  ordersList.push(apiItem);
+                }
+              });
+            }
           }
         }
       } catch (apiErr) {
@@ -630,9 +633,12 @@ export default function AdminDashboard({
   };
 
   useEffect(() => {
-    if (token) {
+    loadOrders();
+
+    const activeAuthToken = token || sessionStorage.getItem("arcadia_admin_token") || localStorage.getItem("arcadia_admin_token");
+    if (activeAuthToken) {
       fetchAdminData();
-      loadOrders();
+    }
 
       const unsubscribes = [
         onSnapshot(doc(db, "arcadia_system_db", "bookings.json"), (snapshot) => {
@@ -688,7 +694,6 @@ export default function AdminDashboard({
       return () => {
         unsubscribes.forEach((unsub) => unsub());
       };
-    }
   }, [token]);
 
   // Dedicated Crashlytics Real-Time Query with Server-Side Pagination and Field Filtering
