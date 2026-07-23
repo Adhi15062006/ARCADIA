@@ -134,7 +134,7 @@
     "role": "Super Admin",
     "id": "u_admin_root_seed",
     "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-    "passwordHash": "$2b$10$Cq.pfHS5SbdhHFyDQvtr9eR7dI/PpA6XfeIfnC3Gcr1gOJ/99r216",
+    "passwordHash": "$2b$10$UUcZ989Ewh6a9yyaV57YkOs9fX2sv5z0bdmH9ebzTaC4USUy4SC0i",
     "email": "arcadiadevelopers07@gmail.com",
     "createdAt": "2026-07-21T02:39:56.435Z",
     "name": "Super Admin",
