@@ -269,27 +269,32 @@ export default function ContactForms({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      if (res.ok) {
-        const data = await res.json();
-        console.log("[Order Audit] Firestore response / Document ID:", data.id || data.orderId);
 
-        // Also write directly to Firestore orders collection for instant real-time synchronization
-        try {
-          const orderDocRef = doc(db, "orders", data.id || data.orderId);
-          await setDoc(orderDocRef, { ...payload, id: data.id || data.orderId, orderId: data.id || data.orderId });
-          console.log("[Order Audit] Direct client Firestore write succeeded for order ID:", data.id || data.orderId);
-        } catch (fsErr: any) {
-          console.warn("[Order Audit] Direct client Firestore write deferred:", fsErr.message || fsErr);
-        }
-
-        setPlacedOrder(data);
-        setOrderStatus("success");
-        onSuccess("order", data);
-      } else {
-        setOrderStatus("error");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to persist order payload to server.");
       }
-    } catch (err) {
-      console.error("[Order System] Error submitting order:", err);
+
+      const data = await res.json();
+      const orderId = data.id || data.orderId;
+      console.log("[Order Audit] Server persisted document ID:", orderId);
+
+      // Directly write to Firestore orders collection & await promise resolution
+      const finalOrderPayload = { ...payload, id: orderId, orderId };
+      const orderDocRef = doc(db, "orders", orderId);
+      
+      try {
+        await setDoc(orderDocRef, finalOrderPayload);
+        console.log("[Order Audit] Direct client Firestore setDoc resolved successfully for ID:", orderId);
+      } catch (clientWriteErr: any) {
+        console.warn("[Order Audit] Client direct setDoc write deferred/backed up by server:", clientWriteErr.message || clientWriteErr);
+      }
+
+      setPlacedOrder(data);
+      setOrderStatus("success");
+      onSuccess("order", data);
+    } catch (err: any) {
+      console.error("[Order Audit Error] Submission write failed:", err);
       setOrderStatus("error");
     }
   };

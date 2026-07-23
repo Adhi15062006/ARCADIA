@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User, onIdTokenChanged, signOut } from "firebase/auth";
+import { User, onIdTokenChanged, signOut, signInAnonymously } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebase/config";
 import { setCrashlyticsUser } from "../firebase/crashlytics";
@@ -279,6 +279,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setClientNameState(null);
           setClientAvatarState(null);
           setActiveToken(null);
+
+          signInAnonymously(auth).catch((anonErr) => {
+            console.log("[AuthContext] Guest anonymous sign-in deferred:", anonErr.message || anonErr);
+          });
         }
       }
       setLoading(false);

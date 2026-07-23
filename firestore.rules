@@ -112,7 +112,7 @@ service cloud.firestore {
     // 6. Orders Collection
     match /orders/{orderId} {
       allow read: if true;
-      allow create: if request.auth != null || isServerKey(incoming()) || true;
+      allow create: if true;
       allow update: if isEmployee() || isAuthenticated() || isServerKey(incoming());
       allow delete: if isAdmin() || isServerKey(existing());
     }
