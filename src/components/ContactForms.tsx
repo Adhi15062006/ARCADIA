@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { generateInvoicePDF } from "../utils/pdfGenerator";
 import { Order } from "../types";
-import { db } from "../firebase/config";
+import { auth, db } from "../firebase/config";
 import { doc, setDoc } from "firebase/firestore";
 
 interface ContactFormsProps {
@@ -224,8 +224,15 @@ export default function ContactForms({
     setOrderStatus("submitting");
     const budgetNum = parseInt(orderData.budget) || 0;
     const now = new Date().toISOString();
-    
+    const currentUid = auth.currentUser?.uid || "u_client_" + Date.now();
+
+    console.log("[Order Audit] auth.currentUser:", auth.currentUser);
+    console.log("[Order Audit] auth.currentUser.uid:", auth.currentUser?.uid);
+    console.log("[Order Audit] auth.currentUser.email:", auth.currentUser?.email);
+
     const payload = {
+      customerId: currentUid,
+      userId: currentUid,
       name: orderData.name,
       customerName: orderData.name,
       company: orderData.company,
@@ -253,7 +260,8 @@ export default function ContactForms({
       updatedAt: now
     };
 
-    console.log("[Order System] Before writing order:", payload);
+    console.log("[Order Audit] customerId:", payload.customerId);
+    console.log("[Order Audit] Order payload:", payload);
 
     try {
       const res = await fetch("/api/orders", {
@@ -263,15 +271,15 @@ export default function ContactForms({
       });
       if (res.ok) {
         const data = await res.json();
-        console.log("[Order System] Firestore response / Document ID:", data.id || data.orderId);
+        console.log("[Order Audit] Firestore response / Document ID:", data.id || data.orderId);
 
         // Also write directly to Firestore orders collection for instant real-time synchronization
         try {
           const orderDocRef = doc(db, "orders", data.id || data.orderId);
           await setDoc(orderDocRef, { ...payload, id: data.id || data.orderId, orderId: data.id || data.orderId });
-          console.log("[Order System] Direct client Firestore write succeeded for order ID:", data.id || data.orderId);
-        } catch (fsErr) {
-          console.warn("[Order System] Direct client Firestore write deferred:", fsErr);
+          console.log("[Order Audit] Direct client Firestore write succeeded for order ID:", data.id || data.orderId);
+        } catch (fsErr: any) {
+          console.warn("[Order Audit] Direct client Firestore write deferred:", fsErr.message || fsErr);
         }
 
         setPlacedOrder(data);

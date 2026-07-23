@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User, onIdTokenChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebase/config";
 import { setCrashlyticsUser } from "../firebase/crashlytics";
 
@@ -178,6 +178,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      console.log("[Auth Audit] auth.currentUser:", firebaseUser);
+      console.log("[Auth Audit] auth.currentUser.uid:", firebaseUser?.uid);
+      console.log("[Auth Audit] auth.currentUser.email:", firebaseUser?.email);
+
       if (firebaseUser) {
         try {
           const idTokenResult = await firebaseUser.getIdTokenResult();
@@ -190,6 +194,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             "arcadiadevelopers07@gmail.com",
             "godesportsfreefire@gmail.com"
           ].filter(Boolean);
+
+          const adminRoles = ["Super Admin", "Admin", "admin", "Manager", "Staff"];
 
           // Fallback 1: Check session/localStorage for existing role
           if (!role || role === "Customer") {
@@ -207,31 +213,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
 
-          // Fallback 2: Check Firestore user doc
-          if (!role || role === "Customer") {
-            try {
-              const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-              if (userDoc.exists()) {
-                const docData = userDoc.data();
-                if (docData.role && docData.role !== "Customer") {
-                  role = docData.role;
-                }
-                if (docData.status) {
-                  status = docData.status;
-                }
-              }
-            } catch (err) {
-              console.warn("[AuthContext] Firestore role lookup failed:", err);
-            }
-          }
-
-          // Fallback 3: Super Admin emails
+          // Fallback 2: Check Super Admin emails
           if ((!role || role === "Customer") && adminEmails.includes(firebaseUser.email || "")) {
             role = "Super Admin";
           }
 
           if (!role) {
             role = "Customer";
+          }
+
+          const email = firebaseUser.email || "";
+          const name = firebaseUser.displayName || email.split("@")[0] || "Client";
+          const avatar = firebaseUser.photoURL || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80`;
+          const token = idTokenResult.token;
+
+          // Auto-create or ensure users/{uid} document exists in Firestore for Security Rules matching
+          try {
+            const userDocRef = doc(db, "users", firebaseUser.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (!userDoc.exists()) {
+              console.log("[Auth Audit] Auto-creating user role document for UID:", firebaseUser.uid);
+              await setDoc(userDocRef, {
+                uid: firebaseUser.uid,
+                email,
+                name,
+                role,
+                status,
+                createdAt: new Date().toISOString()
+              }, { merge: true });
+            } else {
+              const docData = userDoc.data();
+              if (docData.role && docData.role !== role && adminRoles.includes(docData.role)) {
+                role = docData.role;
+              }
+            }
+          } catch (docErr) {
+            console.warn("[Auth Audit] Automatic user role document sync deferred:", docErr);
           }
 
           if (status === "suspended") {
@@ -241,12 +258,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
 
-          const email = firebaseUser.email || "";
-          const name = firebaseUser.displayName || email.split("@")[0] || "Client";
-          const avatar = firebaseUser.photoURL || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80`;
-          const token = idTokenResult.token;
-
-          const adminRoles = ["Super Admin", "Admin", "admin", "Manager", "Staff"];
           if (adminRoles.includes(role)) {
             setAdminSession(token, email, role);
           } else {
