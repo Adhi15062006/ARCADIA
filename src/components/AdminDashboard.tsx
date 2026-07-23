@@ -576,7 +576,14 @@ export default function AdminDashboard({
           });
           console.log("[Order System] Orders returned from Firestore orders collection:", ordersList.length);
           if (ordersList.length > 0) {
-            setOrders(ordersList);
+            setOrders(prev => {
+              const map = new Map();
+              prev.forEach((o: any) => map.set(o.id || o.orderId, o));
+              ordersList.forEach((o: any) => map.set(o.id || o.orderId, o));
+              return Array.from(map.values()).sort((a: any, b: any) => 
+                new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+              );
+            });
           }
         }, (err) => console.error("[Order System] Error listening to orders collection:", err)),
 
@@ -584,11 +591,12 @@ export default function AdminDashboard({
           const data = snapshot.data();
           if (data && Array.isArray(data.data)) {
             setOrders(prev => {
-              if (prev.length === 0) return data.data;
               const map = new Map();
               data.data.forEach((o: any) => map.set(o.id || o.orderId, o));
               prev.forEach((o: any) => map.set(o.id || o.orderId, o));
-              return Array.from(map.values());
+              return Array.from(map.values()).sort((a: any, b: any) => 
+                new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+              );
             });
           }
         }, (err) => console.error("Error listening to orders:", err)),
@@ -767,7 +775,16 @@ export default function AdminDashboard({
 
       if (bRes.ok && oRes.ok && iRes.ok && lRes.ok) {
         setBookings(await bRes.json());
-        setOrders(await oRes.json());
+        const apiOrders = await oRes.json();
+        setOrders(prev => {
+          if (!Array.isArray(apiOrders)) return prev;
+          const map = new Map();
+          prev.forEach((o: any) => map.set(o.id || o.orderId, o));
+          apiOrders.forEach((o: any) => map.set(o.id || o.orderId, o));
+          return Array.from(map.values()).sort((a: any, b: any) => 
+            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+          );
+        });
         setInquiries(await iRes.json());
         setLogs(await lRes.json());
         if (vRes && vRes.ok) setVacancies(await vRes.json());

@@ -2749,11 +2749,30 @@ app.post("/api/bookings", (req, res) => {
 });
 
 // Orders API
-app.get("/api/orders", authenticateJWT, requireAdmin, (req, res) => {
-  const orders = dbOrders();
-  console.log("[Order System] Admin query count:", orders.length);
-  console.log("[Order System] Orders returned:", orders.length);
-  res.json(orders);
+app.get("/api/orders", authenticateJWT, requireAdmin, async (req, res) => {
+  const localOrders = dbOrders();
+  const map = new Map<string, any>();
+  localOrders.forEach(o => map.set(o.id || o.orderId, o));
+
+  if (adminDb) {
+    try {
+      const snap = await adminDb.collection("orders").get();
+      snap.forEach((docSnap: any) => {
+        const data = normalizeOrderSchema(docSnap.data());
+        map.set(data.id, { ...map.get(data.id), ...data });
+      });
+    } catch (fsErr: any) {
+      console.warn("[Order System] Firestore GET /api/orders read deferred:", fsErr.message || fsErr);
+    }
+  }
+
+  const combinedOrders = Array.from(map.values()).sort((a: any, b: any) =>
+    new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+
+  console.log("[Order System] Admin query count:", combinedOrders.length);
+  console.log("[Order System] Orders returned:", combinedOrders.length);
+  res.json(combinedOrders);
 });
 
 app.post("/api/orders", (req, res) => {
