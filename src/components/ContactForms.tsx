@@ -174,20 +174,44 @@ export default function ContactForms({
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBookingStatus("submitting");
+    const bookingId = "b_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
+    const now = new Date().toISOString();
+    const payload = {
+      id: bookingId,
+      bookingId,
+      ...bookingData,
+      status: "Pending",
+      createdAt: now,
+      updatedAt: now
+    };
+
     try {
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bookingData)
+        body: JSON.stringify(payload)
       });
-      if (res.ok) {
-        const data = await res.json();
-        setBookingStatus("success");
-        onSuccess("booking", data);
-      } else {
-        setBookingStatus("error");
+
+      if (!res.ok) {
+        throw new Error("Failed to persist booking on server.");
       }
+
+      const data = await res.json();
+      const finalId = data.id || bookingId;
+
+      // Directly write booking to Firestore bookings collection
+      try {
+        const bookingDocRef = doc(db, "bookings", finalId);
+        await setDoc(bookingDocRef, { ...payload, id: finalId, bookingId: finalId });
+        console.log("[Booking Audit] Direct client Firestore setDoc succeeded for ID:", finalId);
+      } catch (fsErr: any) {
+        console.warn("[Booking Audit] Direct client setDoc write deferred:", fsErr.message || fsErr);
+      }
+
+      setBookingStatus("success");
+      onSuccess("booking", data);
     } catch (err) {
+      console.error("[Booking Error] Submission failed:", err);
       setBookingStatus("error");
     }
   };

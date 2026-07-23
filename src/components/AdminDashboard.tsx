@@ -561,15 +561,21 @@ export default function AdminDashboard({
   const loadOrders = async () => {
     setIsRefreshingOrders(true);
     try {
-      console.log("[Admin Orders Audit] Fetching orders via getDocs from Firestore orders collection...");
+      console.log("[Admin Orders Speed Optimization] Executing parallel Promise.allSettled fetching...");
       const ordersMap = new Map<string, Order>();
+      const activeAuthToken = token || sessionStorage.getItem("arcadia_admin_token") || localStorage.getItem("arcadia_admin_token");
+      const apiHeaders = activeAuthToken ? { "Authorization": `Bearer ${activeAuthToken}` } : null;
 
-      // 1. Direct Firestore collection read
-      try {
-        const snap = await getDocs(collection(db, "orders"));
-        console.log("[Admin Orders Audit] Number of documents returned:", snap.size);
+      const [snapRes, sysSnapRes, apiRes] = await Promise.allSettled([
+        getDocs(collection(db, "orders")),
+        getDoc(doc(db, "arcadia_system_db", "orders.json")),
+        apiHeaders ? fetch("/api/orders", { headers: apiHeaders }) : Promise.resolve(null)
+      ]);
+
+      if (snapRes.status === "fulfilled" && snapRes.value) {
+        console.log("[Admin Orders Audit] Number of documents returned:", snapRes.value.size);
         const docIds: string[] = [];
-        snap.forEach((documentDoc) => {
+        snapRes.value.forEach((documentDoc) => {
           docIds.push(documentDoc.id);
           const data = documentDoc.data();
           const id = documentDoc.id || data.id || data.orderId;
@@ -618,62 +624,40 @@ export default function AdminDashboard({
           });
         });
         console.log("[Admin Orders Audit] Document IDs:", docIds);
-        if (snap.docs.length > 0) {
-          console.log("[Admin Orders Audit] First document data:", snap.docs[0].data());
-        }
-      } catch (fsErr: any) {
-        console.warn("[Admin Orders Audit] Direct getDocs read deferred:", fsErr.message || fsErr);
       }
 
-      // 2. System DB Backup Document Read
-      try {
-        const sysDocRef = doc(db, "arcadia_system_db", "orders.json");
-        const sysSnap = await getDoc(sysDocRef);
-        if (sysSnap.exists()) {
-          const sysData = sysSnap.data();
-          if (sysData && Array.isArray(sysData.data)) {
-            sysData.data.forEach((item: any) => {
-              const itemId = item.id || item.orderId;
-              if (itemId && !ordersMap.has(itemId)) {
-                ordersMap.set(itemId, item);
-              }
-            });
-          }
-        }
-      } catch (sysErr) {
-        console.warn("[Admin Orders Audit] System DB backup read deferred:", sysErr);
-      }
-
-      // 3. REST API Fallback
-      try {
-        const activeAuthToken = token || sessionStorage.getItem("arcadia_admin_token") || localStorage.getItem("arcadia_admin_token");
-        if (activeAuthToken) {
-          const headers = { "Authorization": `Bearer ${activeAuthToken}` };
-          const res = await fetch("/api/orders", { headers });
-          if (res.ok) {
-            const apiData = await res.json();
-            if (Array.isArray(apiData)) {
-              apiData.forEach((apiItem: any) => {
-                const apiId = apiItem.id || apiItem.orderId;
-                if (apiId && !ordersMap.has(apiId)) {
-                  ordersMap.set(apiId, apiItem);
-                }
-              });
+      if (sysSnapRes.status === "fulfilled" && sysSnapRes.value && sysSnapRes.value.exists()) {
+        const sysData = sysSnapRes.value.data();
+        if (sysData && Array.isArray(sysData.data)) {
+          sysData.data.forEach((item: any) => {
+            const itemId = item.id || item.orderId;
+            if (itemId && !ordersMap.has(itemId)) {
+              ordersMap.set(itemId, item);
             }
-          }
+          });
         }
-      } catch (apiErr) {
-        console.warn("[Admin Orders Audit] API fallback deferred:", apiErr);
+      }
+
+      if (apiRes.status === "fulfilled" && apiRes.value && (apiRes.value as Response).ok) {
+        const apiData = await (apiRes.value as Response).json();
+        if (Array.isArray(apiData)) {
+          apiData.forEach((apiItem: any) => {
+            const apiId = apiItem.id || apiItem.orderId;
+            if (apiId && !ordersMap.has(apiId)) {
+              ordersMap.set(apiId, apiItem);
+            }
+          });
+        }
       }
 
       const consolidatedList = Array.from(ordersMap.values()).sort((a, b) => 
         new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
       );
 
-      console.log("[Admin Orders Audit] Consolidated total orders count:", consolidatedList.length);
+      console.log("[Admin Orders Speed Optimization] Consolidated total orders count:", consolidatedList.length);
       setOrders(consolidatedList);
     } catch (err: any) {
-      console.error("[Admin Orders Audit] Error loading orders:", err);
+      console.error("[Admin Orders Error]:", err);
     } finally {
       setIsRefreshingOrders(false);
     }
@@ -743,6 +727,39 @@ export default function AdminDashboard({
             );
           });
         }, (err) => console.error("[Admin Orders Realtime Error]:", err)),
+
+        onSnapshot(collection(db, "bookings"), (snapshot) => {
+          console.log("[Admin Bookings Realtime] Received live Firestore bookings count:", snapshot.size);
+          const liveBookings: Booking[] = [];
+          snapshot.forEach((documentDoc) => {
+            const data = documentDoc.data();
+            const id = documentDoc.id || data.id || data.bookingId;
+            liveBookings.push({
+              id,
+              bookingId: id,
+              name: data.name || data.clientName || "Client",
+              email: data.email || "",
+              phone: data.phone || "",
+              service: data.service || "Consultation",
+              businessName: data.businessName || data.company || "",
+              date: data.date || "",
+              time: data.time || "",
+              meetingMode: data.meetingMode || "Google Meet",
+              requirements: data.requirements || data.description || "",
+              createdAt: data.createdAt || new Date().toISOString()
+            } as any);
+          });
+          if (liveBookings.length > 0) {
+            setBookings(prev => {
+              const map = new Map<string, any>();
+              prev.forEach((b: any) => map.set(b.id || b.bookingId, b));
+              liveBookings.forEach((b: any) => map.set(b.id || b.bookingId, { ...map.get(b.id || b.bookingId), ...b }));
+              return Array.from(map.values()).sort((a: any, b: any) => 
+                new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+              );
+            });
+          }
+        }, (err) => console.error("[Admin Bookings Realtime Error]:", err)),
 
         onSnapshot(doc(db, "arcadia_system_db", "bookings.json"), (snapshot) => {
           const data = snapshot.data();

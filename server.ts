@@ -559,6 +559,23 @@ function saveDB<T>(filename: string, data: T) {
     });
   }
 
+  if (filename === "bookings.json" && Array.isArray(data)) {
+    data.forEach(bookingItem => {
+      const bId = bookingItem.id || ("b_" + Math.random().toString(36).substr(2, 9));
+      const payload = { ...bookingItem, id: bId };
+      if (adminDb) {
+        adminDb.collection("bookings").doc(bId).set(payload)
+          .then(() => console.log("[Booking Pipeline] Admin SDK successfully saved booking:", bId))
+          .catch((adminErr: any) => console.error("[Booking Pipeline] Admin SDK error writing booking:", adminErr));
+      } else {
+        const bookingDocRef = doc(db, "bookings", bId);
+        setDoc(bookingDocRef, payload)
+          .then(() => console.log("[Booking Pipeline] Client SDK fallback saved booking:", bId))
+          .catch((clientErr: any) => console.error("[Booking Pipeline] Client SDK fallback error:", clientErr));
+      }
+    });
+  }
+
   setDoc(doc(db, "arcadia_system_db", filename), payload)
     .then(() => {
       console.log(`[Client Token] Successfully backed up ${filename} to Firebase Firestore.`);
@@ -2713,8 +2730,29 @@ app.delete("/api/projects/:id", authenticateJWT, requireAdmin, (req, res) => {
 });
 
 // Bookings API
-app.get("/api/bookings", authenticateJWT, requireAdmin, (req, res) => {
-  res.json(dbBookings());
+app.get("/api/bookings", authenticateJWT, requireAdmin, async (req, res) => {
+  const localBookings = dbBookings();
+  const map = new Map<string, any>();
+  localBookings.forEach(b => map.set(b.id || b.bookingId, b));
+
+  if (adminDb) {
+    try {
+      const snap = await adminDb.collection("bookings").get();
+      snap.forEach((docSnap: any) => {
+        const data = docSnap.data();
+        const bId = docSnap.id || data.id || data.bookingId;
+        map.set(bId, { ...map.get(bId), ...data, id: bId });
+      });
+    } catch (fsErr: any) {
+      console.warn("[Booking System] Firestore GET /api/bookings read deferred:", fsErr.message || fsErr);
+    }
+  }
+
+  const combinedBookings = Array.from(map.values()).sort((a: any, b: any) =>
+    new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+
+  res.json(combinedBookings);
 });
 
 app.post("/api/bookings", (req, res) => {
