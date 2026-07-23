@@ -6,7 +6,7 @@ import AdminManagement from "./AdminManagement";
 import { generateInvoicePDF, generateRefundPDF } from "../utils/pdfGenerator";
 import { db, handleFirestoreError, OperationType } from "../firebase/config";
 import { recordException } from "../firebase/crashlytics";
-import { onSnapshot, doc, collection, query, orderBy, updateDoc, deleteDoc, where, limit, startAfter, getCountFromServer, setDoc, addDoc, getDocs } from "firebase/firestore";
+import { onSnapshot, doc, collection, query, orderBy, updateDoc, deleteDoc, where, limit, startAfter, getCountFromServer, setDoc, addDoc, getDocs, getDoc } from "firebase/firestore";
 import { 
   BarChart2, 
   TrendingUp, 
@@ -561,46 +561,90 @@ export default function AdminDashboard({
   const loadOrders = async () => {
     setIsRefreshingOrders(true);
     try {
-      console.log("[Admin Orders] Fetching orders via getDocs from Firestore orders collection...");
-      const snap = await getDocs(collection(db, "orders"));
-      const ordersList: Order[] = [];
-      snap.forEach((documentDoc) => {
-        const data = documentDoc.data();
-        const id = documentDoc.id || data.id || data.orderId;
-        ordersList.push({
-          id,
-          orderId: id,
-          name: data.name || data.customerName || "Client",
-          customerName: data.customerName || data.name || "Client",
-          email: data.email || "",
-          phone: data.phone || "",
-          company: data.company || "",
-          address: data.address || "Digital Online Order",
-          service: data.service || "Web Application",
-          items: data.items || [{ id: "item_1", name: data.service || "Digital Service", price: parseInt(String(data.budget || data.total || 0)) }],
-          subtotal: data.subtotal !== undefined ? data.subtotal : parseInt(String(data.budget || data.total || 0)),
-          tax: data.tax || 0,
-          shipping: data.shipping || 0,
-          discount: data.discount || 0,
-          total: data.total !== undefined ? data.total : parseInt(String(data.budget || data.total || 0)),
-          budget: String(data.budget || data.total || 0),
-          paymentAmount: data.paymentAmount !== undefined ? data.paymentAmount : parseInt(String(data.budget || data.total || 0)),
-          paymentMethod: data.paymentMethod || "Razorpay Gateway",
-          paymentStatus: data.paymentStatus || (data.isPaid ? "Paid" : "Pending"),
-          orderStatus: data.orderStatus || data.status || "Pending",
-          status: data.status || data.orderStatus || "Pending",
-          isPaid: data.isPaid || data.paymentStatus === "Paid" || false,
-          deadline: data.deadline || "Flexible",
-          description: data.description || "",
-          fileUrl: data.fileUrl || "",
-          paymentScreenshot: data.paymentScreenshot || "",
-          milestones: data.milestones || [],
-          createdAt: data.createdAt || new Date().toISOString(),
-          updatedAt: data.updatedAt || new Date().toISOString()
-        });
-      });
+      console.log("[Admin Orders Audit] Fetching orders via getDocs from Firestore orders collection...");
+      const ordersMap = new Map<string, Order>();
 
-      // Secondary merge with API fallback if available
+      // 1. Direct Firestore collection read
+      try {
+        const snap = await getDocs(collection(db, "orders"));
+        console.log("[Admin Orders Audit] Number of documents returned:", snap.size);
+        const docIds: string[] = [];
+        snap.forEach((documentDoc) => {
+          docIds.push(documentDoc.id);
+          const data = documentDoc.data();
+          const id = documentDoc.id || data.id || data.orderId;
+
+          const rawBudget = data.budget !== undefined ? data.budget : (data.total !== undefined ? data.total : (data.amount !== undefined ? data.amount : 0));
+          const parsedBudget = parseInt(String(rawBudget)) || 0;
+          const nameVal = data.name || data.customerName || data.clientName || "Client";
+          const emailVal = data.email || data.clientEmail || "";
+          const phoneVal = data.phone || data.contact || "";
+          const companyVal = data.company || "";
+          const serviceVal = data.service || "Web Application";
+          const statusVal = data.status || data.orderStatus || "Pending";
+          const isPaidVal = data.isPaid || data.paymentStatus === "Paid" || false;
+          const createdAtVal = data.createdAt || data.timestamp || data.date || new Date().toISOString();
+
+          ordersMap.set(id, {
+            id,
+            orderId: id,
+            name: nameVal,
+            customerName: nameVal,
+            email: emailVal,
+            phone: phoneVal,
+            company: companyVal,
+            address: data.address || "Digital Online Order",
+            service: serviceVal,
+            items: data.items || [{ id: "item_1", name: serviceVal, price: parsedBudget }],
+            subtotal: data.subtotal !== undefined ? data.subtotal : parsedBudget,
+            tax: data.tax || 0,
+            shipping: data.shipping || 0,
+            discount: data.discount || 0,
+            total: data.total !== undefined ? data.total : parsedBudget,
+            budget: String(parsedBudget),
+            paymentAmount: data.paymentAmount !== undefined ? data.paymentAmount : parsedBudget,
+            paymentMethod: data.paymentMethod || "Razorpay Gateway",
+            paymentStatus: data.paymentStatus || (isPaidVal ? "Paid" : "Pending"),
+            orderStatus: statusVal,
+            status: statusVal,
+            isPaid: isPaidVal,
+            deadline: data.deadline || "Flexible",
+            description: data.description || "",
+            fileUrl: data.fileUrl || "",
+            paymentScreenshot: data.paymentScreenshot || "",
+            milestones: data.milestones || [],
+            createdAt: createdAtVal,
+            updatedAt: data.updatedAt || createdAtVal
+          });
+        });
+        console.log("[Admin Orders Audit] Document IDs:", docIds);
+        if (snap.docs.length > 0) {
+          console.log("[Admin Orders Audit] First document data:", snap.docs[0].data());
+        }
+      } catch (fsErr: any) {
+        console.warn("[Admin Orders Audit] Direct getDocs read deferred:", fsErr.message || fsErr);
+      }
+
+      // 2. System DB Backup Document Read
+      try {
+        const sysDocRef = doc(db, "arcadia_system_db", "orders.json");
+        const sysSnap = await getDoc(sysDocRef);
+        if (sysSnap.exists()) {
+          const sysData = sysSnap.data();
+          if (sysData && Array.isArray(sysData.data)) {
+            sysData.data.forEach((item: any) => {
+              const itemId = item.id || item.orderId;
+              if (itemId && !ordersMap.has(itemId)) {
+                ordersMap.set(itemId, item);
+              }
+            });
+          }
+        }
+      } catch (sysErr) {
+        console.warn("[Admin Orders Audit] System DB backup read deferred:", sysErr);
+      }
+
+      // 3. REST API Fallback
       try {
         const activeAuthToken = token || sessionStorage.getItem("arcadia_admin_token") || localStorage.getItem("arcadia_admin_token");
         if (activeAuthToken) {
@@ -611,22 +655,25 @@ export default function AdminDashboard({
             if (Array.isArray(apiData)) {
               apiData.forEach((apiItem: any) => {
                 const apiId = apiItem.id || apiItem.orderId;
-                if (apiId && !ordersList.some(o => o.id === apiId)) {
-                  ordersList.push(apiItem);
+                if (apiId && !ordersMap.has(apiId)) {
+                  ordersMap.set(apiId, apiItem);
                 }
               });
             }
           }
         }
       } catch (apiErr) {
-        console.warn("[Admin Orders] API fallback deferred:", apiErr);
+        console.warn("[Admin Orders Audit] API fallback deferred:", apiErr);
       }
 
-      ordersList.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-      console.log("[Admin Orders] Successfully loaded orders count:", ordersList.length);
-      setOrders(ordersList);
+      const consolidatedList = Array.from(ordersMap.values()).sort((a, b) => 
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+
+      console.log("[Admin Orders Audit] Consolidated total orders count:", consolidatedList.length);
+      setOrders(consolidatedList);
     } catch (err: any) {
-      console.error("[Admin Orders] Error loading orders from Firestore:", err);
+      console.error("[Admin Orders Audit] Error loading orders:", err);
     } finally {
       setIsRefreshingOrders(false);
     }
