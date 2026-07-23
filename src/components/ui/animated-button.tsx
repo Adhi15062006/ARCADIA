@@ -7,11 +7,12 @@ export interface AnimatedButtonProps extends HTMLMotionProps<"button"> {
 
 const AnimatedButton = forwardRef<HTMLButtonElement, AnimatedButtonProps>(
   ({ children, whileHover, whileTap, transition, className, ...props }, ref) => {
+    const isDisabled = props.disabled;
     return (
       <motion.button
         ref={ref}
-        whileHover={whileHover || { scale: 1.02, y: -1 }}
-        whileTap={whileTap || { scale: 0.98, y: 1 }}
+        whileHover={isDisabled ? undefined : (whileHover || { scale: 1.02, y: -1 })}
+        whileTap={isDisabled ? undefined : (whileTap || { scale: 0.98, y: 1 })}
         transition={
           transition || {
             type: "spring",
@@ -19,8 +20,7 @@ const AnimatedButton = forwardRef<HTMLButtonElement, AnimatedButtonProps>(
             damping: 15,
           }
         }
-        // Retain cursor-pointer as a default helper if hover class transitions are active
-        className={`${className || ""} cursor-pointer`}
+        className={`${className || ""} ${isDisabled ? "" : "cursor-pointer"}`}
         {...props}
       >
         {children}

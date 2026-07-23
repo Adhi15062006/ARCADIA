@@ -24,6 +24,8 @@ const firebaseConfig = (window as any).FIREBASE_CONFIG || {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
+console.log("[Firebase Audit] Configuration resolved - projectId:", firebaseConfig.projectId, "appId:", firebaseConfig.appId, "authDomain:", firebaseConfig.authDomain);
+
 const dbId = (window as any).FIREBASE_CONFIG?.firestoreDatabaseId || import.meta.env.VITE_FIREBASE_DATABASE_ID || import.meta.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID || undefined;
 
 export const auth = getAuth(app);

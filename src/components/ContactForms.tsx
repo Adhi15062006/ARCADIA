@@ -459,8 +459,8 @@ export default function ContactForms({
         {/* Success / Invoice Step */}
         {orderStatus === "success" && placedOrder ? (
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             className="flex flex-col h-full justify-between"
           >
             <div id="invoice-receipt-panel" className="p-8 bg-arcadia-black border border-white/10 rounded-3xl text-center space-y-6 overflow-y-auto max-h-[500px]">
