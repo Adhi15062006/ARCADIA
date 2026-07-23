@@ -545,17 +545,17 @@ function saveDB<T>(filename: string, data: T) {
   if (filename === "orders.json" && Array.isArray(data)) {
     data.forEach(orderItem => {
       const normalized = normalizeOrderSchema(orderItem);
-      const orderDocRef = doc(db, "orders", normalized.id);
-      console.log("[Order System] Before writing order:", normalized.id);
-      setDoc(orderDocRef, normalized)
-        .then(() => console.log("[Order System] Firestore response / Document ID:", normalized.id))
-        .catch(err => {
-          if (adminDb) {
-            adminDb.collection("orders").doc(normalized.id).set(normalized)
-              .then(() => console.log("[Order System] Admin Firestore response / Document ID:", normalized.id))
-              .catch(adminErr => console.error("[Order System] Failed to write order to Firestore orders collection:", adminErr));
-          }
-        });
+      console.log("[Order Pipeline] Persisting order to global Firestore:", normalized.id);
+      if (adminDb) {
+        adminDb.collection("orders").doc(normalized.id).set(normalized)
+          .then(() => console.log("[Order Pipeline] Admin SDK successfully saved order:", normalized.id))
+          .catch((adminErr: any) => console.error("[Order Pipeline] Admin SDK error writing order:", adminErr));
+      } else {
+        const orderDocRef = doc(db, "orders", normalized.id);
+        setDoc(orderDocRef, normalized)
+          .then(() => console.log("[Order Pipeline] Client SDK fallback saved order:", normalized.id))
+          .catch((clientErr: any) => console.error("[Order Pipeline] Client SDK fallback error:", clientErr));
+      }
     });
   }
 

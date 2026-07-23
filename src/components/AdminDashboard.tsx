@@ -636,7 +636,12 @@ export default function AdminDashboard({
         }, (err) => console.error("Error listening to mock_emails:", err))
       ];
 
+      const pollingInterval = setInterval(() => {
+        fetchAdminData();
+      }, 5000);
+
       return () => {
+        clearInterval(pollingInterval);
         unsubscribes.forEach((unsub) => unsub());
       };
     }
