@@ -8,5 +8,7 @@ dist
 coverage
 *.log
 *-service-account.json
+api/server-bundle.cjs*
+
 
 

@@ -3,7 +3,7 @@ let app = null;
 export default async function handler(req, res) {
   if (!app) {
     try {
-      const bundlePath = "../dist/server-bundle.cjs";
+      const bundlePath = "./server-bundle.cjs";
       const serverModule = await import(bundlePath);
       let rawApp = serverModule.default || serverModule;
       if (rawApp && typeof rawApp === "object" && typeof rawApp.default === "function") {
