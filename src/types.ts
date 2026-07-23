@@ -46,21 +46,36 @@ export interface PaymentMilestone {
 
 export interface Order {
   id: string;
+  orderId?: string;
+  customerId?: string;
+  userId?: string;
   name: string;
+  customerName?: string;
   company: string;
   email: string;
   phone: string;
+  address?: string;
   service: string;
+  items?: any[];
+  subtotal?: number;
+  tax?: number;
+  shipping?: number;
+  discount?: number;
+  total?: number;
   budget: string;
+  paymentAmount?: number;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  orderStatus?: string;
+  status: "Pending" | "Payment Pending" | "Accepted" | "In Progress" | "Completed" | "Cancelled";
+  isPaid: boolean;
   deadline: string;
   description: string;
   fileUrl?: string;
   paymentScreenshot?: string;
-  status: "Pending" | "Payment Pending" | "Accepted" | "In Progress" | "Completed" | "Cancelled";
-  isPaid: boolean;
-  paymentAmount?: number;
   milestones?: PaymentMilestone[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface BlogPost {

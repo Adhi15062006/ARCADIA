@@ -556,9 +556,83 @@ export default function AdminDashboard({
   const [blogForm, setBlogForm] = useState({ title: "", excerpt: "", content: "", category: "Design", imageUrl: "", author: "ARCADIA Architect" });
   const [vacancyForm, setVacancyForm] = useState({ id: "", title: "", location: "", salary: "", type: "Full-Time" });
 
+  const [isRefreshingOrders, setIsRefreshingOrders] = useState(false);
+
+  const loadOrders = async () => {
+    setIsRefreshingOrders(true);
+    try {
+      console.log("[Admin Orders] Fetching orders via getDocs from Firestore orders collection...");
+      const snap = await getDocs(collection(db, "orders"));
+      const ordersList: Order[] = [];
+      snap.forEach((documentDoc) => {
+        const data = documentDoc.data();
+        const id = documentDoc.id || data.id || data.orderId;
+        ordersList.push({
+          id,
+          orderId: id,
+          name: data.name || data.customerName || "Client",
+          customerName: data.customerName || data.name || "Client",
+          email: data.email || "",
+          phone: data.phone || "",
+          company: data.company || "",
+          address: data.address || "Digital Online Order",
+          service: data.service || "Web Application",
+          items: data.items || [{ id: "item_1", name: data.service || "Digital Service", price: parseInt(String(data.budget || data.total || 0)) }],
+          subtotal: data.subtotal !== undefined ? data.subtotal : parseInt(String(data.budget || data.total || 0)),
+          tax: data.tax || 0,
+          shipping: data.shipping || 0,
+          discount: data.discount || 0,
+          total: data.total !== undefined ? data.total : parseInt(String(data.budget || data.total || 0)),
+          budget: String(data.budget || data.total || 0),
+          paymentAmount: data.paymentAmount !== undefined ? data.paymentAmount : parseInt(String(data.budget || data.total || 0)),
+          paymentMethod: data.paymentMethod || "Razorpay Gateway",
+          paymentStatus: data.paymentStatus || (data.isPaid ? "Paid" : "Pending"),
+          orderStatus: data.orderStatus || data.status || "Pending",
+          status: data.status || data.orderStatus || "Pending",
+          isPaid: data.isPaid || data.paymentStatus === "Paid" || false,
+          deadline: data.deadline || "Flexible",
+          description: data.description || "",
+          fileUrl: data.fileUrl || "",
+          paymentScreenshot: data.paymentScreenshot || "",
+          milestones: data.milestones || [],
+          createdAt: data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt || new Date().toISOString()
+        });
+      });
+
+      // Secondary merge with API fallback if available
+      try {
+        const headers = { "Authorization": `Bearer ${token}` };
+        const res = await fetch("/api/orders", { headers });
+        if (res.ok) {
+          const apiData = await res.json();
+          if (Array.isArray(apiData)) {
+            apiData.forEach((apiItem: any) => {
+              const apiId = apiItem.id || apiItem.orderId;
+              if (apiId && !ordersList.some(o => o.id === apiId)) {
+                ordersList.push(apiItem);
+              }
+            });
+          }
+        }
+      } catch (apiErr) {
+        console.warn("[Admin Orders] API fallback deferred:", apiErr);
+      }
+
+      ordersList.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      console.log("[Admin Orders] Successfully loaded orders count:", ordersList.length);
+      setOrders(ordersList);
+    } catch (err: any) {
+      console.error("[Admin Orders] Error loading orders from Firestore:", err);
+    } finally {
+      setIsRefreshingOrders(false);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchAdminData();
+      loadOrders();
 
       const unsubscribes = [
         onSnapshot(doc(db, "arcadia_system_db", "bookings.json"), (snapshot) => {
@@ -567,39 +641,6 @@ export default function AdminDashboard({
             setBookings(data.data);
           }
         }, (err) => console.error("Error listening to bookings:", err)),
-
-        onSnapshot(collection(db, "orders"), (snapshot) => {
-          console.log("[Order System] Admin query count:", snapshot.size);
-          const ordersList: any[] = [];
-          snapshot.forEach((document) => {
-            ordersList.push(document.data());
-          });
-          console.log("[Order System] Orders returned from Firestore orders collection:", ordersList.length);
-          if (ordersList.length > 0) {
-            setOrders(prev => {
-              const map = new Map();
-              prev.forEach((o: any) => map.set(o.id || o.orderId, o));
-              ordersList.forEach((o: any) => map.set(o.id || o.orderId, o));
-              return Array.from(map.values()).sort((a: any, b: any) => 
-                new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-              );
-            });
-          }
-        }, (err) => console.error("[Order System] Error listening to orders collection:", err)),
-
-        onSnapshot(doc(db, "arcadia_system_db", "orders.json"), (snapshot) => {
-          const data = snapshot.data();
-          if (data && Array.isArray(data.data)) {
-            setOrders(prev => {
-              const map = new Map();
-              data.data.forEach((o: any) => map.set(o.id || o.orderId, o));
-              prev.forEach((o: any) => map.set(o.id || o.orderId, o));
-              return Array.from(map.values()).sort((a: any, b: any) => 
-                new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-              );
-            });
-          }
-        }, (err) => console.error("Error listening to orders:", err)),
 
         onSnapshot(doc(db, "arcadia_system_db", "inquiries.json"), (snapshot) => {
           const data = snapshot.data();
@@ -644,12 +685,7 @@ export default function AdminDashboard({
         }, (err) => console.error("Error listening to mock_emails:", err))
       ];
 
-      const pollingInterval = setInterval(() => {
-        fetchAdminData();
-      }, 5000);
-
       return () => {
-        clearInterval(pollingInterval);
         unsubscribes.forEach((unsub) => unsub());
       };
     }
@@ -2130,13 +2166,25 @@ export default function AdminDashboard({
                       <h3 className="font-display font-black text-lg text-white">CLIENT ORDERS</h3>
                       <p className="font-sans text-xs text-gray-500">Pipeline deployment tracker.</p>
                     </div>
-                    <AnimatedButton
-                      onClick={() => exportToCSV("orders")}
-                      className="px-3.5 py-1.5 rounded-full border border-white/10 text-xs font-semibold flex items-center gap-1.5 hover:bg-white/5 transition"
-                    >
-                      <FileSpreadsheet className="w-4 h-4 text-green-400" />
-                      <span>Export CSV</span>
-                    </AnimatedButton>
+                    <div className="flex items-center gap-3">
+                      <AnimatedButton
+                        type="button"
+                        disabled={isRefreshingOrders}
+                        onClick={loadOrders}
+                        className="px-3.5 py-1.5 rounded-full border border-white/10 text-xs font-semibold flex items-center gap-1.5 hover:bg-white/10 transition cursor-pointer disabled:opacity-50"
+                        title="Fetch latest orders from Firestore"
+                      >
+                        <RefreshCw className={`w-4 h-4 text-cyan-400 ${isRefreshingOrders ? "animate-spin" : ""}`} />
+                        <span>{isRefreshingOrders ? "Refreshing..." : "Refresh Orders"}</span>
+                      </AnimatedButton>
+                      <AnimatedButton
+                        onClick={() => exportToCSV("orders")}
+                        className="px-3.5 py-1.5 rounded-full border border-white/10 text-xs font-semibold flex items-center gap-1.5 hover:bg-white/5 transition"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-green-400" />
+                        <span>Export CSV</span>
+                      </AnimatedButton>
+                    </div>
                   </div>
 
                   <div className="overflow-x-auto">
