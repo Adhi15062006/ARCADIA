@@ -688,6 +688,62 @@ export default function AdminDashboard({
     }
 
       const unsubscribes = [
+        onSnapshot(collection(db, "orders"), (snapshot) => {
+          console.log("[Admin Orders Realtime] Received live Firestore orders count:", snapshot.size);
+          const liveOrders: Order[] = [];
+          snapshot.forEach((documentDoc) => {
+            const data = documentDoc.data();
+            const id = documentDoc.id || data.id || data.orderId;
+            const rawBudget = data.budget !== undefined ? data.budget : (data.total !== undefined ? data.total : (data.amount !== undefined ? data.amount : 0));
+            const parsedBudget = parseInt(String(rawBudget)) || 0;
+            const nameVal = data.name || data.customerName || data.clientName || "Client";
+            const emailVal = data.email || data.clientEmail || "";
+            const statusVal = data.status || data.orderStatus || "Pending";
+            const isPaidVal = data.isPaid || data.paymentStatus === "Paid" || false;
+
+            liveOrders.push({
+              id,
+              orderId: id,
+              name: nameVal,
+              customerName: nameVal,
+              email: emailVal,
+              phone: data.phone || data.contact || "",
+              company: data.company || "",
+              address: data.address || "Digital Online Order",
+              service: data.service || "Web Application",
+              items: data.items || [{ id: "item_1", name: data.service || "Digital Service", price: parsedBudget }],
+              subtotal: data.subtotal !== undefined ? data.subtotal : parsedBudget,
+              tax: data.tax || 0,
+              shipping: data.shipping || 0,
+              discount: data.discount || 0,
+              total: data.total !== undefined ? data.total : parsedBudget,
+              budget: String(parsedBudget),
+              paymentAmount: data.paymentAmount !== undefined ? data.paymentAmount : parsedBudget,
+              paymentMethod: data.paymentMethod || "Razorpay Gateway",
+              paymentStatus: data.paymentStatus || (isPaidVal ? "Paid" : "Pending"),
+              orderStatus: statusVal,
+              status: statusVal,
+              isPaid: isPaidVal,
+              deadline: data.deadline || "Flexible",
+              description: data.description || "",
+              fileUrl: data.fileUrl || "",
+              paymentScreenshot: data.paymentScreenshot || "",
+              milestones: data.milestones || [],
+              createdAt: data.createdAt || data.timestamp || new Date().toISOString(),
+              updatedAt: data.updatedAt || new Date().toISOString()
+            });
+          });
+
+          setOrders(prev => {
+            const map = new Map<string, Order>();
+            prev.forEach(o => map.set(o.id, o));
+            liveOrders.forEach(o => map.set(o.id, { ...map.get(o.id), ...o }));
+            return Array.from(map.values()).sort((a, b) => 
+              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            );
+          });
+        }, (err) => console.error("[Admin Orders Realtime Error]:", err)),
+
         onSnapshot(doc(db, "arcadia_system_db", "bookings.json"), (snapshot) => {
           const data = snapshot.data();
           if (data && Array.isArray(data.data)) {

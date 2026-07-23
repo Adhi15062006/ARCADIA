@@ -24,10 +24,13 @@ service cloud.firestore {
         data.server_key == 'arcadia_secure_server_key_2026_futuristic_studio_token';
     }
 
-    // Safely retrieve the user's role from their database document
+    // Safely retrieve the user's role from token claim, database document, or super admin email
     function getUserRole() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+      return isAuthenticated()
+        ? (request.auth.token.keys().hasAll(['role']) ? request.auth.token.role :
+           (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+             : (request.auth.token.email == 'arcadiadevelopers07@gmail.com' || request.auth.token.email == 'godesportsfreefire@gmail.com' ? 'Super Admin' : 'Client')))
         : 'Client';
     }
 
@@ -35,28 +38,34 @@ service cloud.firestore {
     function isSuperAdmin() {
       return isAuthenticated() && (
         getUserRole() == 'Super Admin' ||
-        request.auth.token.email == 'godesportsfreefire@gmail.com'
+        request.auth.token.email == 'arcadiadevelopers07@gmail.com' ||
+        request.auth.token.email == 'godesportsfreefire@gmail.com' ||
+        (request.auth.token.keys().hasAll(['role']) && request.auth.token.role == 'Super Admin')
       );
     }
 
     function isAdmin() {
       return isAuthenticated() && (
         isSuperAdmin() ||
-        getUserRole() == 'Admin'
+        getUserRole() == 'Admin' ||
+        (request.auth.token.keys().hasAll(['role']) && request.auth.token.role == 'Admin')
       );
     }
 
     function isManager() {
       return isAuthenticated() && (
         isAdmin() ||
-        getUserRole() == 'Manager'
+        getUserRole() == 'Manager' ||
+        (request.auth.token.keys().hasAll(['role']) && request.auth.token.role == 'Manager')
       );
     }
 
     function isEmployee() {
       return isAuthenticated() && (
         isManager() ||
-        getUserRole() == 'Employee'
+        getUserRole() == 'Employee' ||
+        getUserRole() in ['Super Admin', 'Admin', 'Manager', 'Employee'] ||
+        (request.auth.token.keys().hasAll(['role']) && request.auth.token.role in ['Super Admin', 'Admin', 'Manager', 'Employee'])
       );
     }
 
