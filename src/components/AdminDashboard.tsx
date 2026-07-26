@@ -768,40 +768,102 @@ export default function AdminDashboard({
           }
         }, (err) => console.error("Error listening to bookings:", err)),
 
+        onSnapshot(collection(db, "contactMessages"), (snapshot) => {
+          const list: Inquiry[] = [];
+          snapshot.forEach((documentDoc) => {
+            const data = documentDoc.data();
+            list.push({
+              id: documentDoc.id,
+              name: data.name || data.clientName || "Anonymous",
+              email: data.email || "",
+              subject: data.subject || data.service || "Inquiry",
+              message: data.message || data.requirements || "",
+              createdAt: data.createdAt || data.timestamp || new Date().toISOString()
+            });
+          });
+          if (list.length > 0) setInquiries(list);
+        }, (err) => console.error("Error listening to contactMessages:", err)),
+
         onSnapshot(doc(db, "arcadia_system_db", "inquiries.json"), (snapshot) => {
           const data = snapshot.data();
           if (data && Array.isArray(data.data)) {
-            setInquiries(data.data);
+            setInquiries(prev => prev.length === 0 ? data.data : prev);
           }
-        }, (err) => console.error("Error listening to inquiries:", err)),
+        }, (err) => console.error("Error listening to inquiries fallback:", err)),
+
+        onSnapshot(collection(db, "activityLogs"), (snapshot) => {
+          const list: ActivityLog[] = [];
+          snapshot.forEach((documentDoc) => {
+            const data = documentDoc.data();
+            list.push({
+              id: documentDoc.id,
+              action: data.action || "System Event",
+              details: data.details || data.message || "",
+              timestamp: data.timestamp || data.createdAt || new Date().toISOString()
+            });
+          });
+          if (list.length > 0) setLogs(list);
+        }, (err) => console.error("Error listening to activityLogs:", err)),
 
         onSnapshot(doc(db, "arcadia_system_db", "logs.json"), (snapshot) => {
           const data = snapshot.data();
           if (data && Array.isArray(data.data)) {
-            setLogs(data.data);
+            setLogs(prev => prev.length === 0 ? data.data : prev);
           }
-        }, (err) => console.error("Error listening to logs:", err)),
+        }, (err) => console.error("Error listening to logs fallback:", err)),
+
+        onSnapshot(collection(db, "careers"), (snapshot) => {
+          const list: any[] = [];
+          snapshot.forEach((documentDoc) => {
+            list.push({ id: documentDoc.id, ...documentDoc.data() });
+          });
+          if (list.length > 0) setVacancies(list);
+        }, (err) => console.error("Error listening to careers:", err)),
 
         onSnapshot(doc(db, "arcadia_system_db", "vacancies.json"), (snapshot) => {
           const data = snapshot.data();
           if (data && Array.isArray(data.data)) {
-            setVacancies(data.data);
+            setVacancies(prev => prev.length === 0 ? data.data : prev);
           }
-        }, (err) => console.error("Error listening to vacancies:", err)),
+        }, (err) => console.error("Error listening to vacancies fallback:", err)),
+
+        onSnapshot(collection(db, "jobApplications"), (snapshot) => {
+          const list: any[] = [];
+          snapshot.forEach((documentDoc) => {
+            list.push({ id: documentDoc.id, ...documentDoc.data() });
+          });
+          if (list.length > 0) setApplications(list);
+        }, (err) => console.error("Error listening to jobApplications:", err)),
 
         onSnapshot(doc(db, "arcadia_system_db", "applications.json"), (snapshot) => {
           const data = snapshot.data();
           if (data && Array.isArray(data.data)) {
-            setApplications(data.data);
+            setApplications(prev => prev.length === 0 ? data.data : prev);
           }
-        }, (err) => console.error("Error listening to applications:", err)),
+        }, (err) => console.error("Error listening to applications fallback:", err)),
+
+        onSnapshot(collection(db, "users"), (snapshot) => {
+          const list: any[] = [];
+          snapshot.forEach((documentDoc) => {
+            list.push({ id: documentDoc.id, ...documentDoc.data() });
+          });
+          if (list.length > 0) setUsersList(list);
+        }, (err) => console.error("Error listening to users:", err)),
 
         onSnapshot(doc(db, "arcadia_system_db", "users.json"), (snapshot) => {
           const data = snapshot.data();
           if (data && Array.isArray(data.data)) {
-            setUsersList(data.data);
+            setUsersList(prev => prev.length === 0 ? data.data : prev);
           }
-        }, (err) => console.error("Error listening to users:", err)),
+        }, (err) => console.error("Error listening to users fallback:", err)),
+
+        onSnapshot(collection(db, "seoSettings"), (snapshot) => {
+          const list: SEOSettings[] = [];
+          snapshot.forEach((documentDoc) => {
+            list.push({ id: documentDoc.id, ...documentDoc.data() } as SEOSettings);
+          });
+          if (list.length > 0) setSeoSettings(list);
+        }, (err) => console.error("Error listening to seoSettings:", err)),
 
         onSnapshot(doc(db, "arcadia_system_db", "mock_emails.json"), (snapshot) => {
           const data = snapshot.data();

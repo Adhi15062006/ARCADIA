@@ -11,75 +11,99 @@ service firebase.storage {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isImage() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp|gif|svg\\+xml)');
+    }
+
+    function isDocument() {
+      return request.resource.contentType.matches('application/(pdf|msword|vnd\\.openxmlformats-officedocument\\.wordprocessingml\\.document|plain|zip|x-zip-compressed)');
+    }
+
     // Global Catch-all Safety Net
     match /{allPaths=**} {
       allow read, write: if false;
     }
 
-    // 1. Profile Images: Owner write only, size < 5MB, must be image
+    // 1. Profile Images & Avatars: Owner write only, size < 5MB, image MIME check
     match /profile-images/{userId}/{allPaths=**} {
       allow read: if isSignedIn();
-      allow write: if isOwner(userId) && 
-                    request.resource.size < 5 * 1024 * 1024 && 
-                    request.resource.contentType.matches('image/.*');
+      allow write: if isOwner(userId) && request.resource.size < 5 * 1024 * 1024 && isImage();
     }
 
-    // 2. Project Files: Size < 50MB for code, blueprints, screenshots
+    match /avatars/{userId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) && request.resource.size < 5 * 1024 * 1024 && isImage();
+    }
+
+    // 2. Project Files: Size < 50MB for code, blueprints, documents
+    match /projects/{projectId}/{allPaths=**} {
+      allow read, write: if isSignedIn() && request.resource.size < 50 * 1024 * 1024 && (isImage() || isDocument());
+    }
+
     match /project-files/{projectId}/{allPaths=**} {
-      allow read, write: if isSignedIn() && request.resource.size < 50 * 1024 * 1024;
+      allow read, write: if isSignedIn() && request.resource.size < 50 * 1024 * 1024 && (isImage() || isDocument());
     }
 
-    // 3. Portfolio: Publicly readable, write by admin/manager < 10MB images
+    // 3. Portfolio: Publicly readable, authenticated write < 10MB images
     match /portfolio/{allPaths=**} {
       allow read: if true;
-      allow write: if isSignedIn() && 
-                    request.resource.size < 10 * 1024 * 1024 && 
-                    request.resource.contentType.matches('image/.*');
+      allow write: if isSignedIn() && request.resource.size < 10 * 1024 * 1024 && isImage();
     }
 
-    // 4. Blog Images: Publicly readable, write by manager < 10MB images
+    // 4. Catalog & Services Images: Publicly readable, authenticated write < 10MB images
+    match /catalog/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.resource.size < 10 * 1024 * 1024 && isImage();
+    }
+
     match /blog-images/{allPaths=**} {
       allow read: if true;
-      allow write: if isSignedIn() && 
-                    request.resource.size < 10 * 1024 * 1024 && 
-                    request.resource.contentType.matches('image/.*');
+      allow write: if isSignedIn() && request.resource.size < 10 * 1024 * 1024 && isImage();
     }
 
-    // 5. Team bio photos: Publicly readable, write by manager < 5MB images
+    // 5. Team & Logos: Publicly readable, authenticated write < 10MB
     match /team/{allPaths=**} {
       allow read: if true;
-      allow write: if isSignedIn() && 
-                    request.resource.size < 5 * 1024 * 1024 && 
-                    request.resource.contentType.matches('image/.*');
+      allow write: if isSignedIn() && request.resource.size < 5 * 1024 * 1024 && isImage();
     }
 
-    // 6. Documents & Invoices: Secured, read strictly by owner or admins
+    match /logos/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.resource.size < 5 * 1024 * 1024 && isImage();
+    }
+
+    match /banners/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.resource.size < 10 * 1024 * 1024 && isImage();
+    }
+
+    // 6. Documents & Invoices: Secured, read strictly by owner or authenticated staff
     match /documents/{userId}/{allPaths=**} {
-      allow read: if isOwner(userId) || isSignedIn(); // Admins/staff check through custom UI
-      allow write: if isSignedIn() && request.resource.size < 25 * 1024 * 1024;
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.resource.size < 25 * 1024 * 1024 && (isImage() || isDocument());
     }
 
     match /invoices/{userId}/{allPaths=**} {
-      allow read: if isOwner(userId) || isSignedIn();
-      allow write: if isSignedIn() && request.resource.size < 15 * 1024 * 1024;
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.resource.size < 15 * 1024 * 1024 && (isImage() || isDocument());
     }
 
-    // 7. Logos: Public read, admin write
-    match /logos/{allPaths=**} {
-      allow read: if true;
-      allow write: if isSignedIn() && request.resource.contentType.matches('image/.*');
+    match /payments/{userId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.resource.size < 10 * 1024 * 1024 && (isImage() || isDocument());
     }
 
-    // 8. Banners: Public read, admin write
-    match /banners/{allPaths=**} {
-      allow read: if true;
-      allow write: if isSignedIn() && request.resource.contentType.matches('image/.*');
+    // 7. Resumes: Public create for job applicants (< 10MB PDF/DOC), read by staff
+    match /resumes/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow create: if request.resource.size < 10 * 1024 * 1024 && isDocument();
+      allow update, delete: if isSignedIn();
     }
 
-    // 9. Generic Uploads: Secured per client ID
+    // 8. Generic Uploads: Secured per client ID
     match /uploads/{userId}/{allPaths=**} {
-      allow read: if isOwner(userId);
-      allow write: if isOwner(userId) && request.resource.size < 30 * 1024 * 1024;
+      allow read: if isOwner(userId) || isSignedIn();
+      allow write: if isOwner(userId) && request.resource.size < 30 * 1024 * 1024 && (isImage() || isDocument());
     }
   }
 }

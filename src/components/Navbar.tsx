@@ -57,6 +57,7 @@ export default function Navbar({
 
   const navItems = [
     { id: "home", labelEn: "Home", labelHi: "मुख्य" },
+    { id: "about", labelEn: "About", labelHi: "हमारे बारे में" },
     { id: "services", labelEn: "Services", labelHi: "सेवाएं" },
     { id: "portfolio", labelEn: "Portfolio", labelHi: "पोर्टफोलियो" },
     { id: "pricing", labelEn: "Pricing", labelHi: "मूल्य" },

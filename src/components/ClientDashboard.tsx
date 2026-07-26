@@ -476,8 +476,9 @@ export default function ClientDashboard({
         const ordersFromCol: any[] = [];
         snapshot.forEach((docSnap) => {
           const item = docSnap.data();
-          if (item.email?.toLowerCase().trim() === cleanEmail || item.userId === cleanEmail || item.customerId === cleanEmail) {
-            ordersFromCol.push(item);
+          const docId = docSnap.id || item.id || item.orderId;
+          if (item.email?.toLowerCase().trim() === cleanEmail || item.clientEmail?.toLowerCase().trim() === cleanEmail || item.userId === cleanEmail || item.customerId === cleanEmail) {
+            ordersFromCol.push({ id: docId, orderId: docId, ...item });
           }
         });
         if (ordersFromCol.length > 0) {
@@ -485,7 +486,9 @@ export default function ClientDashboard({
             const map = new Map();
             prev.forEach((o: any) => map.set(o.id || o.orderId, o));
             ordersFromCol.forEach((o: any) => map.set(o.id || o.orderId, o));
-            return Array.from(map.values());
+            return Array.from(map.values()).sort((a: any, b: any) =>
+              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            );
           });
         }
       }, (err) => console.error("Error listening to orders collection in client dashboard:", err)),
@@ -493,41 +496,96 @@ export default function ClientDashboard({
       onSnapshot(doc(db, "arcadia_system_db", "orders.json"), (snapshot) => {
         const data = snapshot.data();
         if (data && Array.isArray(data.data)) {
-          const filtered = data.data.filter((o: any) => o.email?.toLowerCase().trim() === cleanEmail);
+          const filtered = data.data.filter((o: any) => o.email?.toLowerCase().trim() === cleanEmail || o.clientEmail?.toLowerCase().trim() === cleanEmail);
           setClientOrders(prev => {
             if (prev.length === 0) return filtered;
             const map = new Map();
             filtered.forEach((o: any) => map.set(o.id || o.orderId, o));
             prev.forEach((o: any) => map.set(o.id || o.orderId, o));
-            return Array.from(map.values());
+            return Array.from(map.values()).sort((a: any, b: any) =>
+              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            );
           });
         }
-      }, (err) => console.error("Error listening to client orders:", err)),
+      }, (err) => console.error("Error listening to client orders fallback:", err)),
+
+      onSnapshot(collection(db, "bookings"), (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((docSnap) => {
+          const item = docSnap.data();
+          if (item.email?.toLowerCase().trim() === cleanEmail) {
+            list.push({ id: docSnap.id, ...item });
+          }
+        });
+        if (list.length > 0) setClientBookings(list);
+      }, (err) => console.error("Error listening to bookings collection in client dashboard:", err)),
 
       onSnapshot(doc(db, "arcadia_system_db", "bookings.json"), (snapshot) => {
         const data = snapshot.data();
         if (data && Array.isArray(data.data)) {
           const filtered = data.data.filter((b: any) => b.email?.toLowerCase().trim() === cleanEmail);
-          setClientBookings(filtered);
+          setClientBookings(prev => prev.length === 0 ? filtered : prev);
         }
-      }, (err) => console.error("Error listening to client bookings:", err)),
+      }, (err) => console.error("Error listening to client bookings fallback:", err)),
+
+      onSnapshot(collection(db, "contactMessages"), (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((docSnap) => {
+          const item = docSnap.data();
+          if (item.email?.toLowerCase().trim() === cleanEmail) {
+            list.push({ id: docSnap.id, ...item });
+          }
+        });
+        if (list.length > 0) setClientInquiries(list);
+      }, (err) => console.error("Error listening to contactMessages collection in client dashboard:", err)),
 
       onSnapshot(doc(db, "arcadia_system_db", "inquiries.json"), (snapshot) => {
         const data = snapshot.data();
         if (data && Array.isArray(data.data)) {
           const filtered = data.data.filter((i: any) => i.email?.toLowerCase().trim() === cleanEmail);
-          setClientInquiries(filtered);
+          setClientInquiries(prev => prev.length === 0 ? filtered : prev);
         }
-      }, (err) => console.error("Error listening to client inquiries:", err)),
+      }, (err) => console.error("Error listening to client inquiries fallback:", err)),
+
+      onSnapshot(collection(db, "notifications"), (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((docSnap) => {
+          const item = docSnap.data();
+          if (item.userEmail?.toLowerCase().trim() === cleanEmail || item.clientEmail?.toLowerCase().trim() === cleanEmail || item.userId === cleanEmail) {
+            list.push({ id: docSnap.id, ...item });
+          }
+        });
+        if (list.length > 0) {
+          const sorted = list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+          setNotifications(sorted);
+          setUnreadNotificationsCount(sorted.filter((notif: any) => !notif.read).length);
+        }
+      }, (err) => console.error("Error listening to notifications collection in client dashboard:", err)),
 
       onSnapshot(doc(db, "arcadia_system_db", "notifications.json"), (snapshot) => {
         const data = snapshot.data();
         if (data && Array.isArray(data.data)) {
           const filtered = data.data.filter((n: any) => n.userEmail?.toLowerCase().trim() === cleanEmail);
-          setNotifications(filtered);
-          setUnreadNotificationsCount(filtered.filter((notif: any) => !notif.read).length);
+          setNotifications(prev => {
+            if (prev.length === 0) {
+              setUnreadNotificationsCount(filtered.filter((notif: any) => !notif.read).length);
+              return filtered;
+            }
+            return prev;
+          });
         }
-      }, (err) => console.error("Error listening to client notifications:", err))
+      }, (err) => console.error("Error listening to client notifications fallback:", err)),
+
+      onSnapshot(collection(db, "maintenanceSubscriptions"), (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((docSnap) => {
+          const item = docSnap.data();
+          if (item.clientEmail?.toLowerCase().trim() === cleanEmail || item.clientId === cleanEmail) {
+            list.push({ id: docSnap.id, ...item });
+          }
+        });
+        if (list.length > 0) setMaintenanceSubs(list);
+      }, (err) => console.error("Error listening to maintenanceSubscriptions collection in client dashboard:", err))
     ];
 
     return () => {

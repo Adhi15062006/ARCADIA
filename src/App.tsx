@@ -16,6 +16,7 @@ import ClientDashboard from "./components/ClientDashboard";
 import LoginPortal from "./components/LoginPortal";
 import Chatbot from "./components/Chatbot";
 import MiscSection from "./components/MiscSection";
+import AboutSection from "./components/AboutSection";
 import { Service, Project, BlogPost, FAQ, Testimonial, SEOSettings } from "./types";
 import { db, auth } from "./firebase/config";
 import { onSnapshot, doc, collection } from "firebase/firestore";
@@ -181,54 +182,114 @@ function AppContent() {
         snapshot.forEach((docSnap) => {
           list.push({ id: docSnap.id, ...docSnap.data() } as SEOSettings);
         });
-        setSeoConfigs(list);
+        if (list.length > 0) setSeoConfigs(list);
       }, (error) => {
         console.warn("Real-time listener for seoSettings failed:", error);
+      }),
+
+      onSnapshot(collection(db, "services"), (snapshot) => {
+        if (!snapshot.empty) {
+          const list: Service[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...docSnap.data() } as Service);
+          });
+          setServices(list);
+        }
+      }, (error) => {
+        console.warn("Real-time listener for top-level services collection failed:", error);
       }),
 
       onSnapshot(doc(db, "arcadia_system_db", "services.json"), (snapshot) => {
         const data = snapshot.data();
         if (data && Array.isArray(data.data)) {
-          setServices(data.data);
+          setServices(prev => prev.length === 0 ? data.data : prev);
         }
       }, (error) => {
-        console.warn("Real-time listener for services failed, relying on REST cache:", error);
+        console.warn("Real-time listener for services.json fallback failed:", error);
+      }),
+
+      onSnapshot(collection(db, "projects"), (snapshot) => {
+        if (!snapshot.empty) {
+          const list: Project[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...docSnap.data() } as Project);
+          });
+          setProjects(list);
+        }
+      }, (error) => {
+        console.warn("Real-time listener for top-level projects collection failed:", error);
       }),
 
       onSnapshot(doc(db, "arcadia_system_db", "projects.json"), (snapshot) => {
         const data = snapshot.data();
         if (data && Array.isArray(data.data)) {
-          setProjects(data.data);
+          setProjects(prev => prev.length === 0 ? data.data : prev);
         }
       }, (error) => {
-        console.warn("Real-time listener for projects failed, relying on REST cache:", error);
+        console.warn("Real-time listener for projects.json fallback failed:", error);
+      }),
+
+      onSnapshot(collection(db, "blogs"), (snapshot) => {
+        if (!snapshot.empty) {
+          const list: BlogPost[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...docSnap.data() } as BlogPost);
+          });
+          setBlogs(list);
+        }
+      }, (error) => {
+        console.warn("Real-time listener for top-level blogs collection failed:", error);
       }),
 
       onSnapshot(doc(db, "arcadia_system_db", "blogs.json"), (snapshot) => {
         const data = snapshot.data();
         if (data && Array.isArray(data.data)) {
-          setBlogs(data.data);
+          setBlogs(prev => prev.length === 0 ? data.data : prev);
         }
       }, (error) => {
-        console.warn("Real-time listener for blogs failed, relying on REST cache:", error);
+        console.warn("Real-time listener for blogs.json fallback failed:", error);
+      }),
+
+      onSnapshot(collection(db, "faqs"), (snapshot) => {
+        if (!snapshot.empty) {
+          const list: FAQ[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...docSnap.data() } as FAQ);
+          });
+          setFaqs(list);
+        }
+      }, (error) => {
+        console.warn("Real-time listener for top-level faqs collection failed:", error);
       }),
 
       onSnapshot(doc(db, "arcadia_system_db", "faqs.json"), (snapshot) => {
         const data = snapshot.data();
         if (data && Array.isArray(data.data)) {
-          setFaqs(data.data);
+          setFaqs(prev => prev.length === 0 ? data.data : prev);
         }
       }, (error) => {
-        console.warn("Real-time listener for FAQs failed, relying on REST cache:", error);
+        console.warn("Real-time listener for faqs.json fallback failed:", error);
+      }),
+
+      onSnapshot(collection(db, "testimonials"), (snapshot) => {
+        if (!snapshot.empty) {
+          const list: Testimonial[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...docSnap.data() } as Testimonial);
+          });
+          setTestimonials(list);
+        }
+      }, (error) => {
+        console.warn("Real-time listener for top-level testimonials collection failed:", error);
       }),
 
       onSnapshot(doc(db, "arcadia_system_db", "testimonials.json"), (snapshot) => {
         const data = snapshot.data();
         if (data && Array.isArray(data.data)) {
-          setTestimonials(data.data);
+          setTestimonials(prev => prev.length === 0 ? data.data : prev);
         }
       }, (error) => {
-        console.warn("Real-time listener for testimonials failed, relying on REST cache:", error);
+        console.warn("Real-time listener for testimonials.json fallback failed:", error);
       }),
 
       onSnapshot(doc(db, "arcadia_system_db", "homepage_settings.json"), (snapshot) => {
@@ -619,6 +680,9 @@ function AppContent() {
                     { src: "/logo3.svg", alt: "LUMEN LABS" },
                   ]}
                 />
+
+                {/* About Section - Founder K. JAI ADITYA */}
+                <AboutSection lang={lang} />
 
                 {/* Dynamic Service Catalog */}
                 <Suspense fallback={
