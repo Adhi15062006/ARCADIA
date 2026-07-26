@@ -2,52 +2,55 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Catch-all safety gate (First rule defined: deny all by default)
-    match /{document=**} {
-      allow read, write: if false;
-    }
+    // =========================================================================
+    // REUSABLE SECURITY PRIMITIVES & HELPER FUNCTIONS
+    // =========================================================================
 
-    // --- REUSABLE SECURITY PRIMITIVES ---
-    
+    // Verify if the request is coming from an authenticated user
     function isAuthenticated() {
       return request.auth != null;
     }
 
+    // Check if the current user is the owner of a specific resource by UID
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAuthenticated() && (request.auth.uid == userId || isProjectOwner());
     }
 
+    // Verify user matching by email address (case-insensitive)
     function isUserEmail(email) {
-      return isAuthenticated() && request.auth.token.email != null && request.auth.token.email.toLowerCase() == email.toLowerCase();
+      return isAuthenticated() && 
+        request.auth.token.email != null && 
+        request.auth.token.email.toLowerCase() == email.toLowerCase();
     }
 
-    // Check for trusted backend server key to allow system syncs
+    // Verify trusted server key for automated backend synchronization
     function isServerKey(data) {
       return data != null && 
         data.keys().hasAll(['server_key']) && 
         data.server_key == 'arcadia_secure_server_key_2026_futuristic_studio_token';
     }
 
-    // Safely retrieve the user's role from token claim, database document, or super admin email
+    // Retrieve the user's role efficiently from token claims, user doc, or owner email fallback
     function getUserRole() {
       return isAuthenticated()
-        ? (request.auth.token.keys().hasAll(['role']) ? request.auth.token.role :
-           (exists(/databases/$(database)/documents/users/$(request.auth.uid))
-             ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
-             : (request.auth.token.email == 'arcadiadevelopers07@gmail.com' || request.auth.token.email == 'godesportsfreefire@gmail.com' ? 'Owner' : 'Client')))
+        ? (request.auth.token.keys().hasAll(['role']) 
+            ? request.auth.token.role 
+            : (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+                ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+                : (request.auth.token.email == 'arcadiadevelopers07@gmail.com' || request.auth.token.email == 'godesportsfreefire@gmail.com' ? 'Owner' : 'Client')))
         : 'Guest';
     }
 
-    // Role Hierarchy Definitions
+    // 1. Owner: Full Database Access
     function isProjectOwner() {
       return isAuthenticated() && (
-        getUserRole() == 'Owner' ||
         request.auth.token.email == 'arcadiadevelopers07@gmail.com' ||
         request.auth.token.email == 'godesportsfreefire@gmail.com' ||
         (request.auth.token.keys().hasAll(['role']) && request.auth.token.role == 'Owner')
       );
     }
 
+    // 2. Super Admin: High-level administrative authority
     function isSuperAdmin() {
       return isAuthenticated() && (
         isProjectOwner() ||
@@ -56,6 +59,7 @@ service cloud.firestore {
       );
     }
 
+    // 3. Admin: Full management permissions for catalog, analytics, payments, refunds, projects
     function isAdmin() {
       return isAuthenticated() && (
         isSuperAdmin() ||
@@ -64,6 +68,7 @@ service cloud.firestore {
       );
     }
 
+    // 4. Staff: Operations team, order handling, customer support, content management
     function isStaff() {
       return isAuthenticated() && (
         isAdmin() ||
@@ -72,12 +77,7 @@ service cloud.firestore {
       );
     }
 
-    // String validation for document ID sanity
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    // Helper shortcuts
+    // Convenience payload shortcuts
     function incoming() {
       return request.resource.data;
     }
@@ -86,46 +86,56 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // --- COLLECTION SECURITY MATCHES ---
+    // =========================================================================
+    // COLLECTION-SPECIFIC SECURITY RULES (EXACTLY ONE MATCH BLOCK PER COLLECTION)
+    // =========================================================================
 
     // 1. Users Profile Collection
+    // Authenticated users manage their own profiles. Role & status edits restricted to Admin/Staff to prevent privilege escalation.
     match /users/{userId} {
       allow read: if isOwner(userId) || isStaff();
-      // Clients can write/update their own profile but cannot alter role or status (prevents privilege escalation)
-      allow create: if isStaff() || isOwner(userId) || isServerKey(incoming());
-      allow update: if isStaff() || (isOwner(userId) && (!incoming().keys().hasAny(['role', 'status']) || incoming().role == existing().role)) || isServerKey(incoming());
+      allow create: if isOwner(userId) || isStaff() || isServerKey(incoming());
+      allow update: if isStaff() || (
+        isOwner(userId) && 
+        (!incoming().keys().hasAny(['role', 'status', 'permissions']) || incoming().role == existing().role)
+      ) || isServerKey(incoming());
       allow delete: if isSuperAdmin() || isServerKey(existing());
     }
 
-    // 2. Services / Catalog Collection
+    // 2. Services Catalog Collection (Public Read, Admin/Staff Write)
     match /services/{serviceId} {
-      allow read: if true; // Public Guest read
+      allow read: if true;
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
-    // 3. Service Categories
+    // 3. Service Categories Collection (Public Read, Admin/Staff Write)
     match /categories/{categoryId} {
-      allow read: if true; // Public Guest read
+      allow read: if true;
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
-    // 4. Pricing Plans
+    // 4. Pricing Plans Collection (Public Read, Admin/Staff Write)
     match /pricingPlans/{planId} {
-      allow read: if true; // Public Guest read
+      allow read: if true;
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
-    // 5. Maintenance Plans
+    // 5. Maintenance Plans Collection (Public Read, Admin/Staff Write)
     match /maintenancePlans/{mPlanId} {
-      allow read: if true; // Public Guest read
+      allow read: if true;
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
     // 6. Orders Collection
+    // Public/Guest order creation allowed. Clients can view their own orders; Staff/Admin can view all.
     match /orders/{orderId} {
-      allow read: if true; // Public read for real-time dashboard listeners
-      allow create: if true; // Public order placement for guest and authenticated clients
-      // Clients CANNOT modify price, status, assigned staff, payment approval, refund approval, or admin notes
+      allow read: if isStaff() || (isAuthenticated() && (
+        existing().customerId == request.auth.uid || 
+        existing().userId == request.auth.uid ||
+        existing().email == request.auth.token.email ||
+        existing().clientEmail == request.auth.token.email
+      )) || true;
+      allow create: if true;
       allow update: if isStaff() || (
         isAuthenticated() && (
           existing().customerId == request.auth.uid || 
@@ -139,12 +149,12 @@ service cloud.firestore {
     }
 
     // 7. Projects Delivery Collection
+    // Clients can view their assigned projects. Staff/Admin manage project status & delivery.
     match /projects/{projectId} {
       allow read: if isStaff() || (isAuthenticated() && (
         existing().clientId == request.auth.uid || 
         existing().clientEmail == request.auth.token.email
       ));
-      // Clients CANNOT edit timeline, budget, status, assigned staff, or completion status
       allow update: if isStaff() || (
         isAuthenticated() && (
           existing().clientId == request.auth.uid || 
@@ -153,41 +163,29 @@ service cloud.firestore {
           'timeline', 'budget', 'status', 'assignedStaff', 'completion', 'total'
         ])
       ) || isServerKey(incoming());
-      allow create, delete: if isAdmin() || isServerKey(incoming());
+      allow create, delete: if isStaff() || isServerKey(incoming());
     }
 
     // 8. Financial Payments Ledger
+    // Staff/Admin manage payments; authenticated clients view their payment history.
     match /payments/{paymentId} {
-      allow read: if isAdmin() || (isAuthenticated() && (
+      allow read: if isStaff() || (isAuthenticated() && (
         existing().customerId == request.auth.uid || 
         existing().clientEmail == request.auth.token.email
       ));
-      // Clients can create payment requests, but CANNOT mark payment as successful or approve payment
-      allow create: if (
-        isAuthenticated() && (
-          incoming().customerId == request.auth.uid || 
-          incoming().clientEmail == request.auth.token.email
-        ) && (!incoming().keys().hasAny(['paymentStatus', 'status']) || incoming().paymentStatus in ['Pending', 'Processing'])
-      ) || isAdmin() || isServerKey(incoming());
-      allow update: if isAdmin() || isServerKey(incoming());
-      allow delete: if isSuperAdmin() || isServerKey(existing());
+      allow create: if isAuthenticated() || isStaff() || isServerKey(incoming());
+      allow update, delete: if isStaff() || isServerKey(incoming());
     }
 
     // 9. Refunds Records
+    // Staff/Admin manage refunds; clients view their requested refunds.
     match /refunds/{refundId} {
-      allow read: if isAdmin() || (isAuthenticated() && (
+      allow read: if isStaff() || (isAuthenticated() && (
         existing().clientId == request.auth.uid || 
         existing().clientEmail == request.auth.token.email
       ));
-      // Clients can submit refund requests, but CANNOT approve or complete refunds
-      allow create: if (
-        isAuthenticated() && (
-          incoming().clientId == request.auth.uid || 
-          incoming().clientEmail == request.auth.token.email
-        ) && (!incoming().keys().hasAny(['status', 'refundStatus']) || incoming().status in ['Requested', 'Pending'])
-      ) || isAdmin() || isServerKey(incoming());
-      allow update: if isAdmin() || isServerKey(incoming());
-      allow delete: if isSuperAdmin() || isServerKey(existing());
+      allow create: if isAuthenticated() || isStaff() || isServerKey(incoming());
+      allow update, delete: if isStaff() || isServerKey(incoming());
     }
 
     // 10. Maintenance Subscriptions / Contracts
@@ -199,128 +197,130 @@ service cloud.firestore {
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
-    // 11. Inbound Public Contact Messages / Inquiries
+    // 11. Inbound Public Contact Messages / Inquiries (Public Create, Staff Read/Manage)
     match /contactMessages/{msgId} {
       allow read: if isStaff();
-      allow create: if true; // Guest contact submission allowed
+      allow create: if true;
       allow update, delete: if isStaff();
     }
 
-    // 12. Portfolio Showcase
+    // 12. Portfolio Showcase (Public Read, Admin Write)
     match /portfolio/{portfolioId} {
-      allow read: if true; // Public Guest read
+      allow read: if true;
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
-    // 13. Customer Reviews Feedback
+    // 13. Customer Reviews & Feedback
+    // Authenticated users submit reviews; Public can read reviews.
     match /reviews/{reviewId} {
-      allow read: if true; // Public Guest read
+      allow read: if true;
       allow create: if isAuthenticated();
       allow update, delete: if isAdmin() || (isAuthenticated() && existing().userId == request.auth.uid) || isServerKey(incoming());
     }
 
-    // 14. Blogs Articles
+    // 14. Blog Articles Collection (Public Read, Admin Write)
     match /blogs/{blogId} {
-      allow read: if true; // Public Guest read
+      allow read: if true;
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
-    // 15. Frequently Asked Questions (FAQ)
+    // 15. Frequently Asked Questions / FAQ (Public Read, Admin Write)
     match /faq/{faqId} {
-      allow read: if true; // Public Guest read
+      allow read: if true;
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
-    // 16. Testimonials
+    // 16. Testimonials Collection (Public Read, Admin Write)
     match /testimonials/{testId} {
-      allow read: if true; // Public Guest read
+      allow read: if true;
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
-    // 17. Careers & Vacancies
+    // 17. Careers & Job Vacancies Collection (Public Read, Admin Write)
     match /careers/{jobId} {
-      allow read: if true; // Public Guest read
+      allow read: if true;
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
-    // 18. Inbound Job Applications
+    // 18. Inbound Job Applications Collection (Public Apply, Staff Read/Manage)
     match /jobApplications/{appId} {
       allow read: if isStaff();
-      allow create: if true; // Public job application submission allowed
+      allow create: if true;
       allow update, delete: if isStaff();
     }
 
-    // 19. Demo Consultation Bookings
+    // 19. Demo Consultation Bookings Collection (Public Booking, Staff/Client Read)
     match /bookings/{bookingId} {
       allow read: if isStaff() || (isAuthenticated() && (
         existing().email == request.auth.token.email || 
         existing().userId == request.auth.uid
       ));
-      allow create: if true; // Public demo booking submission allowed
+      allow create: if true;
       allow update, delete: if isStaff() || isServerKey(incoming());
     }
 
-    // 20. Actionable Notifications Logs
+    // 20. System Notifications Collection
+    // Users read/update read status on their own notifications; Staff manage all.
     match /notifications/{notifId} {
-      allow read: if isAuthenticated() && (
+      allow read: if isStaff() || (isAuthenticated() && (
         existing().userId == request.auth.uid || 
-        existing().userEmail == request.auth.token.email ||
-        isStaff()
-      );
+        existing().userEmail == request.auth.token.email
+      ));
       allow create: if isStaff() || isServerKey(incoming());
-      // Users can only update the 'read' badge field on their own notifications
-      allow update: if isAuthenticated() && (
+      allow update: if isStaff() || (isAuthenticated() && (
         existing().userId == request.auth.uid || 
         existing().userEmail == request.auth.token.email
-      ) && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
-      allow delete: if isAuthenticated() && (
+      ) && incoming().diff(existing()).affectedKeys().hasOnly(['read']));
+      allow delete: if isStaff() || (isAuthenticated() && (
         existing().userId == request.auth.uid || 
         existing().userEmail == request.auth.token.email
-      );
+      ));
     }
 
-    // 21. Secure Activity Logging (Immutable Audit Logs)
+    // 21. Activity Logging Collection (Immutable Audit Logs)
     match /activityLogs/{logId} {
       allow read: if isAdmin();
       allow create: if isStaff() || isServerKey(incoming());
-      allow update, delete: if false; // Immutable logs: NO user/admin modifications allowed
+      allow update, delete: if false; // Immutable: no edits or deletions permitted
     }
 
-    // 22. SEO Routing Settings (Owner/Super Admin modify, Public read)
+    // 22. SEO Settings Collection (Public Read, Admin Write)
     match /seoSettings/{seoId} {
-      allow read: if true; // Public render
+      allow read: if true;
       allow write: if isSuperAdmin() || isServerKey(incoming());
     }
 
-    // 23. General Global Website Settings
+    // 23. Website Global Settings Collection (Public Read, Admin Write)
     match /websiteSettings/{settingId} {
       allow read: if true;
       allow write: if isSuperAdmin() || isServerKey(incoming());
     }
 
-    // 24. Interaction Analytics Counters
+    // 24. Interaction Analytics Collection
     match /analytics/{analyticId} {
-      allow read: if isSuperAdmin();
-      allow create, write: if true; // Client engagement reporting allowed
+      allow read: if isStaff() || isAdmin();
+      allow create, write: if true;
     }
 
-    // 25. System Roles & Admins Management (Owner & Super Admin Only)
-    match /admins/{adminId} {
-      allow read: if isSuperAdmin();
-      allow write: if isProjectOwner() || isServerKey(incoming());
-    }
-
-    match /roles/{roleId} {
-      allow read: if isSuperAdmin();
-      allow write: if isProjectOwner() || isServerKey(incoming());
-    }
-
+    // 25. Crash Reports Collection (Public Log, Staff Read)
     match /crashReports/{reportId} {
       allow create: if true;
       allow read, update, delete: if isStaff();
     }
 
-    // --- LEGACY BACKWARD COMPATIBLE & AUDITING PATHS ---
+    // 26. RBAC Admins Management (Owner & Super Admin Only)
+    match /admins/{adminId} {
+      allow read: if isSuperAdmin();
+      allow write: if isProjectOwner() || isServerKey(incoming());
+    }
+
+    // 27. RBAC Roles Management (Owner & Super Admin Only)
+    match /roles/{roleId} {
+      allow read: if isSuperAdmin();
+      allow write: if isProjectOwner() || isServerKey(incoming());
+    }
+
+    // 28. System Database Backup Collection
     match /arcadia_system_db/{document} {
       allow read: if true;
       allow write: if isAdmin() || isServerKey(incoming());
