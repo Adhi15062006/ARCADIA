@@ -324,6 +324,29 @@ export default function ContactForms({
       await setDoc(orderDocRef, cleanPayload);
       console.log(`[Firestore Order Write Success] Path: orders/${generatedOrderId}, Ref Path: ${orderDocRef.path}, Document ID: ${generatedOrderId}, UID: ${currentUid}`);
 
+      // 1b. Auto-create corresponding project document in 'projects' collection for instant Client Hub rendering
+      const projectPayload = JSON.parse(JSON.stringify({
+        id: generatedOrderId,
+        projectId: generatedOrderId,
+        orderId: generatedOrderId,
+        clientId: currentUid,
+        clientEmail: orderData.email,
+        customerName: orderData.name,
+        title: orderData.service,
+        service: orderData.service,
+        status: "Pending Review",
+        timeline: orderData.deadline || "10 Days",
+        progress: 0,
+        assignedStaff: "Unassigned",
+        createdAt: now,
+        updatedAt: now,
+        server_key: "arcadia_secure_server_key_2026_futuristic_studio_token"
+      }));
+
+      const projectDocRef = doc(db, "projects", generatedOrderId);
+      await setDoc(projectDocRef, projectPayload).catch(pErr => console.warn("[Auto-Project Creation Warning]:", pErr));
+      console.log(`[Firestore Project Auto-Create Success] Path: projects/${generatedOrderId}`);
+
       // 2. Secondary Sync: Notify server backend to trigger notifications, email, & activity logs
       try {
         const res = await fetch("/api/orders", {

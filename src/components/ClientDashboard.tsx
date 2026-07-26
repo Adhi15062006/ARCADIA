@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { generateInvoicePDF, generateRefundPDF } from "../utils/pdfGenerator";
 import { Order, Booking, Inquiry } from "../types";
-import { db } from "../firebase/config";
+import { db, auth } from "../firebase/config";
 import { onSnapshot, doc, collection, setDoc } from "firebase/firestore";
 
 function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
@@ -506,24 +506,59 @@ export default function ClientDashboard({
     const unsubscribes = [
       onSnapshot(collection(db, "orders"), (snapshot) => {
         const ordersFromCol: any[] = [];
+        const currentUid = auth.currentUser?.uid;
         snapshot.forEach((docSnap) => {
           const item = docSnap.data();
           const docId = docSnap.id || item.id || item.orderId;
-          if (item.email?.toLowerCase().trim() === cleanEmail || item.clientEmail?.toLowerCase().trim() === cleanEmail || item.userId === cleanEmail || item.customerId === cleanEmail) {
+          const matchEmail = item.email?.toLowerCase().trim() === cleanEmail || item.clientEmail?.toLowerCase().trim() === cleanEmail || item.userEmail?.toLowerCase().trim() === cleanEmail;
+          const matchUid = currentUid && (item.userId === currentUid || item.customerId === currentUid || item.clientId === currentUid);
+          if (matchEmail || matchUid) {
             ordersFromCol.push({ id: docId, orderId: docId, ...item });
           }
         });
-        if (ordersFromCol.length > 0) {
+        setClientOrders(ordersFromCol.sort((a: any, b: any) =>
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        ));
+        setIsClientDataLoading(false);
+      }, (err) => console.error("Error listening to orders collection in client dashboard:", err)),
+
+      onSnapshot(collection(db, "projects"), (snapshot) => {
+        const projectsFromCol: any[] = [];
+        const currentUid = auth.currentUser?.uid;
+        snapshot.forEach((docSnap) => {
+          const item = docSnap.data();
+          const docId = docSnap.id || item.id || item.projectId || item.orderId;
+          const matchEmail = item.clientEmail?.toLowerCase().trim() === cleanEmail || item.email?.toLowerCase().trim() === cleanEmail;
+          const matchUid = currentUid && (item.clientId === currentUid || item.userId === currentUid || item.customerId === currentUid);
+          if (matchEmail || matchUid) {
+            projectsFromCol.push({ id: docId, projectId: docId, ...item });
+          }
+        });
+        if (projectsFromCol.length > 0) {
+          // Merge active project updates into orders if order doesn't exist separately
           setClientOrders(prev => {
             const map = new Map();
             prev.forEach((o: any) => map.set(o.id || o.orderId, o));
-            ordersFromCol.forEach((o: any) => map.set(o.id || o.orderId, o));
+            projectsFromCol.forEach((p: any) => {
+              if (!map.has(p.id)) {
+                map.set(p.id, {
+                  id: p.id,
+                  orderId: p.id,
+                  service: p.service || p.title || "Web Application",
+                  status: p.status || "In Progress",
+                  orderStatus: p.status || "In Progress",
+                  progress: p.progress || 0,
+                  assignedStaff: p.assignedStaff || "Assigned Developer",
+                  createdAt: p.createdAt || new Date().toISOString()
+                });
+              }
+            });
             return Array.from(map.values()).sort((a: any, b: any) =>
               new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
             );
           });
         }
-      }, (err) => console.error("Error listening to orders collection in client dashboard:", err)),
+      }, (err) => console.error("Error listening to projects collection in client dashboard:", err)),
 
       onSnapshot(doc(db, "arcadia_system_db", "orders.json"), (snapshot) => {
         const data = snapshot.data();
@@ -538,18 +573,22 @@ export default function ClientDashboard({
               new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
             );
           });
+          setIsClientDataLoading(false);
         }
       }, (err) => console.error("Error listening to client orders fallback:", err)),
 
       onSnapshot(collection(db, "bookings"), (snapshot) => {
         const list: any[] = [];
+        const currentUid = auth.currentUser?.uid;
         snapshot.forEach((docSnap) => {
           const item = docSnap.data();
-          if (item.email?.toLowerCase().trim() === cleanEmail) {
+          const matchEmail = item.email?.toLowerCase().trim() === cleanEmail;
+          const matchUid = currentUid && (item.userId === currentUid || item.customerId === currentUid);
+          if (matchEmail || matchUid) {
             list.push({ id: docSnap.id, ...item });
           }
         });
-        if (list.length > 0) setClientBookings(list);
+        setClientBookings(list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()));
       }, (err) => console.error("Error listening to bookings collection in client dashboard:", err)),
 
       onSnapshot(doc(db, "arcadia_system_db", "bookings.json"), (snapshot) => {
@@ -562,13 +601,16 @@ export default function ClientDashboard({
 
       onSnapshot(collection(db, "contactMessages"), (snapshot) => {
         const list: any[] = [];
+        const currentUid = auth.currentUser?.uid;
         snapshot.forEach((docSnap) => {
           const item = docSnap.data();
-          if (item.email?.toLowerCase().trim() === cleanEmail) {
+          const matchEmail = item.email?.toLowerCase().trim() === cleanEmail;
+          const matchUid = currentUid && (item.userId === currentUid || item.customerId === currentUid);
+          if (matchEmail || matchUid) {
             list.push({ id: docSnap.id, ...item });
           }
         });
-        if (list.length > 0) setClientInquiries(list);
+        setClientInquiries(list);
       }, (err) => console.error("Error listening to contactMessages collection in client dashboard:", err)),
 
       onSnapshot(doc(db, "arcadia_system_db", "inquiries.json"), (snapshot) => {
@@ -581,17 +623,18 @@ export default function ClientDashboard({
 
       onSnapshot(collection(db, "notifications"), (snapshot) => {
         const list: any[] = [];
+        const currentUid = auth.currentUser?.uid;
         snapshot.forEach((docSnap) => {
           const item = docSnap.data();
-          if (item.userEmail?.toLowerCase().trim() === cleanEmail || item.clientEmail?.toLowerCase().trim() === cleanEmail || item.userId === cleanEmail) {
+          const matchEmail = item.userEmail?.toLowerCase().trim() === cleanEmail || item.clientEmail?.toLowerCase().trim() === cleanEmail;
+          const matchUid = currentUid && (item.userId === currentUid || item.customerId === currentUid);
+          if (matchEmail || matchUid) {
             list.push({ id: docSnap.id, ...item });
           }
         });
-        if (list.length > 0) {
-          const sorted = list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-          setNotifications(sorted);
-          setUnreadNotificationsCount(sorted.filter((notif: any) => !notif.read).length);
-        }
+        const sorted = list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        setNotifications(sorted);
+        setUnreadNotificationsCount(sorted.filter((notif: any) => !notif.read).length);
       }, (err) => console.error("Error listening to notifications collection in client dashboard:", err)),
 
       onSnapshot(doc(db, "arcadia_system_db", "notifications.json"), (snapshot) => {

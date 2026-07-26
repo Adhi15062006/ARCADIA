@@ -128,6 +128,7 @@ export default function AdminDashboard({
   // Dashboard content states (REST fetched)
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [managedProjects, setManagedProjects] = useState<Project[]>(projects || []);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [vacancies, setVacancies] = useState<any[]>([]);
@@ -689,6 +690,34 @@ export default function AdminDashboard({
           ));
         }, (err) => console.error("[Admin Orders Realtime Error]:", err)),
 
+        onSnapshot(collection(db, "projects"), (snapshot) => {
+          console.log("[Admin Projects Realtime] Received live Firestore projects count:", snapshot.size);
+          const liveProjects: Project[] = [];
+          snapshot.forEach((documentDoc) => {
+            const data = documentDoc.data();
+            const id = documentDoc.id || data.id || data.projectId || data.orderId;
+            liveProjects.push({
+              id,
+              title: data.title || data.service || "Web Application",
+              category: data.category || "Websites",
+              description: data.description || "",
+              technologies: data.technologies || (Array.isArray(data.tech) ? data.tech : ["React", "TypeScript", "Firebase"]),
+              imageUrl: data.imageUrl || data.image || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
+              liveUrl: data.liveUrl || "#",
+              caseStudy: data.caseStudy || "",
+              status: data.status || "In Progress",
+              progress: data.progress !== undefined ? data.progress : 0,
+              assignedStaff: data.assignedStaff || "Unassigned",
+              clientId: data.clientId || "",
+              clientEmail: data.clientEmail || "",
+              createdAt: data.createdAt || new Date().toISOString()
+            } as any);
+          });
+          if (liveProjects.length > 0) {
+            setManagedProjects(liveProjects);
+          }
+        }, (err) => console.error("[Admin Projects Realtime Error]:", err)),
+
         onSnapshot(collection(db, "bookings"), (snapshot) => {
           console.log("[Admin Bookings Realtime] Received live Firestore bookings count:", snapshot.size);
           const liveBookings: Booking[] = [];
@@ -1238,9 +1267,25 @@ export default function AdminDashboard({
     document.body.removeChild(link);
   };
 
-  // Order Status update handler
+  // Order Status update handler with direct Firestore sync
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
     try {
+      const updatedData = {
+        status,
+        orderStatus: status,
+        updatedAt: new Date().toISOString()
+      };
+      
+      await setDoc(doc(db, "orders", orderId), updatedData, { merge: true }).catch(e => console.warn("[Orders Firestore Update Warning]:", e));
+      await setDoc(doc(db, "projects", orderId), {
+        id: orderId,
+        orderId,
+        status,
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch(e => console.warn("[Projects Firestore Update Warning]:", e));
+
+      console.log(`[Admin Realtime Sync] Updated order & project #${orderId} status to '${status}' in Firestore.`);
+
       const res = await fetch(`/api/orders/${orderId}/status`, {
         method: "PUT",
         headers: {
@@ -1251,7 +1296,32 @@ export default function AdminDashboard({
       });
       if (res.ok) {
         fetchAdminData();
+        onShowToast?.("success", `Order #${orderId} status updated to ${status}`);
       }
+    } catch (err) {
+      console.error("[Update Order Status Error]:", err);
+    }
+  };
+
+  const handleAssignStaff = async (orderId: string, assignedStaff: string) => {
+    try {
+      const updatedData = { assignedStaff, updatedAt: new Date().toISOString() };
+      await setDoc(doc(db, "orders", orderId), updatedData, { merge: true }).catch(() => {});
+      await setDoc(doc(db, "projects", orderId), updatedData, { merge: true }).catch(() => {});
+      onShowToast?.("success", `Assigned staff to order #${orderId}: ${assignedStaff}`);
+      fetchAdminData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateProgress = async (orderId: string, progress: number) => {
+    try {
+      const updatedData = { progress, updatedAt: new Date().toISOString() };
+      await setDoc(doc(db, "orders", orderId), updatedData, { merge: true }).catch(() => {});
+      await setDoc(doc(db, "projects", orderId), updatedData, { merge: true }).catch(() => {});
+      onShowToast?.("success", `Updated project #${orderId} progress to ${progress}%`);
+      fetchAdminData();
     } catch (err) {
       console.error(err);
     }
@@ -2410,6 +2480,18 @@ export default function AdminDashboard({
                                       <option value="Completed">Complete</option>
                                       <option value="Cancelled">Cancel</option>
                                     </select>
+                                    <select
+                                       value={order.assignedStaff || "Unassigned"}
+                                       onChange={e => handleAssignStaff(order.id, e.target.value)}
+                                       className="bg-arcadia-black border border-white/10 rounded px-2 py-1 text-[10px] text-gray-300 focus:outline-none cursor-pointer"
+                                       title="Assign Senior Staff Developer"
+                                     >
+                                       <option value="Unassigned">Assign Staff...</option>
+                                       <option value="K. JAI ADITYA (Founder & Lead Architect)">K. JAI ADITYA (Founder)</option>
+                                       <option value="Senior AI Engineer">Senior AI Engineer</option>
+                                       <option value="Lead FullStack Engineer">Lead FullStack Engineer</option>
+                                       <option value="UI/UX Specialist">UI/UX Specialist</option>
+                                     </select>
                                     <AnimatedButton
                                       onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
                                       className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold transition cursor-pointer ${

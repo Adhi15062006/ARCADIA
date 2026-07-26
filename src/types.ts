@@ -74,6 +74,8 @@ export interface Order {
   fileUrl?: string;
   paymentScreenshot?: string;
   milestones?: PaymentMilestone[];
+  assignedStaff?: string;
+  progress?: number;
   createdAt: string;
   updatedAt?: string;
 }
