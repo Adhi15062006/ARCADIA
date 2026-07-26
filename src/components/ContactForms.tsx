@@ -248,7 +248,21 @@ export default function ContactForms({
     setOrderStatus("submitting");
     const budgetNum = parseInt(orderData.budget) || 0;
     const now = new Date().toISOString();
-    const currentUid = auth.currentUser?.uid || "u_client_" + Date.now();
+    
+    // Ensure active Firebase Authentication state
+    let currentUid = auth.currentUser?.uid;
+    if (!currentUid) {
+      try {
+        const { signInAnonymously } = await import("firebase/auth");
+        const anonRes = await signInAnonymously(auth);
+        currentUid = anonRes.user.uid;
+        console.log("[Order Pipeline] Authenticated guest via Firebase Anonymous Session UID:", currentUid);
+      } catch (authErr: any) {
+        console.warn("[Order Pipeline] Anonymous auth session deferred:", authErr.message || authErr);
+        currentUid = "u_client_" + Date.now();
+      }
+    }
+
     const generatedOrderId = "ord_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
 
     const defaultMilestones = [
@@ -298,13 +312,13 @@ export default function ContactForms({
       server_key: "arcadia_secure_server_key_2026_futuristic_studio_token"
     };
 
-    console.log("[Order Pipeline] Initiating order creation. Order ID:", generatedOrderId);
+    console.log("[Order Pipeline] Target Collection: 'orders'. Order ID:", generatedOrderId, "Payload:", payload);
 
     try {
-      // 1. Primary Write: Direct client Firestore document creation
+      // 1. Primary Write: Direct Firestore setDoc write
       const orderDocRef = doc(db, "orders", generatedOrderId);
       await setDoc(orderDocRef, payload);
-      console.log("[Order Pipeline] Successfully stored order document in Firestore! ID:", generatedOrderId);
+      console.log(`[Firestore Order Write Success] Path: orders/${generatedOrderId}, UID: ${currentUid}`);
 
       // 2. Secondary Sync: Notify server backend to trigger notifications, email, & activity logs
       try {
@@ -315,21 +329,28 @@ export default function ContactForms({
         });
         if (res.ok) {
           const serverData = await res.json();
-          console.log("[Order Pipeline] Server sync & email notification dispatched successfully.");
           setPlacedOrder(serverData);
         } else {
-          console.warn("[Order Pipeline] Server sync returned non-200 status, but Firestore document exists.");
           setPlacedOrder(payload);
         }
       } catch (serverErr) {
-        console.warn("[Order Pipeline] Server API sync deferred, order securely stored in Firestore.", serverErr);
+        console.warn("[Order Pipeline] Server API notification deferred, order securely stored in Firestore.", serverErr);
         setPlacedOrder(payload);
       }
 
       setOrderStatus("success");
       onSuccess("order", payload);
     } catch (err: any) {
-      console.error("[Order Pipeline CRITICAL ERROR] Firestore write failed:", err);
+      console.error("[Firestore Order Write CRITICAL ERROR]:", {
+        code: err.code || "unknown",
+        message: err.message || String(err),
+        stack: err.stack,
+        collectionPath: "orders",
+        documentId: generatedOrderId,
+        uid: currentUid,
+        payload
+      });
+
       // Fallback: Attempt server REST endpoint if direct client SDK encountered network/emulator issues
       try {
         const res = await fetch("/api/orders", {
@@ -711,78 +732,63 @@ export default function ContactForms({
 
             {/* Step Content */}
             <div className="flex-grow">
-              {!isClientLoggedIn ? (
-                <div className="flex flex-col items-center justify-center text-center p-8 bg-black/40 border border-white/5 rounded-3xl space-y-6 my-4">
-                  <div className="p-3.5 bg-purple-500/10 border border-purple-500/20 rounded-3xl text-purple-400">
-                    <Lock className="w-8 h-8 animate-pulse" />
-                  </div>
-                  <div>
-                    <h4 className="font-display font-black text-sm text-white uppercase tracking-wider">Authentication Required</h4>
-                    <p className="font-sans text-[11px] text-gray-500 mt-2 leading-relaxed max-w-sm">
-                      Only authenticated users can place project orders and make co-development payments. Please log in or establish a client profile to unlock our secure development pipeline.
-                    </p>
-                  </div>
-                  <AnimatedButton
-                    type="button"
-                    onClick={onNavigateToLogin}
-                    className="w-full max-w-xs py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-display text-[10px] font-bold uppercase tracking-wider transition cursor-pointer shadow-[0_4px_12px_rgba(147,51,234,0.3)]"
-                  >
-                    Go to Client Login Portal
-                  </AnimatedButton>
-                </div>
-              ) : (
-                <>
-                  {orderStep === 1 && (
-                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-                      {/* Logged in badge */}
-                      <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 text-[10px] text-purple-300 font-mono flex items-center justify-between">
-                        <span>🔐 SECURE CO-DEVELOPMENT SESSION</span>
-                        <span className="font-bold">{clientEmail}</span>
-                      </div>
+              {orderStep === 1 && (
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+                  {isClientLoggedIn && (
+                    <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 text-[10px] text-purple-300 font-mono flex items-center justify-between">
+                      <span>🔐 SECURE CO-DEVELOPMENT SESSION</span>
+                      <span className="font-bold">{clientEmail}</span>
+                    </div>
+                  )}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1.5 font-bold">Full Name</label>
-                          <input
-                            type="text"
-                            readOnly
-                            value={orderData.name}
-                            className="w-full px-4 py-3 bg-white/[0.01] border border-white/5 rounded-xl text-xs text-gray-400 focus:outline-none select-none cursor-not-allowed"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1.5 font-bold">Company / Brand</label>
-                          <input
-                            type="text"
-                            value={orderData.company}
-                            onChange={e => setOrderData({ ...orderData, company: e.target.value })}
-                            placeholder="e.g. Aura Innovations"
-                            className="w-full px-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl text-xs text-white placeholder-gray-600 focus:outline-none"
-                          />
-                        </div>
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1.5 font-bold">Full Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={orderData.name}
+                        onChange={e => setOrderData({ ...orderData, name: e.target.value })}
+                        placeholder="e.g. Aarav Sharma"
+                        className="w-full px-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1.5 font-bold">Company / Brand</label>
+                      <input
+                        type="text"
+                        value={orderData.company}
+                        onChange={e => setOrderData({ ...orderData, company: e.target.value })}
+                        placeholder="e.g. Aura Innovations"
+                        className="w-full px-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl text-xs text-white placeholder-gray-600 focus:outline-none"
+                      />
+                    </div>
+                  </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1.5 font-bold">Email Address</label>
-                          <input
-                            type="email"
-                            readOnly
-                            value={orderData.email}
-                            className="w-full px-4 py-3 bg-white/[0.01] border border-white/5 rounded-xl text-xs text-gray-400 focus:outline-none select-none cursor-not-allowed"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1.5 font-bold">Phone Number</label>
-                          <input
-                            type="tel"
-                            value={orderData.phone}
-                            onChange={e => setOrderData({ ...orderData, phone: e.target.value })}
-                            placeholder="e.g. +91 91234 56789"
-                            className="w-full px-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl text-xs text-white placeholder-gray-600 focus:outline-none"
-                          />
-                        </div>
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1.5 font-bold">Email Address *</label>
+                      <input
+                        type="email"
+                        required
+                        value={orderData.email}
+                        onChange={e => setOrderData({ ...orderData, email: e.target.value })}
+                        placeholder="e.g. aarav@aura.in"
+                        className="w-full px-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-mono text-gray-500 mb-1.5 font-bold">Phone Number *</label>
+                      <input
+                        type="tel"
+                        required
+                        value={orderData.phone}
+                        onChange={e => setOrderData({ ...orderData, phone: e.target.value })}
+                        placeholder="e.g. +91 91234 56789"
+                        className="w-full px-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl text-xs text-white placeholder-gray-600 focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 </motion.div>
               )}
 
@@ -898,13 +904,10 @@ export default function ContactForms({
                   </div>
                 </motion.div>
               )}
-                </>
-              )}
             </div>
 
             {/* Wizard Navigation Controls */}
-            {isClientLoggedIn && (
-              <div className="flex justify-between gap-4 pt-6 mt-6 border-t border-white/5">
+            <div className="flex justify-between gap-4 pt-6 mt-6 border-t border-white/5">
               {orderStep > 1 && (
                 <AnimatedButton
                   type="button"
@@ -937,14 +940,13 @@ export default function ContactForms({
                     <span>Registering Order...</span>
                   ) : (
                     <>
-                      <span>Submit for Review</span>
+                      <span>Place Order</span>
                       <CheckCircle className="w-4 h-4" />
                     </>
                   )}
                 </AnimatedButton>
               )}
             </div>
-            )}
           </div>
         )}
       </div>
