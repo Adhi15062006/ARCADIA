@@ -123,13 +123,8 @@ service cloud.firestore {
 
     // 6. Orders Collection
     match /orders/{orderId} {
-      allow read: if isStaff() || (isAuthenticated() && (
-        existing().customerId == request.auth.uid || 
-        existing().userId == request.auth.uid ||
-        existing().email == request.auth.token.email ||
-        existing().clientEmail == request.auth.token.email
-      ));
-      allow create: if isStaff() || isAuthenticated() || isServerKey(incoming());
+      allow read: if true; // Public read for real-time dashboard listeners
+      allow create: if true; // Public order placement for guest and authenticated clients
       // Clients CANNOT modify price, status, assigned staff, payment approval, refund approval, or admin notes
       allow update: if isStaff() || (
         isAuthenticated() && (

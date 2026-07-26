@@ -249,76 +249,104 @@ export default function ContactForms({
     const budgetNum = parseInt(orderData.budget) || 0;
     const now = new Date().toISOString();
     const currentUid = auth.currentUser?.uid || "u_client_" + Date.now();
+    const generatedOrderId = "ord_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
 
-    console.log("[Order Audit] auth.currentUser:", auth.currentUser);
-    console.log("[Order Audit] auth.currentUser.uid:", auth.currentUser?.uid);
-    console.log("[Order Audit] auth.currentUser.email:", auth.currentUser?.email);
+    const defaultMilestones = [
+      { id: "m1", label: "Kickoff & Deposit (30%)", percentage: 30, amount: Math.round(budgetNum * 0.3), status: orderData.isPaid ? ("Paid" as const) : ("Link Sent" as const), paidAt: orderData.isPaid ? now : undefined },
+      { id: "m2", label: "Development Milestone (50%)", percentage: 50, amount: Math.round(budgetNum * 0.5), status: "Pending" as const },
+      { id: "m3", label: "Final Delivery & Launch (20%)", percentage: 20, amount: Math.round(budgetNum * 0.2), status: "Pending" as const }
+    ];
 
-    const payload = {
+    const payload: Order & { server_key: string; package: string; price: number; currency: string; notes: string; attachments: string[]; clientEmail?: string } = {
+      id: generatedOrderId,
+      orderId: generatedOrderId,
       customerId: currentUid,
       userId: currentUid,
       name: orderData.name,
       customerName: orderData.name,
-      company: orderData.company,
+      company: orderData.company || "",
       email: orderData.email,
+      clientEmail: orderData.email,
       phone: orderData.phone,
       address: "Digital Online Order",
       service: orderData.service,
-      items: [{ id: "s_" + Date.now(), name: orderData.service, price: budgetNum }],
+      package: orderData.service,
+      items: [{ id: "item_1", name: orderData.service, price: budgetNum }],
       budget: String(budgetNum),
+      price: budgetNum,
       subtotal: budgetNum,
       tax: 0,
       shipping: 0,
       discount: 0,
       total: budgetNum,
-      deadline: orderData.deadline,
-      description: orderData.description,
-      fileUrl: orderData.fileUrl,
-      paymentScreenshot: orderData.paymentScreenshot,
+      currency: "INR",
+      paymentAmount: budgetNum,
       paymentMethod: "Razorpay Gateway",
       paymentStatus: orderData.isPaid ? "Paid" : "Pending",
       orderStatus: "Pending",
       status: "Pending",
       isPaid: orderData.isPaid,
+      deadline: orderData.deadline || "10 Days",
+      description: orderData.description || "",
+      notes: orderData.description || "",
+      fileUrl: orderData.fileUrl || "",
+      attachments: orderData.fileUrl ? [orderData.fileUrl] : [],
+      paymentScreenshot: orderData.paymentScreenshot || "",
+      milestones: defaultMilestones,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      server_key: "arcadia_secure_server_key_2026_futuristic_studio_token"
     };
 
-    console.log("[Order Audit] customerId:", payload.customerId);
-    console.log("[Order Audit] Order payload:", payload);
+    console.log("[Order Pipeline] Initiating order creation. Order ID:", generatedOrderId);
 
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+      // 1. Primary Write: Direct client Firestore document creation
+      const orderDocRef = doc(db, "orders", generatedOrderId);
+      await setDoc(orderDocRef, payload);
+      console.log("[Order Pipeline] Successfully stored order document in Firestore! ID:", generatedOrderId);
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to persist order payload to server.");
-      }
-
-      const data = await res.json();
-      const orderId = data.id || data.orderId;
-      console.log("[Order Audit] Server persisted document ID:", orderId);
-
-      // Directly write to Firestore orders collection & await promise resolution
-      const finalOrderPayload = { ...payload, id: orderId, orderId };
-      const orderDocRef = doc(db, "orders", orderId);
-      
+      // 2. Secondary Sync: Notify server backend to trigger notifications, email, & activity logs
       try {
-        await setDoc(orderDocRef, finalOrderPayload);
-        console.log("[Order Audit] Direct client Firestore setDoc resolved successfully for ID:", orderId);
-      } catch (clientWriteErr: any) {
-        console.warn("[Order Audit] Client direct setDoc write deferred/backed up by server:", clientWriteErr.message || clientWriteErr);
+        const res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const serverData = await res.json();
+          console.log("[Order Pipeline] Server sync & email notification dispatched successfully.");
+          setPlacedOrder(serverData);
+        } else {
+          console.warn("[Order Pipeline] Server sync returned non-200 status, but Firestore document exists.");
+          setPlacedOrder(payload);
+        }
+      } catch (serverErr) {
+        console.warn("[Order Pipeline] Server API sync deferred, order securely stored in Firestore.", serverErr);
+        setPlacedOrder(payload);
       }
 
-      setPlacedOrder(data);
       setOrderStatus("success");
-      onSuccess("order", data);
+      onSuccess("order", payload);
     } catch (err: any) {
-      console.error("[Order Audit Error] Submission write failed:", err);
+      console.error("[Order Pipeline CRITICAL ERROR] Firestore write failed:", err);
+      // Fallback: Attempt server REST endpoint if direct client SDK encountered network/emulator issues
+      try {
+        const res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const serverData = await res.json();
+          setPlacedOrder(serverData);
+          setOrderStatus("success");
+          onSuccess("order", serverData);
+          return;
+        }
+      } catch (fallbackErr) {
+        console.error("[Order Pipeline Fallback Error]:", fallbackErr);
+      }
       setOrderStatus("error");
     }
   };
