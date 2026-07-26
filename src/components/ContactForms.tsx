@@ -266,12 +266,12 @@ export default function ContactForms({
     const generatedOrderId = "ord_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
 
     const defaultMilestones = [
-      { id: "m1", label: "Kickoff & Deposit (30%)", percentage: 30, amount: Math.round(budgetNum * 0.3), status: orderData.isPaid ? ("Paid" as const) : ("Link Sent" as const), paidAt: orderData.isPaid ? now : undefined },
-      { id: "m2", label: "Development Milestone (50%)", percentage: 50, amount: Math.round(budgetNum * 0.5), status: "Pending" as const },
-      { id: "m3", label: "Final Delivery & Launch (20%)", percentage: 20, amount: Math.round(budgetNum * 0.2), status: "Pending" as const }
+      { id: "m1", label: "Kickoff & Deposit (30%)", percentage: 30, amount: Math.round(budgetNum * 0.3), status: orderData.isPaid ? ("Paid" as const) : ("Link Sent" as const), paidAt: orderData.isPaid ? now : "" },
+      { id: "m2", label: "Development Milestone (50%)", percentage: 50, amount: Math.round(budgetNum * 0.5), status: "Pending" as const, paidAt: "" },
+      { id: "m3", label: "Final Delivery & Launch (20%)", percentage: 20, amount: Math.round(budgetNum * 0.2), status: "Pending" as const, paidAt: "" }
     ];
 
-    const payload: Order & { server_key: string; package: string; price: number; currency: string; notes: string; attachments: string[]; clientEmail?: string } = {
+    const rawPayload: Order & { server_key: string; package: string; price: number; currency: string; notes: string; attachments: string[]; clientEmail?: string } = {
       id: generatedOrderId,
       orderId: generatedOrderId,
       customerId: currentUid,
@@ -312,34 +312,38 @@ export default function ContactForms({
       server_key: "arcadia_secure_server_key_2026_futuristic_studio_token"
     };
 
-    console.log("[Order Pipeline] Target Collection: 'orders'. Order ID:", generatedOrderId, "Payload:", payload);
+    // Recursively clean payload to eliminate any 'undefined' values (preventing Firestore invalid data error)
+    const cleanPayload = JSON.parse(JSON.stringify(rawPayload));
+
+    console.log("[Firestore Write Attempt] Target Collection: 'orders', Document ID:", generatedOrderId);
+    console.log("[Firestore Payload Data]:", cleanPayload);
 
     try {
       // 1. Primary Write: Direct Firestore setDoc write
       const orderDocRef = doc(db, "orders", generatedOrderId);
-      await setDoc(orderDocRef, payload);
-      console.log(`[Firestore Order Write Success] Path: orders/${generatedOrderId}, UID: ${currentUid}`);
+      await setDoc(orderDocRef, cleanPayload);
+      console.log(`[Firestore Order Write Success] Path: orders/${generatedOrderId}, Ref Path: ${orderDocRef.path}, Document ID: ${generatedOrderId}, UID: ${currentUid}`);
 
       // 2. Secondary Sync: Notify server backend to trigger notifications, email, & activity logs
       try {
         const res = await fetch("/api/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(cleanPayload)
         });
         if (res.ok) {
           const serverData = await res.json();
           setPlacedOrder(serverData);
         } else {
-          setPlacedOrder(payload);
+          setPlacedOrder(cleanPayload);
         }
       } catch (serverErr) {
         console.warn("[Order Pipeline] Server API notification deferred, order securely stored in Firestore.", serverErr);
-        setPlacedOrder(payload);
+        setPlacedOrder(cleanPayload);
       }
 
       setOrderStatus("success");
-      onSuccess("order", payload);
+      onSuccess("order", cleanPayload);
     } catch (err: any) {
       console.error("[Firestore Order Write CRITICAL ERROR]:", {
         code: err.code || "unknown",
@@ -348,7 +352,7 @@ export default function ContactForms({
         collectionPath: "orders",
         documentId: generatedOrderId,
         uid: currentUid,
-        payload
+        payload: cleanPayload
       });
 
       // Fallback: Attempt server REST endpoint if direct client SDK encountered network/emulator issues
@@ -356,7 +360,7 @@ export default function ContactForms({
         const res = await fetch("/api/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(cleanPayload)
         });
         if (res.ok) {
           const serverData = await res.json();
