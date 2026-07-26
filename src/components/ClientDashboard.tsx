@@ -32,7 +32,7 @@ import {
 import { generateInvoicePDF, generateRefundPDF } from "../utils/pdfGenerator";
 import { Order, Booking, Inquiry } from "../types";
 import { db } from "../firebase/config";
-import { onSnapshot, doc, collection } from "firebase/firestore";
+import { onSnapshot, doc, collection, setDoc } from "firebase/firestore";
 
 function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
@@ -360,6 +360,22 @@ export default function ClientDashboard({
             if (verifyResponse.ok) {
               setPayStatus("success");
               onShowToast("success", "Payment verified cryptographically! Awaiting Admin approval.");
+              
+              // Direct top-level Firestore broadcast
+              const targetOrder = clientOrders.find(o => o.id === orderData.orderId);
+              if (targetOrder) {
+                const updatedMilestones = (targetOrder.milestones || []).map((m: any) => {
+                  if (m.id === orderData.milestoneId) {
+                    return { ...m, status: "Paid", paidAt: new Date().toISOString() };
+                  }
+                  return m;
+                });
+                setDoc(doc(db, "orders", orderData.orderId), {
+                  ...targetOrder,
+                  milestones: updatedMilestones,
+                  updatedAt: new Date().toISOString()
+                }, { merge: true }).catch(() => {});
+              }
               fetchClientData();
               setTimeout(() => {
                 setPayingMilestone(null);
@@ -440,6 +456,22 @@ export default function ClientDashboard({
       if (verifyResponse.ok) {
         setPayStatus("success");
         onShowToast("success", "Sandbox Payment simulated and cryptographically verified!");
+        
+        // Direct top-level Firestore broadcast
+        const targetOrder = clientOrders.find(o => o.id === checkoutSimData.orderId);
+        if (targetOrder) {
+          const updatedMilestones = (targetOrder.milestones || []).map((m: any) => {
+            if (m.id === checkoutSimData.milestoneId) {
+              return { ...m, status: "Paid", paidAt: new Date().toISOString() };
+            }
+            return m;
+          });
+          setDoc(doc(db, "orders", checkoutSimData.orderId), {
+            ...targetOrder,
+            milestones: updatedMilestones,
+            updatedAt: new Date().toISOString()
+          }, { merge: true }).catch(() => {});
+        }
         fetchClientData();
         setTimeout(() => {
           setPayingMilestone(null);

@@ -471,6 +471,17 @@ export default function AdminDashboard({
       });
       if (res.ok) {
         onShowToast?.("success", "Project approved! First milestone request and client notification successfully dispatched.");
+        // Direct top-level Firestore broadcast
+        const targetOrder = orders.find(o => o.id === orderId);
+        if (targetOrder) {
+          const updated = {
+            ...targetOrder,
+            status: "Payment Pending",
+            orderStatus: "Payment Pending",
+            updatedAt: new Date().toISOString()
+          };
+          setDoc(doc(db, "orders", orderId), updated, { merge: true }).catch(() => {});
+        }
         fetchAdminData();
       } else {
         onShowToast?.("error", "Failed to approve order and request payment.");
@@ -489,7 +500,6 @@ export default function AdminDashboard({
       });
       if (res.ok) {
         onShowToast?.("success", "Milestone payment approved and marked as PAID!");
-        fetchAdminData();
         
         // Construct the updated order model with the newly paid milestone
         const updatedMilestones: PaymentMilestone[] = (orderObj.milestones || []).map(m => {
@@ -498,10 +508,46 @@ export default function AdminDashboard({
           }
           return m;
         });
-        const updatedOrder: Order = { ...orderObj, milestones: updatedMilestones };
-        
+
+        let nextStatus: any = orderObj.status || "In Progress";
+        let nextProgress = 30;
+        if (milestoneId === "m1" || milestoneId === "m_1") {
+          nextStatus = "Project Started";
+          nextProgress = 30;
+        } else if (milestoneId === "m2" || milestoneId === "m_2") {
+          nextStatus = "In Progress";
+          nextProgress = 75;
+        } else if (milestoneId === "m3" || milestoneId === "m_3") {
+          nextStatus = "Completed";
+          nextProgress = 100;
+        }
+
+        const updatedOrder: Order = {
+          ...orderObj,
+          milestones: updatedMilestones,
+          status: nextStatus,
+          orderStatus: nextStatus,
+          paymentStatus: milestoneId === "m3" ? "Paid" : "Partially Paid",
+          isPaid: milestoneId === "m3" ? true : orderObj.isPaid,
+          updatedAt: new Date().toISOString()
+        };
+
+        // Broadcast direct top-level Firestore doc updates for orders and projects
+        setDoc(doc(db, "orders", orderId), updatedOrder, { merge: true }).catch(() => {});
+        setDoc(doc(db, "projects", orderId), {
+          id: orderId,
+          orderId,
+          clientId: orderObj.customerId || orderObj.email,
+          clientEmail: orderObj.email,
+          title: orderObj.service,
+          status: nextStatus,
+          progress: nextProgress,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+
         // Automatically download/generate company-branded signed PDF invoice
         generateInvoicePDF(updatedOrder, milestoneId);
+        fetchAdminData();
       } else {
         onShowToast?.("error", "Failed to mark milestone as paid.");
       }
@@ -561,101 +607,23 @@ export default function AdminDashboard({
   const loadOrders = async () => {
     setIsRefreshingOrders(true);
     try {
-      console.log("[Admin Orders Speed Optimization] Executing parallel Promise.allSettled fetching...");
-      const ordersMap = new Map<string, Order>();
       const activeAuthToken = token || sessionStorage.getItem("arcadia_admin_token") || localStorage.getItem("arcadia_admin_token");
-      const apiHeaders = activeAuthToken ? { "Authorization": `Bearer ${activeAuthToken}` } : null;
-
-      const [snapRes, sysSnapRes, apiRes] = await Promise.allSettled([
-        getDocs(collection(db, "orders")),
-        getDoc(doc(db, "arcadia_system_db", "orders.json")),
-        apiHeaders ? fetch("/api/orders", { headers: apiHeaders }) : Promise.resolve(null)
-      ]);
-
-      if (snapRes.status === "fulfilled" && snapRes.value) {
-        console.log("[Admin Orders Audit] Number of documents returned:", snapRes.value.size);
-        const docIds: string[] = [];
-        snapRes.value.forEach((documentDoc) => {
-          docIds.push(documentDoc.id);
-          const data = documentDoc.data();
-          const id = documentDoc.id || data.id || data.orderId;
-
-          const rawBudget = data.budget !== undefined ? data.budget : (data.total !== undefined ? data.total : (data.amount !== undefined ? data.amount : 0));
-          const parsedBudget = parseInt(String(rawBudget)) || 0;
-          const nameVal = data.name || data.customerName || data.clientName || "Client";
-          const emailVal = data.email || data.clientEmail || "";
-          const phoneVal = data.phone || data.contact || "";
-          const companyVal = data.company || "";
-          const serviceVal = data.service || "Web Application";
-          const statusVal = data.status || data.orderStatus || "Pending";
-          const isPaidVal = data.isPaid || data.paymentStatus === "Paid" || false;
-          const createdAtVal = data.createdAt || data.timestamp || data.date || new Date().toISOString();
-
-          ordersMap.set(id, {
-            id,
-            orderId: id,
-            name: nameVal,
-            customerName: nameVal,
-            email: emailVal,
-            phone: phoneVal,
-            company: companyVal,
-            address: data.address || "Digital Online Order",
-            service: serviceVal,
-            items: data.items || [{ id: "item_1", name: serviceVal, price: parsedBudget }],
-            subtotal: data.subtotal !== undefined ? data.subtotal : parsedBudget,
-            tax: data.tax || 0,
-            shipping: data.shipping || 0,
-            discount: data.discount || 0,
-            total: data.total !== undefined ? data.total : parsedBudget,
-            budget: String(parsedBudget),
-            paymentAmount: data.paymentAmount !== undefined ? data.paymentAmount : parsedBudget,
-            paymentMethod: data.paymentMethod || "Razorpay Gateway",
-            paymentStatus: data.paymentStatus || (isPaidVal ? "Paid" : "Pending"),
-            orderStatus: statusVal,
-            status: statusVal,
-            isPaid: isPaidVal,
-            deadline: data.deadline || "Flexible",
-            description: data.description || "",
-            fileUrl: data.fileUrl || "",
-            paymentScreenshot: data.paymentScreenshot || "",
-            milestones: data.milestones || [],
-            createdAt: createdAtVal,
-            updatedAt: data.updatedAt || createdAtVal
-          });
-        });
-        console.log("[Admin Orders Audit] Document IDs:", docIds);
-      }
-
-      if (sysSnapRes.status === "fulfilled" && sysSnapRes.value && sysSnapRes.value.exists()) {
-        const sysData = sysSnapRes.value.data();
-        if (sysData && Array.isArray(sysData.data)) {
-          sysData.data.forEach((item: any) => {
-            const itemId = item.id || item.orderId;
-            if (itemId && !ordersMap.has(itemId)) {
-              ordersMap.set(itemId, item);
-            }
-          });
+      if (activeAuthToken) {
+        const res = await fetch("/api/orders", { headers: { "Authorization": `Bearer ${activeAuthToken}` } });
+        if (res.ok) {
+          const apiOrders = await res.json();
+          if (Array.isArray(apiOrders)) {
+            setOrders(prev => {
+              const map = new Map<string, Order>();
+              prev.forEach(o => map.set(o.id, o));
+              apiOrders.forEach((o: any) => map.set(o.id || o.orderId, { ...map.get(o.id || o.orderId), ...o }));
+              return Array.from(map.values()).sort((a, b) => 
+                new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+              );
+            });
+          }
         }
       }
-
-      if (apiRes.status === "fulfilled" && apiRes.value && (apiRes.value as Response).ok) {
-        const apiData = await (apiRes.value as Response).json();
-        if (Array.isArray(apiData)) {
-          apiData.forEach((apiItem: any) => {
-            const apiId = apiItem.id || apiItem.orderId;
-            if (apiId && !ordersMap.has(apiId)) {
-              ordersMap.set(apiId, apiItem);
-            }
-          });
-        }
-      }
-
-      const consolidatedList = Array.from(ordersMap.values()).sort((a, b) => 
-        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-      );
-
-      console.log("[Admin Orders Speed Optimization] Consolidated total orders count:", consolidatedList.length);
-      setOrders(consolidatedList);
     } catch (err: any) {
       console.error("[Admin Orders Error]:", err);
     } finally {
@@ -664,15 +632,13 @@ export default function AdminDashboard({
   };
 
   useEffect(() => {
-    loadOrders();
-
     const activeAuthToken = token || sessionStorage.getItem("arcadia_admin_token") || localStorage.getItem("arcadia_admin_token");
     if (activeAuthToken) {
       fetchAdminData();
     }
 
       const unsubscribes = [
-        onSnapshot(collection(db, "orders"), (snapshot) => {
+        onSnapshot(query(collection(db, "orders"), limit(100)), (snapshot) => {
           console.log("[Admin Orders Realtime] Received live Firestore orders count:", snapshot.size);
           const liveOrders: Order[] = [];
           snapshot.forEach((documentDoc) => {
@@ -718,14 +684,9 @@ export default function AdminDashboard({
             });
           });
 
-          setOrders(prev => {
-            const map = new Map<string, Order>();
-            prev.forEach(o => map.set(o.id, o));
-            liveOrders.forEach(o => map.set(o.id, { ...map.get(o.id), ...o }));
-            return Array.from(map.values()).sort((a, b) => 
-              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-            );
-          });
+          setOrders(liveOrders.sort((a, b) => 
+            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+          ));
         }, (err) => console.error("[Admin Orders Realtime Error]:", err)),
 
         onSnapshot(collection(db, "bookings"), (snapshot) => {

@@ -542,36 +542,39 @@ function saveDB<T>(filename: string, data: T) {
     server_key: 'arcadia_secure_server_key_2026_futuristic_studio_token'
   };
 
-  if (filename === "orders.json" && Array.isArray(data)) {
-    data.forEach(orderItem => {
-      const normalized = normalizeOrderSchema(orderItem);
-      console.log("[Order Pipeline] Persisting order to global Firestore:", normalized.id);
-      if (adminDb) {
-        adminDb.collection("orders").doc(normalized.id).set(normalized)
-          .then(() => console.log("[Order Pipeline] Admin SDK successfully saved order:", normalized.id))
-          .catch((adminErr: any) => console.error("[Order Pipeline] Admin SDK error writing order:", adminErr));
-      } else {
-        const orderDocRef = doc(db, "orders", normalized.id);
-        setDoc(orderDocRef, normalized)
-          .then(() => console.log("[Order Pipeline] Client SDK fallback saved order:", normalized.id))
-          .catch((clientErr: any) => console.error("[Order Pipeline] Client SDK fallback error:", clientErr));
-      }
-    });
-  }
+  const collectionMap: Record<string, string> = {
+    "orders.json": "orders",
+    "bookings.json": "bookings",
+    "services.json": "services",
+    "projects.json": "projects",
+    "blogs.json": "blogs",
+    "faqs.json": "faq",
+    "testimonials.json": "testimonials",
+    "vacancies.json": "careers",
+    "applications.json": "jobApplications",
+    "inquiries.json": "contactMessages",
+    "notifications.json": "notifications",
+    "users.json": "users",
+    "payments.json": "payments",
+    "refunds.json": "refunds",
+    "maintenance_subscriptions.json": "maintenanceSubscriptions",
+    "seo_settings.json": "seoSettings"
+  };
 
-  if (filename === "bookings.json" && Array.isArray(data)) {
-    data.forEach(bookingItem => {
-      const bId = bookingItem.id || ("b_" + Math.random().toString(36).substr(2, 9));
-      const payload = { ...bookingItem, id: bId };
+  const targetCollection = collectionMap[filename];
+  if (targetCollection && Array.isArray(data)) {
+    data.forEach((item: any) => {
+      if (!item) return;
+      const docId = String(item.id || item.orderId || item.bookingId || item.serviceId || item.projectId || item.uid || ("doc_" + Math.random().toString(36).substr(2, 9)));
+      const normalizedItem = targetCollection === "orders" ? normalizeOrderSchema(item) : { ...item, id: docId, server_key: 'arcadia_secure_server_key_2026_futuristic_studio_token' };
+      
       if (adminDb) {
-        adminDb.collection("bookings").doc(bId).set(payload)
-          .then(() => console.log("[Booking Pipeline] Admin SDK successfully saved booking:", bId))
-          .catch((adminErr: any) => console.error("[Booking Pipeline] Admin SDK error writing booking:", adminErr));
+        adminDb.collection(targetCollection).doc(docId).set(normalizedItem, { merge: true })
+          .catch((adminErr: any) => console.error(`[saveDB Pipeline] Admin SDK error writing ${targetCollection}/${docId}:`, adminErr));
       } else {
-        const bookingDocRef = doc(db, "bookings", bId);
-        setDoc(bookingDocRef, payload)
-          .then(() => console.log("[Booking Pipeline] Client SDK fallback saved booking:", bId))
-          .catch((clientErr: any) => console.error("[Booking Pipeline] Client SDK fallback error:", clientErr));
+        const itemRef = doc(db, targetCollection, docId);
+        setDoc(itemRef, normalizedItem, { merge: true })
+          .catch((clientErr: any) => console.error(`[saveDB Pipeline] Client SDK fallback error writing ${targetCollection}/${docId}:`, clientErr));
       }
     });
   }
