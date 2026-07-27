@@ -128,7 +128,7 @@ service cloud.firestore {
 
     // 6. Orders Collection (Strict Payload & Immutability Rules)
     match /orders/{orderId} {
-      allow read: if isStaff() || isOwner(resource.data.customerId) || isUserEmail(resource.data.email) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow read: if isStaff() || isOwner(resource.data.customerId) || isUserEmail(resource.data.email) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
       allow create: if isStaff() || isServerKey(incoming()) || (
         isAuthenticated() && 
         (!incoming().keys().hasAny(['price']) || incoming().price >= 0) &&
@@ -144,7 +144,7 @@ service cloud.firestore {
 
     // 7. Projects Delivery Collection
     match /projects/{projectId} {
-      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
       allow create: if isStaff() || isServerKey(incoming()) || isAuthenticated();
       allow update: if isStaff() || isServerKey(incoming()) || (
         isOwner(resource.data.clientId) &&
@@ -155,20 +155,20 @@ service cloud.firestore {
 
     // 8. Financial Payments Ledger
     match /payments/{paymentId} {
-      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
       allow create: if isStaff() || isServerKey(incoming()) || isAuthenticated();
       allow update, delete: if isStaff() || isServerKey(existing());
     }
 
     // 9. Refunds Records
     match /refunds/{refundId} {
-      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
       allow write: if isStaff() || isServerKey(incoming());
     }
 
     // 10. Maintenance Subscriptions / Contracts
     match /maintenanceSubscriptions/{subId} {
-      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
       allow write: if isStaff() || isServerKey(incoming());
     }
 
@@ -225,14 +225,14 @@ service cloud.firestore {
 
     // 19. Demo Consultation Bookings Collection
     match /bookings/{bookingId} {
-      allow read: if isStaff() || isOwner(resource.data.userId) || isUserEmail(resource.data.email) || isServerKey(resource.data) || true;
+      allow read: if isStaff() || isOwner(resource.data.userId) || isUserEmail(resource.data.email) || isServerKey(resource.data);
       allow create: if isAuthenticated() || isServerKey(incoming());
       allow update, delete: if isStaff() || isOwner(resource.data.userId) || isServerKey(existing());
     }
 
     // 20. System Notifications Collection
     match /notifications/{notifId} {
-      allow read: if isStaff() || isOwner(resource.data.userId) || isUserEmail(resource.data.userEmail) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow read: if isStaff() || isOwner(resource.data.userId) || isUserEmail(resource.data.userEmail) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
       allow create: if isAuthenticated() || isServerKey(incoming());
       allow update: if isStaff() || isOwner(resource.data.userId) || isUserEmail(resource.data.userEmail) || isServerKey(incoming());
       allow delete: if isStaff() || isServerKey(existing());
