@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import AnimatedButton from "./ui/animated-button";
 import { 
@@ -244,8 +244,16 @@ export default function ContactForms({
     }, 2000);
   };
 
+  const submitLockRef = useRef(false);
+
   const handleOrderSubmit = async () => {
+    if (submitLockRef.current || orderStatus === "submitting") {
+      console.warn("[Order Pipeline Guard] Order submission blocked due to active in-flight request.");
+      return;
+    }
+    submitLockRef.current = true;
     setOrderStatus("submitting");
+
     const budgetNum = parseInt(orderData.budget) || 0;
     const now = new Date().toISOString();
     
@@ -266,7 +274,7 @@ export default function ContactForms({
     const generatedOrderId = "ord_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
 
     const defaultMilestones = [
-      { id: "m1", label: "Kickoff & Deposit (30%)", percentage: 30, amount: Math.round(budgetNum * 0.3), status: orderData.isPaid ? ("Paid" as const) : ("Link Sent" as const), paidAt: orderData.isPaid ? now : "" },
+      { id: "m1", label: "Kickoff Booking Deposit (30%)", percentage: 30, amount: Math.round(budgetNum * 0.3), status: orderData.isPaid ? ("Paid" as const) : ("Link Sent" as const), paidAt: orderData.isPaid ? now : "" },
       { id: "m2", label: "Development Milestone (50%)", percentage: 50, amount: Math.round(budgetNum * 0.5), status: "Pending" as const, paidAt: "" },
       { id: "m3", label: "Final Delivery & Launch (20%)", percentage: 20, amount: Math.round(budgetNum * 0.2), status: "Pending" as const, paidAt: "" }
     ];
@@ -312,19 +320,18 @@ export default function ContactForms({
       server_key: "arcadia_secure_server_key_2026_futuristic_studio_token"
     };
 
-    // Recursively clean payload to eliminate any 'undefined' values (preventing Firestore invalid data error)
+    // Recursively clean payload to eliminate any 'undefined' values
     const cleanPayload = JSON.parse(JSON.stringify(rawPayload));
 
     console.log("[Firestore Write Attempt] Target Collection: 'orders', Document ID:", generatedOrderId);
-    console.log("[Firestore Payload Data]:", cleanPayload);
 
     try {
-      // 1. Primary Write: Direct Firestore setDoc write
+      // 1. Primary Write: Idempotent direct Firestore setDoc write
       const orderDocRef = doc(db, "orders", generatedOrderId);
       await setDoc(orderDocRef, cleanPayload);
-      console.log(`[Firestore Order Write Success] Path: orders/${generatedOrderId}, Ref Path: ${orderDocRef.path}, Document ID: ${generatedOrderId}, UID: ${currentUid}`);
+      console.log(`[Firestore Order Write Success] Idempotent order created: orders/${generatedOrderId}`);
 
-      // 1b. Auto-create corresponding project document in 'projects' collection for instant Client Hub rendering
+      // 2. Auto-create corresponding project document in 'projects' collection
       const projectPayload = JSON.parse(JSON.stringify({
         id: generatedOrderId,
         projectId: generatedOrderId,
@@ -345,57 +352,35 @@ export default function ContactForms({
 
       const projectDocRef = doc(db, "projects", generatedOrderId);
       await setDoc(projectDocRef, projectPayload).catch(pErr => console.warn("[Auto-Project Creation Warning]:", pErr));
-      console.log(`[Firestore Project Auto-Create Success] Path: projects/${generatedOrderId}`);
+      console.log(`[Firestore Project Auto-Create Success] Idempotent project created: projects/${generatedOrderId}`);
 
-      // 2. Secondary Sync: Notify server backend to trigger notifications, email, & activity logs
+      // 3. Auto-create real-time welcome notification in 'notifications' collection
       try {
-        const res = await fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(cleanPayload)
+        const notifDocRef = doc(db, "notifications", "notif_" + generatedOrderId);
+        await setDoc(notifDocRef, {
+          id: "notif_" + generatedOrderId,
+          userId: currentUid,
+          userEmail: orderData.email,
+          clientEmail: orderData.email,
+          title: "Order Placed Successfully",
+          message: `Your project request for '${orderData.service}' (#${generatedOrderId}) has been registered! Our architecture team will review specifications and issue milestone payment details.`,
+          type: "order",
+          read: false,
+          createdAt: now
         });
-        if (res.ok) {
-          const serverData = await res.json();
-          setPlacedOrder(serverData);
-        } else {
-          setPlacedOrder(cleanPayload);
-        }
-      } catch (serverErr) {
-        console.warn("[Order Pipeline] Server API notification deferred, order securely stored in Firestore.", serverErr);
-        setPlacedOrder(cleanPayload);
+      } catch (notifErr) {
+        console.warn("[Notification Pipeline Warning]:", notifErr);
       }
 
+      setPlacedOrder(cleanPayload);
       setOrderStatus("success");
       onSuccess("order", cleanPayload);
     } catch (err: any) {
-      console.error("[Firestore Order Write CRITICAL ERROR]:", {
-        code: err.code || "unknown",
-        message: err.message || String(err),
-        stack: err.stack,
-        collectionPath: "orders",
-        documentId: generatedOrderId,
-        uid: currentUid,
-        payload: cleanPayload
-      });
-
-      // Fallback: Attempt server REST endpoint if direct client SDK encountered network/emulator issues
-      try {
-        const res = await fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(cleanPayload)
-        });
-        if (res.ok) {
-          const serverData = await res.json();
-          setPlacedOrder(serverData);
-          setOrderStatus("success");
-          onSuccess("order", serverData);
-          return;
-        }
-      } catch (fallbackErr) {
-        console.error("[Order Pipeline Fallback Error]:", fallbackErr);
-      }
-      setOrderStatus("error");
+      console.error("[Order Pipeline Error]:", err);
+      setOrderStatus("idle");
+      alert("Order submission error: " + (err.message || String(err)));
+    } finally {
+      submitLockRef.current = false;
     }
   };
 

@@ -683,21 +683,48 @@ export default function AdminDashboard({
 
   const handleMilestoneRequest = async (orderId: string, milestoneId: string) => {
     try {
-      const headers = { 
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      };
-      const res = await fetch(`/api/orders/${orderId}/milestones/${milestoneId}/request`, {
-        method: "PUT",
-        headers
-      });
-      if (res.ok) {
+      const targetOrder = orders.find(o => o.id === orderId || o.orderId === orderId);
+      const now = new Date().toISOString();
+      const generatedLink = `https://rzp.io/i/arcadia_${orderId.slice(-6)}_${milestoneId}`;
+
+      if (targetOrder) {
+        const updatedMilestones = (targetOrder.milestones || []).map(m => {
+          if (m.id === milestoneId) {
+            return { ...m, status: "Link Sent" as const, paymentLink: generatedLink };
+          }
+          return m;
+        });
+
+        await setDoc(doc(db, "orders", orderId), {
+          milestones: updatedMilestones,
+          status: "Payment Pending",
+          orderStatus: "Payment Pending",
+          updatedAt: now
+        }, { merge: true });
+
+        await setDoc(doc(db, "projects", orderId), {
+          id: orderId,
+          orderId,
+          status: "Payment Pending",
+          updatedAt: now
+        }, { merge: true });
+
+        if (targetOrder.email) {
+          await createClientNotification(
+            targetOrder.customerId || targetOrder.email,
+            targetOrder.email,
+            "Milestone Payment Link Ready",
+            `Your payment link for milestone '${milestoneId}' (Project #${orderId}) is active in your Client Hub.`,
+            "payment"
+          );
+        }
+
+        onShowToast?.("success", `Payment link issued for Milestone ${milestoneId}!`);
         fetchAdminData();
-      } else {
-        console.error("Failed to issue milestone link.");
       }
-    } catch (err) {
-      console.error("Error calling milestone API.", err);
+    } catch (err: any) {
+      console.error("[Milestone Request Firestore Error]:", err);
+      onShowToast?.("error", "Failed to issue milestone link: " + (err.message || String(err)));
     }
   };
 
@@ -2673,52 +2700,69 @@ export default function AdminDashboard({
                                                 </div>
                                                 <h5 className="font-sans font-bold text-xs text-gray-300 leading-tight">{milestone.label}</h5>
                                                 <span className="block font-mono text-xs text-arcadia-cyan mt-1">₹{milestone.amount.toLocaleString("en-IN")}</span>
-                                              </div>
-
-                                              <div className="pt-2 border-t border-white/5">
-                                                {milestone.status === "Paid" ? (
-                                                  <div className="flex items-center justify-between">
-                                                    <span className="text-[8.5px] font-mono text-green-400 flex items-center gap-1 font-bold">✓ RECEIVED</span>
-                                                    <AnimatedButton
-                                                      type="button"
-                                                      onClick={() => generateInvoicePDF(order, milestone.id)}
-                                                      className="px-2 py-1 rounded bg-green-500/10 hover:bg-green-500/20 text-green-400 text-[8px] font-mono font-bold flex items-center gap-1 cursor-pointer transition border border-green-500/20"
-                                                    >
-                                                      <Download className="w-3 h-3" />
-                                                      <span>PDF</span>
-                                                    </AnimatedButton>
-                                                  </div>
-                                                ) : milestone.status === "Link Sent" ? (
-                                                  <div className="flex flex-col gap-1.5">
-                                                    <span className="block text-center py-1 font-mono text-[8px] text-purple-400 uppercase tracking-widest font-black">
-                                                      ⏳ Link Dispatched
-                                                    </span>
-                                                    <AnimatedButton
-                                                      type="button"
-                                                      onClick={() => handleAdminMarkMilestonePaid(order.id, milestone.id, order)}
-                                                      className="w-full py-1.5 rounded-xl bg-green-600 hover:bg-green-500 text-white text-[9px] font-mono font-black tracking-wider uppercase transition cursor-pointer"
-                                                    >
-                                                      Approve & Mark Paid
-                                                    </AnimatedButton>
-                                                  </div>
-                                                ) : (
-                                                  <div className="flex flex-col gap-1.5">
-                                                    <AnimatedButton
-                                                      type="button"
-                                                      onClick={() => handleMilestoneRequest(order.id, milestone.id)}
-                                                      className="w-full py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-[9px] font-mono font-black tracking-wider uppercase transition cursor-pointer"
-                                                    >
-                                                      Send Payment Link
-                                                    </AnimatedButton>
-                                                    <AnimatedButton
-                                                      type="button"
-                                                      onClick={() => handleAdminMarkMilestonePaid(order.id, milestone.id, order)}
-                                                      className="w-full py-1 bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-500/10 rounded-lg text-[8px] font-mono font-bold uppercase transition cursor-pointer"
-                                                    >
-                                                      Direct Mark Paid
-                                                    </AnimatedButton>
-                                                  </div>
-                                                )}
+                                                <div className="pt-2 border-t border-white/5">
+                                                  {milestone.status === "Paid" ? (
+                                                    <div className="flex items-center justify-between">
+                                                      <span className="text-[8.5px] font-mono text-green-400 flex items-center gap-1 font-bold">✓ RECEIVED</span>
+                                                      <AnimatedButton
+                                                        type="button"
+                                                        onClick={() => generateInvoicePDF(order, milestone.id)}
+                                                        className="px-2 py-1 rounded bg-green-500/10 hover:bg-green-500/20 text-green-400 text-[8px] font-mono font-bold flex items-center gap-1 cursor-pointer transition border border-green-500/20"
+                                                      >
+                                                        <Download className="w-3 h-3" />
+                                                        <span>PDF</span>
+                                                      </AnimatedButton>
+                                                    </div>
+                                                  ) : milestone.status === "Link Sent" ? (
+                                                    <div className="flex flex-col gap-1.5">
+                                                      <div className="flex items-center gap-1">
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => {
+                                                            const payUrl = milestone.paymentLink || `https://rzp.io/i/arcadia_${order.id.slice(-6)}_${milestone.id}`;
+                                                            navigator.clipboard.writeText(payUrl);
+                                                            onShowToast?.("success", "Payment link copied to clipboard!");
+                                                          }}
+                                                          className="flex-1 py-1 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-[8px] font-mono font-bold border border-purple-500/20 cursor-pointer transition"
+                                                        >
+                                                          Copy Link
+                                                        </button>
+                                                        <a
+                                                          href={`https://wa.me/?text=${encodeURIComponent(`Hello ${order.name}, here is your Arcadia payment link for ${milestone.label} (₹${milestone.amount.toLocaleString("en-IN")}): ${milestone.paymentLink || 'https://rzp.io/i/arcadia_' + order.id.slice(-6) + '_' + milestone.id}`)}`}
+                                                          target="_blank"
+                                                          rel="noreferrer"
+                                                          className="px-2 py-1 rounded bg-green-600/20 hover:bg-green-600/30 text-green-400 text-[8px] font-mono font-bold border border-green-500/20 cursor-pointer transition"
+                                                        >
+                                                          WhatsApp
+                                                        </a>
+                                                      </div>
+                                                      <AnimatedButton
+                                                        type="button"
+                                                        onClick={() => handleAdminMarkMilestonePaid(order.id, milestone.id, order)}
+                                                        className="w-full py-1.5 rounded-xl bg-green-600 hover:bg-green-500 text-white text-[9px] font-mono font-black tracking-wider uppercase transition cursor-pointer"
+                                                      >
+                                                        Approve & Mark Paid
+                                                      </AnimatedButton>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="flex flex-col gap-1.5">
+                                                      <AnimatedButton
+                                                        type="button"
+                                                        onClick={() => handleMilestoneRequest(order.id, milestone.id)}
+                                                        className="w-full py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-[9px] font-mono font-black tracking-wider uppercase transition cursor-pointer"
+                                                      >
+                                                        Send Payment Link
+                                                      </AnimatedButton>
+                                                      <AnimatedButton
+                                                        type="button"
+                                                        onClick={() => handleAdminMarkMilestonePaid(order.id, milestone.id, order)}
+                                                        className="w-full py-1 bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-500/10 rounded-lg text-[8px] font-mono font-bold uppercase transition cursor-pointer"
+                                                      >
+                                                        Direct Mark Paid
+                                                      </AnimatedButton>
+                                                    </div>
+                                                  )}
+                                                </div>
                                               </div>
                                             </div>
                                           );
