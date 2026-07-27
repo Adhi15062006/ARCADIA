@@ -6,7 +6,7 @@ import AdminManagement from "./AdminManagement";
 import { generateInvoicePDF, generateRefundPDF } from "../utils/pdfGenerator";
 import { db, handleFirestoreError, OperationType } from "../firebase/config";
 import { recordException } from "../firebase/crashlytics";
-import { onSnapshot, doc, collection, query, orderBy, updateDoc, deleteDoc, where, limit, startAfter, getCountFromServer, setDoc, addDoc, getDocs, getDoc } from "firebase/firestore";
+import { onSnapshot, doc, collection, query, orderBy, updateDoc, deleteDoc, where, limit, startAfter, getCountFromServer, setDoc, addDoc, getDocs, getDoc, writeBatch } from "firebase/firestore";
 import { 
   BarChart2, 
   TrendingUp, 
@@ -19,6 +19,7 @@ import {
   ListOrdered, 
   ShieldCheck, 
   Trash2, 
+  Archive, 
   Plus, 
   Edit3, 
   Download, 
@@ -130,6 +131,9 @@ export default function AdminDashboard({
   const [searchBookingQuery, setSearchBookingQuery] = useState("");
   const [bookingStatusFilter, setBookingStatusFilter] = useState("all");
   const [orders, setOrders] = useState<Order[]>([]);
+  const [showTestOrders, setShowTestOrders] = useState<boolean>(false);
+  const [showArchivedOrders, setShowArchivedOrders] = useState<boolean>(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [managedProjects, setManagedProjects] = useState<Project[]>(projects || []);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
@@ -523,6 +527,76 @@ export default function AdminDashboard({
     } catch (err: any) {
       console.error("[Delete Booking Error]:", err);
       onShowToast?.("error", "Failed to delete booking.");
+    }
+  };
+
+  // Heuristic Test Order Classification & Filtering Engine
+  const isTestOrder = (order: Order): boolean => {
+    if (order.isTest || order.is_test) return true;
+    const idStr = (order.id || order.orderId || "").toLowerCase();
+    const emailStr = (order.email || order.clientEmail || "").toLowerCase();
+    const nameStr = (order.name || order.customerName || "").toLowerCase();
+    const budgetVal = parseInt(order.budget || "0") || 0;
+
+    if (idStr.includes("test") || idStr.includes("ord_demo_test")) return true;
+    if (emailStr.includes("example.com") || emailStr.includes("test@") || emailStr.includes("dummy") || emailStr.includes("sandbox") || emailStr.includes("arcadia.digital")) return true;
+    if (nameStr.includes("test") || nameStr.includes("dummy") || nameStr.includes("alex vance")) return true;
+    if (budgetVal === 0) return true;
+    return false;
+  };
+
+  const handleToggleSelectOrder = (orderId: string) => {
+    setSelectedOrderIds(prev => 
+      prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
+    );
+  };
+
+  const handleBulkArchiveOrders = async () => {
+    if (selectedOrderIds.length === 0) return;
+    if (!window.confirm(`Archive ${selectedOrderIds.length} selected orders?`)) return;
+    try {
+      const batch = writeBatch(db);
+      const now = new Date().toISOString();
+      selectedOrderIds.forEach(id => {
+        batch.set(doc(db, "orders", id), { isArchived: true, updatedAt: now }, { merge: true });
+      });
+      await batch.commit();
+      onShowToast?.("success", `Archived ${selectedOrderIds.length} orders successfully.`);
+      setSelectedOrderIds([]);
+      fetchAdminData();
+    } catch (err: any) {
+      console.error("[Bulk Archive Error]:", err);
+      onShowToast?.("error", "Bulk archive failed.");
+    }
+  };
+
+  const handlePurgeAllTestOrders = async () => {
+    const testOrdersList = orders.filter(isTestOrder);
+    if (testOrdersList.length === 0) {
+      onShowToast?.("info", "No test orders detected in database.");
+      return;
+    }
+    if (!window.confirm(`SECURITY NOTICE: You are about to permanently purge ${testOrdersList.length} test orders from Firestore. This action is backed up to audit logs.`)) return;
+
+    try {
+      const batch = writeBatch(db);
+      testOrdersList.forEach(o => {
+        batch.delete(doc(db, "orders", o.id));
+        batch.delete(doc(db, "projects", o.id));
+      });
+      await batch.commit();
+      
+      await addDoc(collection(db, "activityLogs"), {
+        action: "Bulk Test Orders Purged",
+        details: `Purged ${testOrdersList.length} test orders from production database.`,
+        timestamp: new Date().toISOString()
+      });
+
+      onShowToast?.("success", `Purged ${testOrdersList.length} test orders from database.`);
+      fetchAdminData();
+    } catch (err: any) {
+      console.error("[Purge Test Orders Error]:", err);
+      onShowToast?.("error", "Purge failed: " + (err.message || String(err)));
     }
   };
 
@@ -2529,12 +2603,51 @@ export default function AdminDashboard({
               {/* TAB CLIENT ORDERS */}
               {activeTab === "orders" && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                  {/* Header & Controls Toolbar */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                     <div>
-                      <h3 className="font-display font-black text-lg text-white">CLIENT ORDERS</h3>
-                      <p className="font-sans text-xs text-gray-500">Pipeline deployment tracker.</p>
+                      <h3 className="font-display font-black text-lg text-white tracking-wide uppercase flex items-center gap-2">
+                        <ListOrdered className="w-5 h-5 text-arcadia-cyan" />
+                        <span>CLIENT ORDERS ({orders.filter(o => (showTestOrders || !isTestOrder(o)) && (showArchivedOrders || !o.isArchived)).length})</span>
+                      </h3>
+                      <p className="font-sans text-xs text-gray-500">Pipeline order tracker with automated test-data filtering and archival desk.</p>
                     </div>
-                    <div className="flex items-center gap-3">
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Show/Hide Test Orders Toggle */}
+                      <label className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-gray-300 cursor-pointer hover:bg-white/10 transition select-none">
+                        <input
+                          type="checkbox"
+                          checked={showTestOrders}
+                          onChange={(e) => setShowTestOrders(e.target.checked)}
+                          className="w-3.5 h-3.5 accent-purple-500 rounded cursor-pointer"
+                        />
+                        <span>Show Test Orders ({orders.filter(isTestOrder).length})</span>
+                      </label>
+
+                      {/* Bulk Archive Selected Button */}
+                      {selectedOrderIds.length > 0 && (
+                        <AnimatedButton
+                          type="button"
+                          onClick={handleBulkArchiveOrders}
+                          className="px-3 py-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 text-xs font-mono font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Archive className="w-3.5 h-3.5" />
+                          <span>Archive ({selectedOrderIds.length})</span>
+                        </AnimatedButton>
+                      )}
+
+                      {/* Purge Test Orders Button */}
+                      <AnimatedButton
+                        type="button"
+                        onClick={handlePurgeAllTestOrders}
+                        className="px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-mono font-bold flex items-center gap-1 cursor-pointer"
+                        title="Purge all identified test orders safely"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Purge Test Orders ({orders.filter(isTestOrder).length})</span>
+                      </AnimatedButton>
+
                       <AnimatedButton
                         type="button"
                         disabled={isRefreshingOrders}
@@ -2543,8 +2656,9 @@ export default function AdminDashboard({
                         title="Fetch latest orders from Firestore"
                       >
                         <RefreshCw className={`w-4 h-4 text-cyan-400 ${isRefreshingOrders ? "animate-spin" : ""}`} />
-                        <span>{isRefreshingOrders ? "Refreshing..." : "Refresh Orders"}</span>
+                        <span>Refresh</span>
                       </AnimatedButton>
+
                       <AnimatedButton
                         onClick={() => exportToCSV("orders")}
                         className="px-3.5 py-1.5 rounded-full border border-white/10 text-xs font-semibold flex items-center gap-1.5 hover:bg-white/5 transition"
@@ -2555,10 +2669,12 @@ export default function AdminDashboard({
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  {/* Orders Table */}
+                  <div className="overflow-x-auto bg-white/[0.01] border border-white/5 rounded-2xl">
                     <table className="w-full text-left font-sans text-xs">
                       <thead>
-                        <tr className="border-b border-white/5 text-gray-500">
+                        <tr className="border-b border-white/5 text-gray-500 bg-white/[0.02] font-mono text-[9px] uppercase tracking-wider">
+                          <th className="py-3 px-3 text-center w-10">Select</th>
                           <th className="py-3 px-2">Client Details</th>
                           <th className="py-3 px-2">Service Solution</th>
                           <th className="py-3 px-2 text-right">Budget (INR)</th>
@@ -2569,42 +2685,61 @@ export default function AdminDashboard({
                       <tbody className="divide-y divide-white/5">
                         {isAdminDataLoading ? (
                           <tr>
-                            <td colSpan={5} className="py-4 px-2">
-                              <TableSkeleton rows={4} cols={5} />
+                            <td colSpan={6} className="py-4 px-2">
+                              <TableSkeleton rows={4} cols={6} />
                             </td>
                           </tr>
-                        ) : orders.length === 0 ? (
+                        ) : orders.filter(o => (showTestOrders || !isTestOrder(o)) && (showArchivedOrders || !o.isArchived)).length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="text-center py-8 text-gray-500 font-mono">NO ACTIVE ORDERS CURRENTLY PLACED</td>
+                            <td colSpan={6} className="text-center py-12 text-gray-500 font-mono text-xs uppercase tracking-widest">
+                              No production orders match the current filter display.
+                            </td>
                           </tr>
                         ) : (
-                          orders.map(order => (
-                            <React.Fragment key={order.id}>
-                              <tr className="hover:bg-white/[0.01]">
-                                <td className="py-4 px-2">
-                                  <span className="block font-bold text-white">{order.name}</span>
-                                  <span className="block text-[10px] text-gray-500">{order.company} • {order.email}</span>
-                                </td>
-                                <td className="py-4 px-2">
-                                  <span className="block text-white">{order.service}</span>
-                                  <span className="block text-[10px] text-gray-500">Deadline: {order.deadline}</span>
-                                </td>
-                                <td className="py-4 px-2 text-right">
-                                  <span className="block text-white font-mono font-bold">₹{parseInt(order.budget).toLocaleString("en-IN")}</span>
-                                  <span className={`inline-block text-[9px] px-1.5 py-0.5 rounded ${order.isPaid ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-500"}`}>
-                                    {order.isPaid ? "PAID" : "PENDING"}
-                                  </span>
-                                </td>
-                                <td className="py-4 px-2">
-                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                                    order.status === "Pending" ? "bg-yellow-500/10 text-yellow-500" :
-                                    order.status === "In Progress" ? "bg-blue-500/10 text-blue-400" :
-                                    order.status === "Completed" ? "bg-green-500/10 text-green-400" :
-                                    "bg-red-500/10 text-red-400"
-                                  }`}>
-                                    {order.status}
-                                  </span>
-                                </td>
+                          orders.filter(o => (showTestOrders || !isTestOrder(o)) && (showArchivedOrders || !o.isArchived)).map(order => {
+                            const isTest = isTestOrder(order);
+                            return (
+                              <React.Fragment key={order.id}>
+                                <tr className={`hover:bg-white/[0.01] transition ${isTest ? "bg-amber-500/[0.02]" : ""}`}>
+                                  <td className="py-4 px-3 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedOrderIds.includes(order.id)}
+                                      onChange={() => handleToggleSelectOrder(order.id)}
+                                      className="w-3.5 h-3.5 accent-purple-500 rounded cursor-pointer"
+                                    />
+                                  </td>
+                                  <td className="py-4 px-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-white">{order.name}</span>
+                                      {isTest && (
+                                        <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-[8px] font-black uppercase tracking-wider animate-pulse">
+                                          TEST DATA
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="block text-[10px] text-gray-500 font-mono mt-0.5">{order.company} • {order.email}</span>
+                                  </td>
+                                  <td className="py-4 px-2">
+                                    <span className="block text-white font-semibold">{order.service}</span>
+                                    <span className="block text-[10px] text-gray-500 font-mono">Deadline: {order.deadline}</span>
+                                  </td>
+                                  <td className="py-4 px-2 text-right">
+                                    <span className="block text-white font-mono font-bold">₹{parseInt(order.budget).toLocaleString("en-IN")}</span>
+                                    <span className={`inline-block text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${order.isPaid ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-500"}`}>
+                                      {order.isPaid ? "PAID" : "PENDING"}
+                                    </span>
+                                  </td>
+                                  <td className="py-4 px-2">
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider ${
+                                      order.status === "Pending" ? "bg-yellow-500/10 text-yellow-500" :
+                                      order.status === "In Progress" ? "bg-blue-500/10 text-blue-400" :
+                                      order.status === "Completed" ? "bg-green-500/10 text-green-400" :
+                                      "bg-red-500/10 text-red-400"
+                                    }`}>
+                                      {order.status}
+                                    </span>
+                                  </td>
                                 <td className="py-4 px-2">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     {order.status === "Pending" && (
@@ -2671,7 +2806,7 @@ export default function AdminDashboard({
 
                               {expandedOrderId === order.id && (
                                 <tr className="bg-white/[0.01]">
-                                  <td colSpan={5} className="py-4 px-4 border-b border-white/5">
+                                  <td colSpan={6} className="py-4 px-4 border-b border-white/5">
                                     <div className="space-y-3">
                                       <div className="flex justify-between items-center">
                                         <span className="text-[10px] font-mono text-purple-400 font-black uppercase tracking-wider">Milestone Payments Pipeline (30% / 50% / 20%)</span>
@@ -2773,9 +2908,10 @@ export default function AdminDashboard({
                                 </tr>
                               )}
                             </React.Fragment>
-                          ))
-                        )}
-                      </tbody>
+                          );
+                        })
+                      )}
+                    </tbody>
                     </table>
                   </div>
 

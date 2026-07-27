@@ -53,6 +53,7 @@ export interface Order {
   customerName?: string;
   company: string;
   email: string;
+  clientEmail?: string;
   phone: string;
   address?: string;
   service: string;
@@ -76,6 +77,9 @@ export interface Order {
   milestones?: PaymentMilestone[];
   assignedStaff?: string;
   progress?: number;
+  isTest?: boolean;
+  is_test?: boolean;
+  isArchived?: boolean;
   createdAt: string;
   updatedAt?: string;
 }
