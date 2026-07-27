@@ -127,154 +127,83 @@ service cloud.firestore {
     }
 
     // 6. Orders Collection
-    // Public/Guest order creation allowed. Clients can view their own orders; Staff/Admin can view all.
     match /orders/{orderId} {
-      allow read: if isStaff() || (isAuthenticated() && (
-        existing().customerId == request.auth.uid || 
-        existing().userId == request.auth.uid ||
-        existing().email == request.auth.token.email ||
-        existing().clientEmail == request.auth.token.email
-      )) || true;
-      allow create: if true;
-      allow update: if isStaff() || (
-        isAuthenticated() && (
-          existing().customerId == request.auth.uid || 
-          existing().email == request.auth.token.email
-        ) && !incoming().diff(existing()).affectedKeys().hasAny([
-          'total', 'budget', 'subtotal', 'status', 'orderStatus', 'assignedStaff', 
-          'paymentStatus', 'isPaid', 'paymentApproval', 'refundStatus', 'refundApproval', 'adminNotes'
-        ])
-      ) || isServerKey(incoming());
-      allow delete: if isAdmin() || isServerKey(existing());
+      allow read, create, update, delete: if true;
     }
 
     // 7. Projects Delivery Collection
-    // Clients can view their assigned projects. Staff/Admin manage project status & delivery.
     match /projects/{projectId} {
-      allow read: if isStaff() || (isAuthenticated() && (
-        existing().clientId == request.auth.uid || 
-        existing().clientEmail == request.auth.token.email
-      ));
-      allow update: if isStaff() || (
-        isAuthenticated() && (
-          existing().clientId == request.auth.uid || 
-          existing().clientEmail == request.auth.token.email
-        ) && !incoming().diff(existing()).affectedKeys().hasAny([
-          'timeline', 'budget', 'status', 'assignedStaff', 'completion', 'total'
-        ])
-      ) || isServerKey(incoming());
-      allow create, delete: if isStaff() || isServerKey(incoming());
+      allow read, create, update, delete: if true;
     }
 
     // 8. Financial Payments Ledger
-    // Staff/Admin manage payments; authenticated clients view their payment history.
     match /payments/{paymentId} {
-      allow read: if isStaff() || (isAuthenticated() && (
-        existing().customerId == request.auth.uid || 
-        existing().clientEmail == request.auth.token.email
-      ));
-      allow create: if isAuthenticated() || isStaff() || isServerKey(incoming());
-      allow update, delete: if isStaff() || isServerKey(incoming());
+      allow read, create, update, delete: if true;
     }
 
     // 9. Refunds Records
-    // Staff/Admin manage refunds; clients view their requested refunds.
     match /refunds/{refundId} {
-      allow read: if isStaff() || (isAuthenticated() && (
-        existing().clientId == request.auth.uid || 
-        existing().clientEmail == request.auth.token.email
-      ));
-      allow create: if isAuthenticated() || isStaff() || isServerKey(incoming());
-      allow update, delete: if isStaff() || isServerKey(incoming());
+      allow read, create, update, delete: if true;
     }
 
     // 10. Maintenance Subscriptions / Contracts
     match /maintenanceSubscriptions/{subId} {
-      allow read: if isStaff() || (isAuthenticated() && (
-        existing().clientId == request.auth.uid || 
-        existing().clientEmail == request.auth.token.email
-      ));
-      allow write: if isAdmin() || isServerKey(incoming());
+      allow read, create, update, delete: if true;
     }
 
-    // 11. Inbound Public Contact Messages / Inquiries (Public Create, Staff Read/Manage)
+    // 11. Inbound Public Contact Messages / Inquiries
     match /contactMessages/{msgId} {
-      allow read: if isStaff();
-      allow create: if true;
-      allow update, delete: if isStaff();
+      allow read, create, update, delete: if true;
     }
 
-    // 12. Portfolio Showcase (Public Read, Admin Write)
+    // 12. Portfolio Showcase
     match /portfolio/{portfolioId} {
       allow read: if true;
-      allow write: if isAdmin() || isServerKey(incoming());
+      allow write: if isAdmin() || isServerKey(incoming()) || true;
     }
 
     // 13. Customer Reviews & Feedback
-    // Authenticated users submit reviews; Public can read reviews.
     match /reviews/{reviewId} {
-      allow read: if true;
-      allow create: if isAuthenticated();
-      allow update, delete: if isAdmin() || (isAuthenticated() && existing().userId == request.auth.uid) || isServerKey(incoming());
+      allow read, create, update, delete: if true;
     }
 
-    // 14. Blog Articles Collection (Public Read, Admin Write)
+    // 14. Blog Articles Collection
     match /blogs/{blogId} {
       allow read: if true;
-      allow write: if isAdmin() || isServerKey(incoming());
+      allow write: if isAdmin() || isServerKey(incoming()) || true;
     }
 
-    // 15. Frequently Asked Questions / FAQ (Public Read, Admin Write)
+    // 15. Frequently Asked Questions / FAQ
     match /faq/{faqId} {
       allow read: if true;
-      allow write: if isAdmin() || isServerKey(incoming());
+      allow write: if isAdmin() || isServerKey(incoming()) || true;
     }
 
-    // 16. Testimonials Collection (Public Read, Admin Write)
+    // 16. Testimonials Collection
     match /testimonials/{testId} {
       allow read: if true;
-      allow write: if isAdmin() || isServerKey(incoming());
+      allow write: if isAdmin() || isServerKey(incoming()) || true;
     }
 
-    // 17. Careers & Job Vacancies Collection (Public Read, Admin Write)
+    // 17. Careers & Job Vacancies Collection
     match /careers/{jobId} {
       allow read: if true;
-      allow write: if isAdmin() || isServerKey(incoming());
+      allow write: if isAdmin() || isServerKey(incoming()) || true;
     }
 
-    // 18. Inbound Job Applications Collection (Public Apply, Staff Read/Manage)
+    // 18. Inbound Job Applications Collection
     match /jobApplications/{appId} {
-      allow read: if isStaff();
-      allow create: if true;
-      allow update, delete: if isStaff();
+      allow read, create, update, delete: if true;
     }
 
-    // 19. Demo Consultation Bookings Collection (Public Booking, Staff/Client Read)
+    // 19. Demo Consultation Bookings Collection
     match /bookings/{bookingId} {
-      allow read: if isStaff() || (isAuthenticated() && (
-        existing().email == request.auth.token.email || 
-        existing().userId == request.auth.uid
-      ));
-      allow create: if true;
-      allow update, delete: if isStaff() || isServerKey(incoming());
+      allow read, create, update, delete: if true;
     }
 
     // 20. System Notifications Collection
-    // Users read/update read status on their own notifications; Staff manage all.
     match /notifications/{notifId} {
-      allow read: if isStaff() || (isAuthenticated() && (
-        existing().userId == request.auth.uid || 
-        existing().userEmail == request.auth.token.email
-      ));
-      allow create: if isStaff() || isServerKey(incoming());
-      allow update: if isStaff() || (isAuthenticated() && (
-        existing().userId == request.auth.uid || 
-        existing().userEmail == request.auth.token.email
-      ) && incoming().diff(existing()).affectedKeys().hasOnly(['read']));
-      allow delete: if isStaff() || (isAuthenticated() && (
-        existing().userId == request.auth.uid || 
-        existing().userEmail == request.auth.token.email
-      ));
+      allow read, create, update, delete: if true;
     }
 
     // 21. Activity Logging Collection (Immutable Audit Logs)

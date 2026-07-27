@@ -539,112 +539,131 @@ export default function AdminDashboard({
     }
   };
 
-  // Approve & Request Payment action
+  // Approve & Request Payment action - 100% Direct Firestore Client Sync
   const handleApproveAndRequestPayment = async (orderId: string) => {
     try {
       const targetOrder = orders.find(o => o.id === orderId || o.orderId === orderId);
-      const res = await fetch(`/api/orders/${orderId}/approve-request`, {
-        method: "PUT",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
-      if (res.ok) {
-        onShowToast?.("success", "Project approved! First milestone request and client notification successfully dispatched.");
-        // Direct top-level Firestore broadcast
-        if (targetOrder) {
-          const updated = {
-            ...targetOrder,
-            status: "Payment Pending",
-            orderStatus: "Payment Pending",
-            updatedAt: new Date().toISOString()
-          };
-          setDoc(doc(db, "orders", orderId), updated, { merge: true }).catch(() => {});
-          setDoc(doc(db, "projects", orderId), { ...updated, projectId: orderId }, { merge: true }).catch(() => {});
+      const now = new Date().toISOString();
+      const updatedOrderData = {
+        status: "Payment Pending",
+        orderStatus: "Payment Pending",
+        updatedAt: now
+      };
 
-          if (targetOrder.email) {
-            createClientNotification(
-              targetOrder.customerId || targetOrder.email,
-              targetOrder.email,
-              "Project Approved - Action Required",
-              `Your project order #${orderId} has been approved by Arcadia architecture team. Milestone 1 payment link is available in your Client Hub.`,
-              "order"
-            );
-          }
-        }
-        fetchAdminData();
-      } else {
-        onShowToast?.("error", "Failed to approve order and request payment.");
+      console.log(`[Admin Firestore Write] Updating order #${orderId} status to Payment Pending...`);
+      await setDoc(doc(db, "orders", orderId), updatedOrderData, { merge: true });
+
+      const projectPayload = {
+        id: orderId,
+        projectId: orderId,
+        orderId: orderId,
+        clientId: targetOrder?.customerId || targetOrder?.email || "",
+        clientEmail: targetOrder?.email || "",
+        customerName: targetOrder?.name || targetOrder?.customerName || "Client",
+        title: targetOrder?.service || "Web Application",
+        service: targetOrder?.service || "Web Application",
+        status: "Payment Pending",
+        progress: 10,
+        assignedStaff: targetOrder?.assignedStaff || "Unassigned",
+        updatedAt: now
+      };
+
+      await setDoc(doc(db, "projects", orderId), projectPayload, { merge: true });
+      console.log(`[Admin Firestore Write] Auto-created/updated project #${orderId} to Payment Pending.`);
+
+      if (targetOrder?.email) {
+        await createClientNotification(
+          targetOrder.customerId || targetOrder.email,
+          targetOrder.email,
+          "Project Approved - Action Required",
+          `Your project order #${orderId} has been approved by Arcadia architecture team. Milestone 1 payment link is available in your Client Hub.`,
+          "order"
+        );
       }
-    } catch (err) {
-      console.error(err);
-      onShowToast?.("error", "Could not connect to payment hub.");
+
+      onShowToast?.("success", "Project approved! First milestone request and client notification successfully dispatched.");
+      fetchAdminData();
+    } catch (err: any) {
+      console.error("[Approve Order Firestore Write Error]:", err);
+      onShowToast?.("error", "Failed to approve order: " + (err.message || String(err)));
     }
   };
 
-  // Admin approves / marks a milestone as paid manually
+  // Admin approves / marks a milestone as paid manually - 100% Direct Firestore Client Sync
   const handleAdminMarkMilestonePaid = async (orderId: string, milestoneId: string, orderObj: Order) => {
     try {
-      const res = await fetch(`/api/orders/${orderId}/milestones/${milestoneId}/pay`, {
-        method: "PUT"
-      });
-      if (res.ok) {
-        onShowToast?.("success", "Milestone payment approved and marked as PAID!");
-        
-        // Construct the updated order model with the newly paid milestone
-        const updatedMilestones: PaymentMilestone[] = (orderObj.milestones || []).map(m => {
-          if (m.id === milestoneId) {
-            return { ...m, status: "Paid" as const, paidAt: new Date().toISOString() };
-          }
-          return m;
-        });
-
-        let nextStatus: any = orderObj.status || "In Progress";
-        let nextProgress = 30;
-        if (milestoneId === "m1" || milestoneId === "m_1") {
-          nextStatus = "Project Started";
-          nextProgress = 30;
-        } else if (milestoneId === "m2" || milestoneId === "m_2") {
-          nextStatus = "In Progress";
-          nextProgress = 75;
-        } else if (milestoneId === "m3" || milestoneId === "m_3") {
-          nextStatus = "Completed";
-          nextProgress = 100;
+      const now = new Date().toISOString();
+      const updatedMilestones: PaymentMilestone[] = (orderObj.milestones || []).map(m => {
+        if (m.id === milestoneId) {
+          return { ...m, status: "Paid" as const, paidAt: now };
         }
+        return m;
+      });
 
-        const updatedOrder: Order = {
-          ...orderObj,
-          milestones: updatedMilestones,
-          status: nextStatus,
-          orderStatus: nextStatus,
-          paymentStatus: milestoneId === "m3" ? "Paid" : "Partially Paid",
-          isPaid: milestoneId === "m3" ? true : orderObj.isPaid,
-          updatedAt: new Date().toISOString()
-        };
-
-        // Broadcast direct top-level Firestore doc updates for orders and projects
-        setDoc(doc(db, "orders", orderId), updatedOrder, { merge: true }).catch(() => {});
-        setDoc(doc(db, "projects", orderId), {
-          id: orderId,
-          orderId,
-          clientId: orderObj.customerId || orderObj.email,
-          clientEmail: orderObj.email,
-          title: orderObj.service,
-          status: nextStatus,
-          progress: nextProgress,
-          updatedAt: new Date().toISOString()
-        }, { merge: true }).catch(() => {});
-
-        // Automatically download/generate company-branded signed PDF invoice
-        generateInvoicePDF(updatedOrder, milestoneId);
-        fetchAdminData();
-      } else {
-        onShowToast?.("error", "Failed to mark milestone as paid.");
+      let nextStatus: any = orderObj.status || "In Progress";
+      let nextProgress = 30;
+      if (milestoneId === "m1" || milestoneId === "m_1") {
+        nextStatus = "Project Started";
+        nextProgress = 30;
+      } else if (milestoneId === "m2" || milestoneId === "m_2") {
+        nextStatus = "In Progress";
+        nextProgress = 75;
+      } else if (milestoneId === "m3" || milestoneId === "m_3") {
+        nextStatus = "Completed";
+        nextProgress = 100;
       }
-    } catch (err) {
-      console.error(err);
-      onShowToast?.("error", "Error processing database transaction.");
+
+      const updatedOrder: Order = {
+        ...orderObj,
+        milestones: updatedMilestones,
+        status: nextStatus,
+        orderStatus: nextStatus,
+        paymentStatus: milestoneId === "m3" ? "Paid" : "Partially Paid",
+        isPaid: milestoneId === "m3" ? true : orderObj.isPaid,
+        updatedAt: now
+      };
+
+      console.log(`[Admin Firestore Write] Marking milestone '${milestoneId}' as PAID for order #${orderId}...`);
+      await setDoc(doc(db, "orders", orderId), updatedOrder, { merge: true });
+      await setDoc(doc(db, "projects", orderId), {
+        id: orderId,
+        orderId,
+        clientId: orderObj.customerId || orderObj.email,
+        clientEmail: orderObj.email,
+        title: orderObj.service,
+        status: nextStatus,
+        progress: nextProgress,
+        updatedAt: now
+      }, { merge: true });
+
+      // Create ledger entry in /payments collection
+      await setDoc(doc(db, "payments", `pay_${orderId}_${milestoneId}`), {
+        id: `pay_${orderId}_${milestoneId}`,
+        orderId,
+        milestoneId,
+        clientId: orderObj.customerId || orderObj.email,
+        clientEmail: orderObj.email,
+        amount: Math.round((parseInt(orderObj.budget) || 0) * (milestoneId === "m1" ? 0.3 : milestoneId === "m2" ? 0.5 : 0.2)),
+        status: "Approved",
+        createdAt: now
+      }, { merge: true });
+
+      if (orderObj.email) {
+        await createClientNotification(
+          orderObj.customerId || orderObj.email,
+          orderObj.email,
+          "Payment Milestone Approved",
+          `Your payment for milestone '${milestoneId}' (Project #${orderId}) has been verified & approved. Signed receipt is available in Client Hub.`,
+          "payment"
+        );
+      }
+
+      generateInvoicePDF(updatedOrder, milestoneId);
+      onShowToast?.("success", "Milestone payment approved and marked as PAID!");
+      fetchAdminData();
+    } catch (err: any) {
+      console.error("[Mark Milestone Paid Firestore Error]:", err);
+      onShowToast?.("error", "Error updating milestone payment: " + (err.message || String(err)));
     }
   };
 
@@ -1357,7 +1376,7 @@ export default function AdminDashboard({
     document.body.removeChild(link);
   };
 
-  // Order Status update handler with direct Firestore sync
+  // Order Status update handler with 100% direct Firestore sync
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
     try {
       const targetOrder = orders.find(o => o.id === orderId || o.orderId === orderId);
@@ -1367,18 +1386,19 @@ export default function AdminDashboard({
         updatedAt: new Date().toISOString()
       };
       
-      await setDoc(doc(db, "orders", orderId), updatedData, { merge: true }).catch(e => console.warn("[Orders Firestore Update Warning]:", e));
+      console.log(`[Admin Firestore Write] Updating order & project #${orderId} status to '${status}'...`);
+      await setDoc(doc(db, "orders", orderId), updatedData, { merge: true });
       await setDoc(doc(db, "projects", orderId), {
         id: orderId,
         orderId,
         status,
         updatedAt: new Date().toISOString()
-      }, { merge: true }).catch(e => console.warn("[Projects Firestore Update Warning]:", e));
+      }, { merge: true });
 
-      console.log(`[Admin Realtime Sync] Updated order & project #${orderId} status to '${status}' in Firestore.`);
+      console.log(`[Admin Realtime Sync] Successfully updated order & project #${orderId} status to '${status}' in Firestore.`);
 
       if (targetOrder && targetOrder.email) {
-        createClientNotification(
+        await createClientNotification(
           targetOrder.customerId || targetOrder.email,
           targetOrder.email,
           "Project Status Updated",
@@ -1387,20 +1407,11 @@ export default function AdminDashboard({
         );
       }
 
-      const res = await fetch(`/api/orders/${orderId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ status })
-      });
-      if (res.ok) {
-        fetchAdminData();
-        onShowToast?.("success", `Order #${orderId} status updated to ${status}`);
-      }
-    } catch (err) {
-      console.error("[Update Order Status Error]:", err);
+      onShowToast?.("success", `Order #${orderId} status updated to ${status}`);
+      fetchAdminData();
+    } catch (err: any) {
+      console.error("[Update Order Status Firestore Error]:", err);
+      onShowToast?.("error", "Failed to update order status: " + (err.message || String(err)));
     }
   };
 
