@@ -127,6 +127,8 @@ export default function AdminDashboard({
 
   // Dashboard content states (REST fetched)
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [searchBookingQuery, setSearchBookingQuery] = useState("");
+  const [bookingStatusFilter, setBookingStatusFilter] = useState("all");
   const [orders, setOrders] = useState<Order[]>([]);
   const [managedProjects, setManagedProjects] = useState<Project[]>(projects || []);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -460,9 +462,87 @@ export default function AdminDashboard({
     }
   };
 
+  // Notification Dispatch Engine
+  const createClientNotification = async (userId: string, email: string, title: string, message: string, type: string = "system") => {
+    try {
+      const notifPayload = {
+        id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+        userId: userId || email,
+        userEmail: email,
+        clientEmail: email,
+        title,
+        message,
+        type,
+        read: false,
+        createdAt: new Date().toISOString()
+      };
+      await addDoc(collection(db, "notifications"), notifPayload);
+      console.log(`[Notification Engine] Sent realtime notification to client '${email}':`, title);
+    } catch (err) {
+      console.warn("[Notification Engine Warning]:", err);
+    }
+  };
+
+  // Booking Management Handlers
+  const handleApproveBooking = async (bookingId: string, clientEmail?: string, clientName?: string) => {
+    try {
+      const updatedData = { status: "Approved", updatedAt: new Date().toISOString() };
+      await setDoc(doc(db, "bookings", bookingId), updatedData, { merge: true });
+      onShowToast?.("success", `Demo consultation #${bookingId} approved!`);
+      if (clientEmail) {
+        createClientNotification(clientEmail, clientEmail, "Demo Consultation Confirmed", `Hello ${clientName || 'Client'}, your consultation booking #${bookingId} has been confirmed by our technical team.`, "booking");
+      }
+      fetchAdminData();
+    } catch (err: any) {
+      console.error("[Approve Booking Error]:", err);
+      onShowToast?.("error", "Failed to approve booking.");
+    }
+  };
+
+  const handleRejectBooking = async (bookingId: string, clientEmail?: string) => {
+    try {
+      const updatedData = { status: "Rejected", updatedAt: new Date().toISOString() };
+      await setDoc(doc(db, "bookings", bookingId), updatedData, { merge: true });
+      onShowToast?.("info", `Demo consultation #${bookingId} declined.`);
+      if (clientEmail) {
+        createClientNotification(clientEmail, clientEmail, "Booking Update", `Your consultation booking #${bookingId} could not be scheduled at the requested slot.`, "booking");
+      }
+      fetchAdminData();
+    } catch (err: any) {
+      console.error("[Reject Booking Error]:", err);
+      onShowToast?.("error", "Failed to reject booking.");
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this booking record?")) return;
+    try {
+      await deleteDoc(doc(db, "bookings", bookingId));
+      onShowToast?.("success", `Booking record #${bookingId} purged.`);
+      fetchAdminData();
+    } catch (err: any) {
+      console.error("[Delete Booking Error]:", err);
+      onShowToast?.("error", "Failed to delete booking.");
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete order #${orderId}? This will remove project logs as well.`)) return;
+    try {
+      await deleteDoc(doc(db, "orders", orderId)).catch(() => {});
+      await deleteDoc(doc(db, "projects", orderId)).catch(() => {});
+      onShowToast?.("success", `Order #${orderId} deleted successfully.`);
+      fetchAdminData();
+    } catch (err: any) {
+      console.error("[Delete Order Error]:", err);
+      onShowToast?.("error", "Failed to delete order.");
+    }
+  };
+
   // Approve & Request Payment action
   const handleApproveAndRequestPayment = async (orderId: string) => {
     try {
+      const targetOrder = orders.find(o => o.id === orderId || o.orderId === orderId);
       const res = await fetch(`/api/orders/${orderId}/approve-request`, {
         method: "PUT",
         headers: {
@@ -473,7 +553,6 @@ export default function AdminDashboard({
       if (res.ok) {
         onShowToast?.("success", "Project approved! First milestone request and client notification successfully dispatched.");
         // Direct top-level Firestore broadcast
-        const targetOrder = orders.find(o => o.id === orderId);
         if (targetOrder) {
           const updated = {
             ...targetOrder,
@@ -482,6 +561,17 @@ export default function AdminDashboard({
             updatedAt: new Date().toISOString()
           };
           setDoc(doc(db, "orders", orderId), updated, { merge: true }).catch(() => {});
+          setDoc(doc(db, "projects", orderId), { ...updated, projectId: orderId }, { merge: true }).catch(() => {});
+
+          if (targetOrder.email) {
+            createClientNotification(
+              targetOrder.customerId || targetOrder.email,
+              targetOrder.email,
+              "Project Approved - Action Required",
+              `Your project order #${orderId} has been approved by Arcadia architecture team. Milestone 1 payment link is available in your Client Hub.`,
+              "order"
+            );
+          }
         }
         fetchAdminData();
       } else {
@@ -1270,6 +1360,7 @@ export default function AdminDashboard({
   // Order Status update handler with direct Firestore sync
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
     try {
+      const targetOrder = orders.find(o => o.id === orderId || o.orderId === orderId);
       const updatedData = {
         status,
         orderStatus: status,
@@ -1285,6 +1376,16 @@ export default function AdminDashboard({
       }, { merge: true }).catch(e => console.warn("[Projects Firestore Update Warning]:", e));
 
       console.log(`[Admin Realtime Sync] Updated order & project #${orderId} status to '${status}' in Firestore.`);
+
+      if (targetOrder && targetOrder.email) {
+        createClientNotification(
+          targetOrder.customerId || targetOrder.email,
+          targetOrder.email,
+          "Project Status Updated",
+          `Your project #${orderId} status has been updated to '${status}'. Check your Client Hub for live updates.`,
+          "status"
+        );
+      }
 
       const res = await fetch(`/api/orders/${orderId}/status`, {
         method: "PUT",
@@ -1305,10 +1406,21 @@ export default function AdminDashboard({
 
   const handleAssignStaff = async (orderId: string, assignedStaff: string) => {
     try {
+      const targetOrder = orders.find(o => o.id === orderId || o.orderId === orderId);
       const updatedData = { assignedStaff, updatedAt: new Date().toISOString() };
       await setDoc(doc(db, "orders", orderId), updatedData, { merge: true }).catch(() => {});
       await setDoc(doc(db, "projects", orderId), updatedData, { merge: true }).catch(() => {});
       onShowToast?.("success", `Assigned staff to order #${orderId}: ${assignedStaff}`);
+      
+      if (targetOrder && targetOrder.email) {
+        createClientNotification(
+          targetOrder.customerId || targetOrder.email,
+          targetOrder.email,
+          "Development Engineer Assigned",
+          `${assignedStaff} has been assigned to lead your project #${orderId}.`,
+          "staff"
+        );
+      }
       fetchAdminData();
     } catch (err) {
       console.error(err);
@@ -2508,6 +2620,13 @@ export default function AdminDashboard({
                                     >
                                       <Download className="w-3.5 h-3.5" />
                                     </AnimatedButton>
+                                    <AnimatedButton
+                                      onClick={() => handleDeleteOrder(order.id)}
+                                      className="p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition cursor-pointer"
+                                      title="Purge Order Record"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </AnimatedButton>
                                   </div>
                                 </td>
                               </tr>
@@ -2711,6 +2830,164 @@ export default function AdminDashboard({
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB DEMO BOOKINGS */}
+              {activeTab === "bookings" && (
+                <div className="space-y-6">
+                  {/* Header */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-5">
+                    <div>
+                      <h3 className="font-display font-black text-lg text-white tracking-wide uppercase flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-purple-400" />
+                        <span>DEMO CONSULTATION BOOKINGS ({bookings.length})</span>
+                      </h3>
+                      <p className="font-sans text-xs text-gray-500">Live consultation requests, Google Meet slots, and client architectural bookings.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-mono font-bold uppercase">
+                        REALTIME FIRESTORE LISTENER
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 space-y-1">
+                      <span className="block font-mono text-[9px] text-gray-500 font-bold uppercase">Total Bookings</span>
+                      <span className="block font-display font-black text-2xl text-white">{bookings.length}</span>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 space-y-1">
+                      <span className="block font-mono text-[9px] text-green-400 font-bold uppercase">Approved</span>
+                      <span className="block font-display font-black text-2xl text-green-400">{bookings.filter((b: any) => b.status === "Approved").length}</span>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 space-y-1">
+                      <span className="block font-mono text-[9px] text-yellow-500 font-bold uppercase">Pending Review</span>
+                      <span className="block font-display font-black text-2xl text-yellow-500">{bookings.filter((b: any) => !b.status || b.status === "Pending").length}</span>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 space-y-1">
+                      <span className="block font-mono text-[9px] text-rose-400 font-bold uppercase">Declined</span>
+                      <span className="block font-display font-black text-2xl text-rose-400">{bookings.filter((b: any) => b.status === "Rejected").length}</span>
+                    </div>
+                  </div>
+
+                  {/* Search and Filters */}
+                  <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 flex flex-col md:flex-row gap-4 items-center">
+                    <div className="relative w-full md:flex-1">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <input
+                        type="text"
+                        placeholder="Search bookings by name, email, service, or business..."
+                        value={searchBookingQuery}
+                        onChange={(e) => setSearchBookingQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#090a0f] border border-white/5 focus:border-white/20 text-xs text-white placeholder-gray-500 font-sans outline-none transition"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[9px] text-gray-500 uppercase">Status:</span>
+                      <select
+                        value={bookingStatusFilter}
+                        onChange={(e) => setBookingStatusFilter(e.target.value)}
+                        className="bg-[#090a0f] border border-white/5 hover:border-white/10 rounded-xl px-3 py-2 text-xs font-sans text-gray-300 cursor-pointer outline-none transition"
+                      >
+                        <option value="all">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Declined</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Bookings Table */}
+                  <div className="overflow-x-auto bg-white/[0.01] border border-white/5 rounded-2xl">
+                    {bookings.length === 0 ? (
+                      <div className="p-12 text-center text-gray-500 font-mono text-xs uppercase tracking-widest">
+                        No demo consultations recorded in Firestore database.
+                      </div>
+                    ) : (
+                      <table className="w-full text-left font-sans text-xs">
+                        <thead>
+                          <tr className="border-b border-white/5 text-gray-500 bg-white/[0.02] font-mono text-[9px] uppercase tracking-wider">
+                            <th className="py-3 px-4">Client Info</th>
+                            <th className="py-3 px-4">Service</th>
+                            <th className="py-3 px-4">Slot Date & Time</th>
+                            <th className="py-3 px-4">Meeting Mode</th>
+                            <th className="py-3 px-4">Status</th>
+                            <th className="py-3 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {bookings.filter((b: any) => {
+                            const queryStr = searchBookingQuery.toLowerCase().trim();
+                            const matchesSearch = !queryStr ||
+                              (b.name && b.name.toLowerCase().includes(queryStr)) ||
+                              (b.email && b.email.toLowerCase().includes(queryStr)) ||
+                              (b.service && b.service.toLowerCase().includes(queryStr)) ||
+                              (b.businessName && b.businessName.toLowerCase().includes(queryStr));
+                            const matchesStatus = bookingStatusFilter === "all" || (b.status || "Pending") === bookingStatusFilter;
+                            return matchesSearch && matchesStatus;
+                          }).map((b: any) => (
+                            <tr key={b.id} className="hover:bg-white/[0.01] transition">
+                              <td className="py-4 px-4">
+                                <div className="font-bold text-white text-xs">{b.name || "Client"}</div>
+                                <div className="text-[10px] text-gray-400 font-mono">{b.email}</div>
+                                {b.phone && <div className="text-[9px] text-gray-500 font-mono">{b.phone}</div>}
+                              </td>
+                              <td className="py-4 px-4">
+                                <span className="px-2.5 py-1 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 font-mono text-[10px] font-bold">
+                                  {b.service || "Consultation"}
+                                </span>
+                              </td>
+                              <td className="py-4 px-4 font-mono text-[10px] text-gray-300">
+                                <div>{b.date || "Scheduled Slot"}</div>
+                                <div className="text-gray-500 text-[9px]">{b.time}</div>
+                              </td>
+                              <td className="py-4 px-4 font-mono text-[10px] text-gray-400">
+                                {b.meetingMode || "Google Meet"}
+                              </td>
+                              <td className="py-4 px-4">
+                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider ${
+                                  b.status === "Approved" ? "bg-green-500/10 text-green-400 border border-green-500/20" :
+                                  b.status === "Rejected" ? "bg-red-500/10 text-red-400 border border-red-500/20" :
+                                  "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20"
+                                }`}>
+                                  {b.status || "Pending"}
+                                </span>
+                              </td>
+                              <td className="py-4 px-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  {b.status !== "Approved" && (
+                                    <AnimatedButton
+                                      onClick={() => handleApproveBooking(b.id, b.email, b.name)}
+                                      className="px-2.5 py-1 rounded-lg bg-green-600 hover:bg-green-500 text-white font-mono text-[9px] font-bold uppercase transition cursor-pointer"
+                                    >
+                                      Approve
+                                    </AnimatedButton>
+                                  )}
+                                  {b.status !== "Rejected" && (
+                                    <AnimatedButton
+                                      onClick={() => handleRejectBooking(b.id, b.email)}
+                                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-mono text-[9px] font-bold uppercase transition cursor-pointer border border-white/10"
+                                    >
+                                      Decline
+                                    </AnimatedButton>
+                                  )}
+                                  <AnimatedButton
+                                    onClick={() => handleDeleteBooking(b.id)}
+                                    className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition cursor-pointer"
+                                    title="Delete Booking Record"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </AnimatedButton>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </div>
               )}
