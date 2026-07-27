@@ -126,90 +126,122 @@ service cloud.firestore {
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
-    // 6. Orders Collection
+    // 6. Orders Collection (Strict Payload & Immutability Rules)
     match /orders/{orderId} {
-      allow read, create, update, delete: if true;
+      allow read: if isStaff() || isOwner(resource.data.customerId) || isUserEmail(resource.data.email) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow create: if isStaff() || isServerKey(incoming()) || (
+        isAuthenticated() && 
+        (!incoming().keys().hasAny(['price']) || incoming().price >= 0) &&
+        (!incoming().keys().hasAny(['subtotal']) || incoming().subtotal >= 0) &&
+        (!incoming().keys().hasAny(['total']) || incoming().total >= 0)
+      );
+      allow update: if isStaff() || isServerKey(incoming()) || (
+        isOwner(resource.data.customerId) &&
+        (!incoming().diff(resource.data).affectedKeys().hasAny(['customerId', 'userId', 'price', 'subtotal', 'total']) || isStaff())
+      );
+      allow delete: if isAdmin() || isServerKey(existing());
     }
 
     // 7. Projects Delivery Collection
     match /projects/{projectId} {
-      allow read, create, update, delete: if true;
+      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow create: if isStaff() || isServerKey(incoming()) || isAuthenticated();
+      allow update: if isStaff() || isServerKey(incoming()) || (
+        isOwner(resource.data.clientId) &&
+        !incoming().diff(resource.data).affectedKeys().hasAny(['sourceCodeLink', 'clientId'])
+      );
+      allow delete: if isAdmin() || isServerKey(existing());
     }
 
     // 8. Financial Payments Ledger
     match /payments/{paymentId} {
-      allow read, create, update, delete: if true;
+      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow create: if isStaff() || isServerKey(incoming()) || isAuthenticated();
+      allow update, delete: if isStaff() || isServerKey(existing());
     }
 
     // 9. Refunds Records
     match /refunds/{refundId} {
-      allow read, create, update, delete: if true;
+      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow write: if isStaff() || isServerKey(incoming());
     }
 
     // 10. Maintenance Subscriptions / Contracts
     match /maintenanceSubscriptions/{subId} {
-      allow read, create, update, delete: if true;
+      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow write: if isStaff() || isServerKey(incoming());
     }
 
-    // 11. Inbound Public Contact Messages / Inquiries
+    // 11. Inbound Public Contact Messages / Inquiries (Buffer Exhaustion Protection)
     match /contactMessages/{msgId} {
-      allow read, create, update, delete: if true;
+      allow read: if isStaff() || isServerKey(resource.data);
+      allow create: if (incoming().message == null || incoming().message.size() < 10000) || isServerKey(incoming());
+      allow update, delete: if isStaff() || isServerKey(existing());
     }
 
     // 12. Portfolio Showcase
     match /portfolio/{portfolioId} {
       allow read: if true;
-      allow write: if isAdmin() || isServerKey(incoming()) || true;
+      allow write: if isAdmin() || isServerKey(incoming());
     }
 
     // 13. Customer Reviews & Feedback
     match /reviews/{reviewId} {
-      allow read, create, update, delete: if true;
+      allow read: if true;
+      allow create: if isAuthenticated() || isServerKey(incoming());
+      allow update, delete: if isStaff() || isServerKey(existing());
     }
 
     // 14. Blog Articles Collection
     match /blogs/{blogId} {
       allow read: if true;
-      allow write: if isAdmin() || isServerKey(incoming()) || true;
+      allow write: if isAdmin() || isServerKey(incoming());
     }
 
     // 15. Frequently Asked Questions / FAQ
     match /faq/{faqId} {
       allow read: if true;
-      allow write: if isAdmin() || isServerKey(incoming()) || true;
+      allow write: if isAdmin() || isServerKey(incoming());
     }
 
     // 16. Testimonials Collection
     match /testimonials/{testId} {
       allow read: if true;
-      allow write: if isAdmin() || isServerKey(incoming()) || true;
+      allow write: if isAdmin() || isServerKey(incoming());
     }
 
     // 17. Careers & Job Vacancies Collection
     match /careers/{jobId} {
       allow read: if true;
-      allow write: if isAdmin() || isServerKey(incoming()) || true;
+      allow write: if isAdmin() || isServerKey(incoming());
     }
 
     // 18. Inbound Job Applications Collection
     match /jobApplications/{appId} {
-      allow read, create, update, delete: if true;
+      allow read: if isStaff() || isServerKey(resource.data);
+      allow create: if true;
+      allow update, delete: if isStaff() || isServerKey(existing());
     }
 
     // 19. Demo Consultation Bookings Collection
     match /bookings/{bookingId} {
-      allow read, create, update, delete: if true;
+      allow read: if isStaff() || isOwner(resource.data.userId) || isUserEmail(resource.data.email) || isServerKey(resource.data) || true;
+      allow create: if isAuthenticated() || isServerKey(incoming());
+      allow update, delete: if isStaff() || isOwner(resource.data.userId) || isServerKey(existing());
     }
 
     // 20. System Notifications Collection
     match /notifications/{notifId} {
-      allow read, create, update, delete: if true;
+      allow read: if isStaff() || isOwner(resource.data.userId) || isUserEmail(resource.data.userEmail) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || true;
+      allow create: if isAuthenticated() || isServerKey(incoming());
+      allow update: if isStaff() || isOwner(resource.data.userId) || isUserEmail(resource.data.userEmail) || isServerKey(incoming());
+      allow delete: if isStaff() || isServerKey(existing());
     }
 
     // 21. Activity Logging Collection (Immutable Audit Logs)
     match /activityLogs/{logId} {
-      allow read: if isAdmin();
-      allow create: if isStaff() || isServerKey(incoming());
+      allow read: if isStaff() || isAdmin();
+      allow create: if isAuthenticated() || isServerKey(incoming());
       allow update, delete: if false; // Immutable: no edits or deletions permitted
     }
 
