@@ -4,6 +4,7 @@ import AnimatedButton from "./ui/animated-button";
 import { Service, Project, Booking, Order, BlogPost, FAQ, Testimonial, Inquiry, ActivityLog, PaymentMilestone, SEOSettings } from "../types";
 import AdminManagement from "./AdminManagement";
 import { generateInvoicePDF, generateRefundPDF } from "../utils/pdfGenerator";
+import { triggerEmail } from "../utils/emailService";
 import { db, handleFirestoreError, OperationType } from "../firebase/config";
 import { recordException } from "../firebase/crashlytics";
 import { onSnapshot, doc, collection, query, orderBy, updateDoc, deleteDoc, where, limit, startAfter, getCountFromServer, setDoc, addDoc, getDocs, getDoc, writeBatch } from "firebase/firestore";
@@ -846,59 +847,69 @@ export default function AdminDashboard({
     const activeAuthToken = token || sessionStorage.getItem("arcadia_admin_token") || localStorage.getItem("arcadia_admin_token");
     if (activeAuthToken) {
       fetchAdminData();
+    } else {
+      setIsAdminDataLoading(false);
     }
 
-      const unsubscribes = [
-        onSnapshot(query(collection(db, "orders"), limit(100)), (snapshot) => {
-          console.log("[Admin Orders Realtime] Received live Firestore orders count:", snapshot.size);
-          const liveOrders: Order[] = [];
-          snapshot.forEach((documentDoc) => {
-            const data = documentDoc.data();
-            const id = documentDoc.id || data.id || data.orderId;
-            const rawBudget = data.budget !== undefined ? data.budget : (data.total !== undefined ? data.total : (data.amount !== undefined ? data.amount : 0));
-            const parsedBudget = parseInt(String(rawBudget)) || 0;
-            const nameVal = data.name || data.customerName || data.clientName || "Client";
-            const emailVal = data.email || data.clientEmail || "";
-            const statusVal = data.status || data.orderStatus || "Pending";
-            const isPaidVal = data.isPaid || data.paymentStatus === "Paid" || false;
+    const timer = setTimeout(() => {
+      setIsAdminDataLoading(false);
+    }, 1500);
 
-            liveOrders.push({
-              id,
-              orderId: id,
-              name: nameVal,
-              customerName: nameVal,
-              email: emailVal,
-              phone: data.phone || data.contact || "",
-              company: data.company || "",
-              address: data.address || "Digital Online Order",
-              service: data.service || "Web Application",
-              items: data.items || [{ id: "item_1", name: data.service || "Digital Service", price: parsedBudget }],
-              subtotal: data.subtotal !== undefined ? data.subtotal : parsedBudget,
-              tax: data.tax || 0,
-              shipping: data.shipping || 0,
-              discount: data.discount || 0,
-              total: data.total !== undefined ? data.total : parsedBudget,
-              budget: String(parsedBudget),
-              paymentAmount: data.paymentAmount !== undefined ? data.paymentAmount : parsedBudget,
-              paymentMethod: data.paymentMethod || "Razorpay Gateway",
-              paymentStatus: data.paymentStatus || (isPaidVal ? "Paid" : "Pending"),
-              orderStatus: statusVal,
-              status: statusVal,
-              isPaid: isPaidVal,
-              deadline: data.deadline || "Flexible",
-              description: data.description || "",
-              fileUrl: data.fileUrl || "",
-              paymentScreenshot: data.paymentScreenshot || "",
-              milestones: data.milestones || [],
-              createdAt: data.createdAt || data.timestamp || new Date().toISOString(),
-              updatedAt: data.updatedAt || new Date().toISOString()
-            });
+    const unsubscribes = [
+      onSnapshot(query(collection(db, "orders"), limit(100)), (snapshot) => {
+        console.log("[Admin Orders Realtime] Received live Firestore orders count:", snapshot.size);
+        const liveOrders: Order[] = [];
+        snapshot.forEach((documentDoc) => {
+          const data = documentDoc.data();
+          const id = documentDoc.id || data.id || data.orderId;
+          const rawBudget = data.budget !== undefined ? data.budget : (data.total !== undefined ? data.total : (data.amount !== undefined ? data.amount : 0));
+          const parsedBudget = parseInt(String(rawBudget)) || 0;
+          const nameVal = data.name || data.customerName || data.clientName || "Client";
+          const emailVal = data.email || data.clientEmail || "";
+          const statusVal = data.status || data.orderStatus || "Pending";
+          const isPaidVal = data.isPaid || data.paymentStatus === "Paid" || false;
+
+          liveOrders.push({
+            id,
+            orderId: id,
+            name: nameVal,
+            customerName: nameVal,
+            email: emailVal,
+            phone: data.phone || data.contact || "",
+            company: data.company || "",
+            address: data.address || "Digital Online Order",
+            service: data.service || "Web Application",
+            items: data.items || [{ id: "item_1", name: data.service || "Digital Service", price: parsedBudget }],
+            subtotal: data.subtotal !== undefined ? data.subtotal : parsedBudget,
+            tax: data.tax || 0,
+            shipping: data.shipping || 0,
+            discount: data.discount || 0,
+            total: data.total !== undefined ? data.total : parsedBudget,
+            budget: String(parsedBudget),
+            paymentAmount: data.paymentAmount !== undefined ? data.paymentAmount : parsedBudget,
+            paymentMethod: data.paymentMethod || "Razorpay Gateway",
+            paymentStatus: data.paymentStatus || (isPaidVal ? "Paid" : "Pending"),
+            orderStatus: statusVal,
+            status: statusVal,
+            isPaid: isPaidVal,
+            deadline: data.deadline || "Flexible",
+            description: data.description || "",
+            fileUrl: data.fileUrl || "",
+            paymentScreenshot: data.paymentScreenshot || "",
+            milestones: data.milestones || [],
+            createdAt: data.createdAt || data.timestamp || new Date().toISOString(),
+            updatedAt: data.updatedAt || new Date().toISOString()
           });
+        });
 
-          setOrders(liveOrders.sort((a, b) => 
-            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-          ));
-        }, (err) => console.error("[Admin Orders Realtime Error]:", err)),
+        setOrders(liveOrders.sort((a, b) => 
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        ));
+        setIsAdminDataLoading(false);
+      }, (err) => {
+        console.error("[Admin Orders Realtime Error]:", err);
+        setIsAdminDataLoading(false);
+      }),
 
         onSnapshot(collection(db, "projects"), (snapshot) => {
           console.log("[Admin Projects Realtime] Received live Firestore projects count:", snapshot.size);
@@ -1074,6 +1085,7 @@ export default function AdminDashboard({
       ];
 
       return () => {
+        clearTimeout(timer);
         unsubscribes.forEach((unsub) => unsub());
       };
   }, [token]);
@@ -1506,6 +1518,34 @@ export default function AdminDashboard({
           `Your project #${orderId} status has been updated to '${status}'. Check your Client Hub for live updates.`,
           "status"
         );
+
+        try {
+          await triggerEmail("Project_Status_Update", {
+            to: targetOrder.email,
+            clientName: targetOrder.name || targetOrder.customerName || "Client",
+            projectName: targetOrder.service || "Software Project",
+            status
+          });
+        } catch (emailErr) {
+          console.warn("[Status Update Email Warning]:", emailErr);
+        }
+      }
+
+      try {
+        await addDoc(collection(db, "activityLogs"), {
+          id: "act_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+          timestamp: new Date().toISOString(),
+          userId: adminEmail || "Admin",
+          userEmail: adminEmail || "Admin",
+          role: role || "Admin",
+          action: "Order Status Updated",
+          collection: "orders",
+          documentId: orderId,
+          details: `Order #${orderId} status updated to '${status}'`,
+          server_key: "arcadia_secure_server_key_2026_futuristic_studio_token"
+        });
+      } catch (logErr) {
+        console.warn("[Activity Log Status Update Warning]:", logErr);
       }
 
       onShowToast?.("success", `Order #${orderId} status updated to ${status}`);

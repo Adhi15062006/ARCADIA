@@ -1,6 +1,14 @@
 import { jsPDF } from "jspdf";
-import * as fs from "fs";
-import * as path from "path";
+
+// Optional Node.js environment imports
+let fs: any = null;
+let path: any = null;
+if (typeof window === "undefined" && typeof process !== "undefined" && process.versions && process.versions.node) {
+  try {
+    fs = require("fs");
+    path = require("path");
+  } catch (e) {}
+}
 
 // Define Email Types and Event Names
 export type EmailType =
@@ -865,7 +873,7 @@ export async function triggerEmail(
     sentAt: new Date().toISOString()
   };
 
-  if (saveDBCallback) {
+  if (saveDBCallback && fs && path) {
     try {
       const mockEmailsPath = path.join(process.cwd(), "data", "mock_emails.json");
       let mockEmails: any[] = [];

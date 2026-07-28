@@ -32,7 +32,7 @@ import {
 import { generateInvoicePDF, generateRefundPDF } from "../utils/pdfGenerator";
 import { Order, Booking, Inquiry } from "../types";
 import { db, auth } from "../firebase/config";
-import { onSnapshot, doc, collection, setDoc } from "firebase/firestore";
+import { onSnapshot, doc, collection, setDoc, query, where } from "firebase/firestore";
 
 function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
@@ -499,171 +499,141 @@ export default function ClientDashboard({
   }, [token]);
 
   useEffect(() => {
-    if (!token || !userEmail) return;
+    if (!token || !userEmail) {
+      setIsClientDataLoading(false);
+      return;
+    }
 
     const cleanEmail = userEmail.toLowerCase().trim();
+    const currentUid = auth.currentUser?.uid;
+
+    const processOrdersSnapshot = (snapshot: any) => {
+      const ordersFromCol: any[] = [];
+      snapshot.forEach((docSnap: any) => {
+        const item = docSnap.data();
+        const docId = docSnap.id || item.id || item.orderId;
+        const matchEmail = item.email?.toLowerCase().trim() === cleanEmail || 
+                           item.clientEmail?.toLowerCase().trim() === cleanEmail || 
+                           item.userEmail?.toLowerCase().trim() === cleanEmail;
+        const matchUid = currentUid && (item.userId === currentUid || item.customerId === currentUid || item.clientId === currentUid);
+        if (matchEmail || matchUid) {
+          ordersFromCol.push({ id: docId, orderId: docId, ...item });
+        }
+      });
+      setClientOrders(prev => {
+        const map = new Map<string, any>();
+        prev.forEach(o => map.set(o.id || o.orderId, o));
+        ordersFromCol.forEach(o => map.set(o.id || o.orderId, { ...map.get(o.id || o.orderId), ...o }));
+        return Array.from(map.values()).sort((a: any, b: any) =>
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        );
+      });
+      setIsClientDataLoading(false);
+    };
+
+    const processProjectsSnapshot = (snapshot: any) => {
+      const projectsFromCol: any[] = [];
+      snapshot.forEach((docSnap: any) => {
+        const item = docSnap.data();
+        const docId = docSnap.id || item.id || item.projectId || item.orderId;
+        const matchEmail = item.clientEmail?.toLowerCase().trim() === cleanEmail || item.email?.toLowerCase().trim() === cleanEmail;
+        const matchUid = currentUid && (item.clientId === currentUid || item.userId === currentUid || item.customerId === currentUid);
+        if (matchEmail || matchUid) {
+          projectsFromCol.push({ id: docId, projectId: docId, ...item });
+        }
+      });
+      if (projectsFromCol.length > 0) {
+        setClientOrders(prev => {
+          const map = new Map();
+          prev.forEach((o: any) => map.set(o.id || o.orderId, o));
+          projectsFromCol.forEach((p: any) => {
+            const existing = map.get(p.id);
+            map.set(p.id, {
+              ...(existing || {}),
+              id: p.id,
+              orderId: p.id,
+              service: p.service || p.title || existing?.service || "Web Application",
+              status: p.status || existing?.status || "In Progress",
+              orderStatus: p.status || existing?.orderStatus || "In Progress",
+              progress: p.progress !== undefined ? p.progress : (existing?.progress || 0),
+              assignedStaff: p.assignedStaff || existing?.assignedStaff || "Assigned Developer",
+              createdAt: p.createdAt || existing?.createdAt || new Date().toISOString()
+            });
+          });
+          return Array.from(map.values()).sort((a: any, b: any) =>
+            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+          );
+        });
+      }
+      setIsClientDataLoading(false);
+    };
+
+    const qOrdersEmail = query(collection(db, "orders"), where("email", "==", cleanEmail));
+    const qOrdersClientEmail = query(collection(db, "orders"), where("clientEmail", "==", cleanEmail));
+    const qProjectsClientEmail = query(collection(db, "projects"), where("clientEmail", "==", cleanEmail));
+    const qBookingsEmail = query(collection(db, "bookings"), where("email", "==", cleanEmail));
+    const qInquiriesEmail = query(collection(db, "contactMessages"), where("email", "==", cleanEmail));
+    const qNotifsUserEmail = query(collection(db, "notifications"), where("userEmail", "==", cleanEmail));
+    const qMaintClientEmail = query(collection(db, "maintenanceSubscriptions"), where("clientEmail", "==", cleanEmail));
 
     const unsubscribes = [
-      onSnapshot(collection(db, "orders"), (snapshot) => {
-        const ordersFromCol: any[] = [];
-        const currentUid = auth.currentUser?.uid;
-        snapshot.forEach((docSnap) => {
-          const item = docSnap.data();
-          const docId = docSnap.id || item.id || item.orderId;
-          const matchEmail = item.email?.toLowerCase().trim() === cleanEmail || item.clientEmail?.toLowerCase().trim() === cleanEmail || item.userEmail?.toLowerCase().trim() === cleanEmail;
-          const matchUid = currentUid && (item.userId === currentUid || item.customerId === currentUid || item.clientId === currentUid);
-          if (matchEmail || matchUid) {
-            ordersFromCol.push({ id: docId, orderId: docId, ...item });
-          }
-        });
-        setClientOrders(ordersFromCol.sort((a: any, b: any) =>
-          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-        ));
+      onSnapshot(qOrdersEmail, processOrdersSnapshot, (err) => {
+        console.warn("[Client Orders Listener Warning]:", err);
         setIsClientDataLoading(false);
-      }, (err) => console.error("Error listening to orders collection in client dashboard:", err)),
+      }),
 
-      onSnapshot(collection(db, "projects"), (snapshot) => {
-        const projectsFromCol: any[] = [];
-        const currentUid = auth.currentUser?.uid;
-        snapshot.forEach((docSnap) => {
-          const item = docSnap.data();
-          const docId = docSnap.id || item.id || item.projectId || item.orderId;
-          const matchEmail = item.clientEmail?.toLowerCase().trim() === cleanEmail || item.email?.toLowerCase().trim() === cleanEmail;
-          const matchUid = currentUid && (item.clientId === currentUid || item.userId === currentUid || item.customerId === currentUid);
-          if (matchEmail || matchUid) {
-            projectsFromCol.push({ id: docId, projectId: docId, ...item });
-          }
-        });
-        if (projectsFromCol.length > 0) {
-          // Merge active project updates into orders if order doesn't exist separately
-          setClientOrders(prev => {
-            const map = new Map();
-            prev.forEach((o: any) => map.set(o.id || o.orderId, o));
-            projectsFromCol.forEach((p: any) => {
-              if (!map.has(p.id)) {
-                map.set(p.id, {
-                  id: p.id,
-                  orderId: p.id,
-                  service: p.service || p.title || "Web Application",
-                  status: p.status || "In Progress",
-                  orderStatus: p.status || "In Progress",
-                  progress: p.progress || 0,
-                  assignedStaff: p.assignedStaff || "Assigned Developer",
-                  createdAt: p.createdAt || new Date().toISOString()
-                });
-              }
-            });
-            return Array.from(map.values()).sort((a: any, b: any) =>
-              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-            );
-          });
-        }
-      }, (err) => console.error("Error listening to projects collection in client dashboard:", err)),
+      onSnapshot(qOrdersClientEmail, processOrdersSnapshot, (err) => {
+        console.warn("[Client Orders (clientEmail) Listener Warning]:", err);
+        setIsClientDataLoading(false);
+      }),
 
-      onSnapshot(doc(db, "arcadia_system_db", "orders.json"), (snapshot) => {
-        const data = snapshot.data();
-        if (data && Array.isArray(data.data)) {
-          const filtered = data.data.filter((o: any) => o.email?.toLowerCase().trim() === cleanEmail || o.clientEmail?.toLowerCase().trim() === cleanEmail);
-          setClientOrders(prev => {
-            if (prev.length === 0) return filtered;
-            const map = new Map();
-            filtered.forEach((o: any) => map.set(o.id || o.orderId, o));
-            prev.forEach((o: any) => map.set(o.id || o.orderId, o));
-            return Array.from(map.values()).sort((a: any, b: any) =>
-              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-            );
-          });
-          setIsClientDataLoading(false);
-        }
-      }, (err) => console.error("Error listening to client orders fallback:", err)),
+      onSnapshot(qProjectsClientEmail, processProjectsSnapshot, (err) => {
+        console.warn("[Client Projects Listener Warning]:", err);
+        setIsClientDataLoading(false);
+      }),
 
-      onSnapshot(collection(db, "bookings"), (snapshot) => {
+      onSnapshot(qBookingsEmail, (snapshot) => {
         const list: any[] = [];
-        const currentUid = auth.currentUser?.uid;
         snapshot.forEach((docSnap) => {
-          const item = docSnap.data();
-          const matchEmail = item.email?.toLowerCase().trim() === cleanEmail;
-          const matchUid = currentUid && (item.userId === currentUid || item.customerId === currentUid);
-          if (matchEmail || matchUid) {
-            list.push({ id: docSnap.id, ...item });
-          }
+          list.push({ id: docSnap.id, ...docSnap.data() });
         });
         setClientBookings(list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()));
-      }, (err) => console.error("Error listening to bookings collection in client dashboard:", err)),
+      }, (err) => console.warn("[Client Bookings Listener Warning]:", err)),
 
-      onSnapshot(doc(db, "arcadia_system_db", "bookings.json"), (snapshot) => {
-        const data = snapshot.data();
-        if (data && Array.isArray(data.data)) {
-          const filtered = data.data.filter((b: any) => b.email?.toLowerCase().trim() === cleanEmail);
-          setClientBookings(prev => prev.length === 0 ? filtered : prev);
-        }
-      }, (err) => console.error("Error listening to client bookings fallback:", err)),
-
-      onSnapshot(collection(db, "contactMessages"), (snapshot) => {
+      onSnapshot(qInquiriesEmail, (snapshot) => {
         const list: any[] = [];
-        const currentUid = auth.currentUser?.uid;
         snapshot.forEach((docSnap) => {
-          const item = docSnap.data();
-          const matchEmail = item.email?.toLowerCase().trim() === cleanEmail;
-          const matchUid = currentUid && (item.userId === currentUid || item.customerId === currentUid);
-          if (matchEmail || matchUid) {
-            list.push({ id: docSnap.id, ...item });
-          }
+          list.push({ id: docSnap.id, ...docSnap.data() });
         });
         setClientInquiries(list);
-      }, (err) => console.error("Error listening to contactMessages collection in client dashboard:", err)),
+      }, (err) => console.warn("[Client Inquiries Listener Warning]:", err)),
 
-      onSnapshot(doc(db, "arcadia_system_db", "inquiries.json"), (snapshot) => {
-        const data = snapshot.data();
-        if (data && Array.isArray(data.data)) {
-          const filtered = data.data.filter((i: any) => i.email?.toLowerCase().trim() === cleanEmail);
-          setClientInquiries(prev => prev.length === 0 ? filtered : prev);
-        }
-      }, (err) => console.error("Error listening to client inquiries fallback:", err)),
-
-      onSnapshot(collection(db, "notifications"), (snapshot) => {
+      onSnapshot(qNotifsUserEmail, (snapshot) => {
         const list: any[] = [];
-        const currentUid = auth.currentUser?.uid;
         snapshot.forEach((docSnap) => {
-          const item = docSnap.data();
-          const matchEmail = item.userEmail?.toLowerCase().trim() === cleanEmail || item.clientEmail?.toLowerCase().trim() === cleanEmail;
-          const matchUid = currentUid && (item.userId === currentUid || item.customerId === currentUid);
-          if (matchEmail || matchUid) {
-            list.push({ id: docSnap.id, ...item });
-          }
+          list.push({ id: docSnap.id, ...docSnap.data() });
         });
         const sorted = list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         setNotifications(sorted);
         setUnreadNotificationsCount(sorted.filter((notif: any) => !notif.read).length);
-      }, (err) => console.error("Error listening to notifications collection in client dashboard:", err)),
+      }, (err) => console.warn("[Client Notifications Listener Warning]:", err)),
 
-      onSnapshot(doc(db, "arcadia_system_db", "notifications.json"), (snapshot) => {
-        const data = snapshot.data();
-        if (data && Array.isArray(data.data)) {
-          const filtered = data.data.filter((n: any) => n.userEmail?.toLowerCase().trim() === cleanEmail);
-          setNotifications(prev => {
-            if (prev.length === 0) {
-              setUnreadNotificationsCount(filtered.filter((notif: any) => !notif.read).length);
-              return filtered;
-            }
-            return prev;
-          });
-        }
-      }, (err) => console.error("Error listening to client notifications fallback:", err)),
-
-      onSnapshot(collection(db, "maintenanceSubscriptions"), (snapshot) => {
+      onSnapshot(qMaintClientEmail, (snapshot) => {
         const list: any[] = [];
         snapshot.forEach((docSnap) => {
-          const item = docSnap.data();
-          if (item.clientEmail?.toLowerCase().trim() === cleanEmail || item.clientId === cleanEmail) {
-            list.push({ id: docSnap.id, ...item });
-          }
+          list.push({ id: docSnap.id, ...docSnap.data() });
         });
         if (list.length > 0) setMaintenanceSubs(list);
-      }, (err) => console.error("Error listening to maintenanceSubscriptions collection in client dashboard:", err))
+      }, (err) => console.warn("[Client Maintenance Listener Warning]:", err))
     ];
 
+    // Fallback timer to guarantee loading state completes even on network delays
+    const timer = setTimeout(() => {
+      setIsClientDataLoading(false);
+    }, 1500);
+
     return () => {
+      clearTimeout(timer);
       unsubscribes.forEach((unsub) => unsub());
     };
   }, [token, userEmail]);

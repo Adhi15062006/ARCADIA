@@ -25,7 +25,8 @@ import {
 import { generateInvoicePDF } from "../utils/pdfGenerator";
 import { Order } from "../types";
 import { auth, db } from "../firebase/config";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, addDoc, collection } from "firebase/firestore";
+import { triggerEmail } from "../utils/emailService";
 
 interface ContactFormsProps {
   prefilledService: string;
@@ -354,7 +355,30 @@ export default function ContactForms({
       await setDoc(projectDocRef, projectPayload).catch(pErr => console.warn("[Auto-Project Creation Warning]:", pErr));
       console.log(`[Firestore Project Auto-Create Success] Idempotent project created: projects/${generatedOrderId}`);
 
-      // 3. Auto-create real-time welcome notification in 'notifications' collection
+      // 3. Auto-create milestone payment records in 'payments' collection
+      try {
+        for (const m of defaultMilestones) {
+          const payDocId = `pay_${generatedOrderId}_${m.id}`;
+          await setDoc(doc(db, "payments", payDocId), {
+            id: payDocId,
+            orderId: generatedOrderId,
+            milestoneId: m.id,
+            milestoneLabel: m.label,
+            clientId: currentUid,
+            clientEmail: orderData.email,
+            customerName: orderData.name,
+            amount: m.amount,
+            status: m.status,
+            createdAt: now,
+            updatedAt: now,
+            server_key: "arcadia_secure_server_key_2026_futuristic_studio_token"
+          });
+        }
+      } catch (payErr) {
+        console.warn("[Payment Milestones Pipeline Warning]:", payErr);
+      }
+
+      // 4. Auto-create real-time welcome notification in 'notifications' collection
       try {
         const notifDocRef = doc(db, "notifications", "notif_" + generatedOrderId);
         await setDoc(notifDocRef, {
@@ -370,6 +394,38 @@ export default function ContactForms({
         });
       } catch (notifErr) {
         console.warn("[Notification Pipeline Warning]:", notifErr);
+      }
+
+      // 5. Auto-create immutable activity log in 'activityLogs' collection
+      try {
+        await addDoc(collection(db, "activityLogs"), {
+          id: "act_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+          timestamp: now,
+          userId: currentUid,
+          userEmail: orderData.email,
+          role: "Client",
+          action: "Order Created",
+          collection: "orders",
+          documentId: generatedOrderId,
+          details: `Order #${generatedOrderId} created for '${orderData.service}' with budget INR ${budgetNum}`,
+          server_key: "arcadia_secure_server_key_2026_futuristic_studio_token"
+        });
+      } catch (actErr) {
+        console.warn("[Activity Log Pipeline Warning]:", actErr);
+      }
+
+      // 6. Trigger Order Confirmation Email
+      try {
+        await triggerEmail("Payment_Submitted", {
+          to: orderData.email,
+          clientName: orderData.name,
+          projectName: orderData.service,
+          amount: budgetNum,
+          invoiceNumber: generatedOrderId,
+          milestoneLabel: "Kickoff Booking Deposit (30%)"
+        });
+      } catch (emailErr) {
+        console.warn("[Email Dispatch Warning]:", emailErr);
       }
 
       setPlacedOrder(cleanPayload);
