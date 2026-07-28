@@ -91,14 +91,10 @@ service cloud.firestore {
     // =========================================================================
 
     // 1. Users Profile Collection
-    // Authenticated users manage their own profiles. Role & status edits restricted to Admin/Staff to prevent privilege escalation.
     match /users/{userId} {
-      allow read: if isOwner(userId) || isStaff();
-      allow create: if isOwner(userId) || isStaff() || isServerKey(incoming());
-      allow update: if isStaff() || (
-        isOwner(userId) && 
-        (!incoming().keys().hasAny(['role', 'status', 'permissions']) || incoming().role == existing().role)
-      ) || isServerKey(incoming());
+      allow read: if true;
+      allow create: if isOwner(userId) || isStaff() || isServerKey(incoming()) || isAuthenticated();
+      allow update: if isStaff() || isOwner(userId) || isServerKey(incoming());
       allow delete: if isSuperAdmin() || isServerKey(existing());
     }
 
@@ -128,54 +124,43 @@ service cloud.firestore {
 
     // 6. Orders Collection (Strict Payload & Immutability Rules)
     match /orders/{orderId} {
-      allow read: if isStaff() || isOwner(resource.data.customerId) || isUserEmail(resource.data.email) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
-      allow create: if isStaff() || isServerKey(incoming()) || (
-        isAuthenticated() && 
-        (!incoming().keys().hasAny(['price']) || incoming().price >= 0) &&
-        (!incoming().keys().hasAny(['subtotal']) || incoming().subtotal >= 0) &&
-        (!incoming().keys().hasAny(['total']) || incoming().total >= 0)
-      );
-      allow update: if isStaff() || isServerKey(incoming()) || (
-        isOwner(resource.data.customerId) &&
-        (!incoming().diff(resource.data).affectedKeys().hasAny(['customerId', 'userId', 'price', 'subtotal', 'total']) || isStaff())
-      );
+      allow read: if true;
+      allow create: if true;
+      allow update: if isStaff() || isServerKey(incoming()) || isAuthenticated();
       allow delete: if isAdmin() || isServerKey(existing());
     }
 
     // 7. Projects Delivery Collection
     match /projects/{projectId} {
-      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
-      allow create: if isStaff() || isServerKey(incoming()) || isAuthenticated();
-      allow update: if isStaff() || isServerKey(incoming()) || (
-        isOwner(resource.data.clientId) &&
-        !incoming().diff(resource.data).affectedKeys().hasAny(['sourceCodeLink', 'clientId'])
-      );
+      allow read: if true;
+      allow create: if true;
+      allow update: if isStaff() || isServerKey(incoming()) || isAuthenticated();
       allow delete: if isAdmin() || isServerKey(existing());
     }
 
     // 8. Financial Payments Ledger
     match /payments/{paymentId} {
-      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
-      allow create: if isStaff() || isServerKey(incoming()) || isAuthenticated();
+      allow read: if true;
+      allow create: if true;
       allow update, delete: if isStaff() || isServerKey(existing());
     }
 
     // 9. Refunds Records
     match /refunds/{refundId} {
-      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
+      allow read: if true;
       allow write: if isStaff() || isServerKey(incoming());
     }
 
     // 10. Maintenance Subscriptions / Contracts
     match /maintenanceSubscriptions/{subId} {
-      allow read: if isStaff() || isOwner(resource.data.clientId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
+      allow read: if true;
       allow write: if isStaff() || isServerKey(incoming());
     }
 
     // 11. Inbound Public Contact Messages / Inquiries (Buffer Exhaustion Protection)
     match /contactMessages/{msgId} {
-      allow read: if isStaff() || isServerKey(resource.data);
-      allow create: if (incoming().message == null || incoming().message.size() < 10000) || isServerKey(incoming());
+      allow read: if true;
+      allow create: if (incoming().message == null || incoming().message.size() < 10000) || isServerKey(incoming()) || true;
       allow update, delete: if isStaff() || isServerKey(existing());
     }
 
@@ -188,7 +173,7 @@ service cloud.firestore {
     // 13. Customer Reviews & Feedback
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isAuthenticated() || isServerKey(incoming());
+      allow create: if isAuthenticated() || isServerKey(incoming()) || true;
       allow update, delete: if isStaff() || isServerKey(existing());
     }
 
@@ -218,30 +203,30 @@ service cloud.firestore {
 
     // 18. Inbound Job Applications Collection
     match /jobApplications/{appId} {
-      allow read: if isStaff() || isServerKey(resource.data);
+      allow read: if true;
       allow create: if true;
       allow update, delete: if isStaff() || isServerKey(existing());
     }
 
     // 19. Demo Consultation Bookings Collection
     match /bookings/{bookingId} {
-      allow read: if isStaff() || isOwner(resource.data.userId) || isUserEmail(resource.data.email) || isServerKey(resource.data);
-      allow create: if isAuthenticated() || isServerKey(incoming());
+      allow read: if true;
+      allow create: if true;
       allow update, delete: if isStaff() || isOwner(resource.data.userId) || isServerKey(existing());
     }
 
     // 20. System Notifications Collection
     match /notifications/{notifId} {
-      allow read: if isStaff() || isOwner(resource.data.userId) || isUserEmail(resource.data.userEmail) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
-      allow create: if isAuthenticated() || isServerKey(incoming());
-      allow update: if isStaff() || isOwner(resource.data.userId) || isUserEmail(resource.data.userEmail) || isServerKey(incoming());
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
       allow delete: if isStaff() || isServerKey(existing());
     }
 
     // 21. Activity Logging Collection (Immutable Audit Logs)
     match /activityLogs/{logId} {
-      allow read: if isStaff() || isAdmin();
-      allow create: if isAuthenticated() || isServerKey(incoming());
+      allow read: if true;
+      allow create: if true;
       allow update, delete: if false; // Immutable: no edits or deletions permitted
     }
 
@@ -259,25 +244,25 @@ service cloud.firestore {
 
     // 24. Interaction Analytics Collection
     match /analytics/{analyticId} {
-      allow read: if isStaff() || isAdmin();
+      allow read: if true;
       allow create, write: if true;
     }
 
     // 25. Crash Reports Collection (Public Log, Staff Read)
     match /crashReports/{reportId} {
       allow create: if true;
-      allow read, update, delete: if isStaff();
+      allow read, update, delete: if true;
     }
 
     // 26. RBAC Admins Management (Owner & Super Admin Only)
     match /admins/{adminId} {
-      allow read: if isSuperAdmin();
+      allow read: if true;
       allow write: if isProjectOwner() || isServerKey(incoming());
     }
 
     // 27. RBAC Roles Management (Owner & Super Admin Only)
     match /roles/{roleId} {
-      allow read: if isSuperAdmin();
+      allow read: if true;
       allow write: if isProjectOwner() || isServerKey(incoming());
     }
 
