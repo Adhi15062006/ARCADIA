@@ -200,10 +200,39 @@ export default function ContactForms({
       const data = await res.json();
       const finalId = data.id || bookingId;
 
-      // Directly write booking to Firestore bookings collection
+      // Directly write booking to Firestore bookings & demoBookings collections
       try {
         const bookingDocRef = doc(db, "bookings", finalId);
-        await setDoc(bookingDocRef, { ...payload, id: finalId, bookingId: finalId });
+        const demoDocRef = doc(db, "demoBookings", finalId);
+        const bPayload = { ...payload, id: finalId, bookingId: finalId };
+        await setDoc(bookingDocRef, bPayload, { merge: true });
+        await setDoc(demoDocRef, bPayload, { merge: true }).catch(() => {});
+        
+        // Auto-create admin notification
+        await setDoc(doc(db, "notifications", "notif_booking_" + finalId), {
+          id: "notif_booking_" + finalId,
+          userId: payload.email,
+          userEmail: payload.email,
+          clientEmail: payload.email,
+          title: "New Demo Consultation Booked",
+          message: `Demo booking request received from ${payload.name} (${payload.email}) for ${payload.service || 'Consultation'} on ${payload.date} at ${payload.time}.`,
+          type: "booking",
+          read: false,
+          createdAt: now
+        }).catch(() => {});
+
+        // Log to activity logs
+        await addDoc(collection(db, "activityLogs"), {
+          id: "act_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+          timestamp: now,
+          userEmail: payload.email,
+          role: "Client",
+          action: "Demo Booking Created",
+          collection: "bookings",
+          documentId: finalId,
+          details: `Demo consultation booked by ${payload.name} (${payload.email}) for ${payload.date} ${payload.time}`
+        }).catch(() => {});
+
         console.log("[Booking Audit] Direct client Firestore setDoc succeeded for ID:", finalId);
       } catch (fsErr: any) {
         console.warn("[Booking Audit] Direct client setDoc write deferred:", fsErr.message || fsErr);

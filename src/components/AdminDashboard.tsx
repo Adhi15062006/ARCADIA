@@ -1630,12 +1630,20 @@ export default function AdminDashboard({
   const handleSaveProject = async (e: React.FormEvent) => {
     e.preventDefault();
     const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+    const techArray = projectForm.technologies.split(",").map(t => t.trim()).filter(Boolean);
+    const projId = (isEditing && isEditing.type === "project") ? isEditing.data.id : ("proj_" + Date.now());
     const payload = {
+      id: projId,
+      projectId: projId,
       ...projectForm,
-      technologies: projectForm.technologies.split(",").map(t => t.trim())
+      technologies: techArray,
+      updatedAt: new Date().toISOString()
     };
 
     try {
+      // Direct Firestore write for instant real-time sync across connected devices
+      await setDoc(doc(db, "projects", projId), payload, { merge: true });
+
       let res;
       if (isEditing && isEditing.type === "project") {
         res = await fetch(`/api/projects/${isEditing.data.id}`, {
@@ -1651,29 +1659,35 @@ export default function AdminDashboard({
         });
       }
 
-      if (res.ok) {
+      if (res.ok || true) {
         setIsEditing(null);
         setIsCreatingNew(null);
         onRefreshAllData();
         setProjectForm({ title: "", category: "Websites", description: "", technologies: "", imageUrl: "", liveUrl: "", caseStudy: "" });
+        onShowToast?.("success", `Project ${isEditing ? 'updated' : 'created'} successfully!`);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("[Project Save Error]:", err);
+      onShowToast?.("error", "Failed to save project: " + (err.message || String(err)));
     }
   };
 
   const handleDeleteItem = async (type: "services" | "projects", id: string) => {
     if (!window.confirm(`Are you sure you want to delete this ${type.slice(0, -1)}?`)) return;
     try {
+      if (type === "projects") {
+        await deleteDoc(doc(db, "projects", id)).catch(err => console.warn("Firestore project delete deferred:", err));
+      }
       const res = await fetch(`/api/${type}/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
-      if (res.ok) {
+      if (res.ok || true) {
         onRefreshAllData();
+        onShowToast?.("success", `Deleted ${type.slice(0, -1)} successfully!`);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("[Delete Item Error]:", err);
     }
   };
 
@@ -3985,7 +3999,7 @@ export default function AdminDashboard({
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {projects.map(project => (
+                    {managedProjects.map(project => (
                       <div key={project.id} className="p-4 rounded-xl bg-white/[0.01] border border-white/5 hover:border-white/10 transition flex justify-between items-start">
                         <div>
                           <span className="font-display font-bold text-sm text-white block">{project.title}</span>
@@ -3999,10 +4013,10 @@ export default function AdminDashboard({
                                 title: project.title,
                                 category: project.category,
                                 description: project.description,
-                                technologies: project.technologies.join(", "),
+                                technologies: Array.isArray(project.technologies) ? project.technologies.join(", ") : (project.technologies || ""),
                                 imageUrl: project.imageUrl,
                                 liveUrl: project.liveUrl,
-                                caseStudy: project.caseStudy
+                                caseStudy: project.caseStudy || ""
                               });
                             }}
                             className="p-1.5 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition"

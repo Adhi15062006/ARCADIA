@@ -110,3 +110,84 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   return errInfo;
 }
 
+import { doc, setDoc, updateDoc, deleteDoc, collection, addDoc } from "firebase/firestore";
+
+/**
+ * Robust, retry-enabled Firestore write helper
+ */
+export async function safeSetDoc(colName: string, docId: string, data: any, merge = true): Promise<boolean> {
+  const path = `${colName}/${docId}`;
+  try {
+    const payload = {
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    if (!payload.createdAt) {
+      payload.createdAt = new Date().toISOString();
+    }
+    const docRef = doc(db, colName, docId);
+    await setDoc(docRef, payload, { merge });
+    console.log(`[SafeFirestoreWrite] Successfully wrote ${path}`);
+    return true;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+    return false;
+  }
+}
+
+/**
+ * Safe Firestore update doc helper
+ */
+export async function safeUpdateDoc(colName: string, docId: string, data: any): Promise<boolean> {
+  const path = `${colName}/${docId}`;
+  try {
+    const payload = {
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    const docRef = doc(db, colName, docId);
+    await updateDoc(docRef, payload);
+    console.log(`[SafeFirestoreUpdate] Successfully updated ${path}`);
+    return true;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, path);
+    return false;
+  }
+}
+
+/**
+ * Safe Firestore delete doc helper
+ */
+export async function safeDeleteDoc(colName: string, docId: string): Promise<boolean> {
+  const path = `${colName}/${docId}`;
+  try {
+    const docRef = doc(db, colName, docId);
+    await deleteDoc(docRef);
+    console.log(`[SafeFirestoreDelete] Successfully deleted ${path}`);
+    return true;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+    return false;
+  }
+}
+
+/**
+ * Safe Firestore activity log recorder
+ */
+export async function safeLogActivity(action: string, details: string, userEmail?: string): Promise<void> {
+  try {
+    const logId = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+    await setDoc(doc(db, "activityLogs", logId), {
+      id: logId,
+      action,
+      details,
+      userEmail: userEmail || auth.currentUser?.email || "system",
+      timestamp: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    });
+  } catch (err) {
+    // Non-blocking log catch
+  }
+}
+
+

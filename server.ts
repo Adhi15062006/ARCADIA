@@ -545,6 +545,7 @@ function saveDB<T>(filename: string, data: T) {
   const collectionMap: Record<string, string> = {
     "orders.json": "orders",
     "bookings.json": "bookings",
+    "demo_bookings.json": "demoBookings",
     "services.json": "services",
     "projects.json": "projects",
     "blogs.json": "blogs",
@@ -556,6 +557,11 @@ function saveDB<T>(filename: string, data: T) {
     "notifications.json": "notifications",
     "users.json": "users",
     "payments.json": "payments",
+    "invoices.json": "invoices",
+    "revenue.json": "revenue",
+    "dashboard.json": "dashboard",
+    "messages.json": "messages",
+    "activity_logs.json": "activityLogs",
     "refunds.json": "refunds",
     "maintenance_subscriptions.json": "maintenanceSubscriptions",
     "seo_settings.json": "seoSettings"
