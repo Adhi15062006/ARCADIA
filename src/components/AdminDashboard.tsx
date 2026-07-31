@@ -6,6 +6,7 @@ import AdminManagement from "./AdminManagement";
 import { generateInvoicePDF, generateRefundPDF } from "../utils/pdfGenerator";
 import { triggerEmail } from "../utils/emailService";
 import { db, handleFirestoreError, OperationType } from "../firebase/config";
+import { useAuth } from "../context/AuthContext";
 import { recordException } from "../firebase/crashlytics";
 import { onSnapshot, doc, collection, query, orderBy, updateDoc, deleteDoc, where, limit, startAfter, getCountFromServer, setDoc, addDoc, getDocs, getDoc, writeBatch } from "firebase/firestore";
 import { 
@@ -116,6 +117,7 @@ export default function AdminDashboard({
   setIsAdminLoggedIn,
   onShowToast
 }: AdminDashboardProps) {
+  const { user } = useAuth();
   // Auth state
   const [token, setToken] = useState<string | null>(sessionStorage.getItem("arcadia_admin_token") || localStorage.getItem("arcadia_admin_token"));
   const [role, setRole] = useState<string | null>(sessionStorage.getItem("arcadia_admin_role") || localStorage.getItem("arcadia_admin_role"));
@@ -625,9 +627,6 @@ export default function AdminDashboard({
         updatedAt: now
       };
 
-      console.log(`[Admin Firestore Write] Updating order #${orderId} status to Payment Pending...`);
-      await setDoc(doc(db, "orders", orderId), updatedOrderData, { merge: true });
-
       const projectPayload = {
         id: orderId,
         projectId: orderId,
@@ -643,20 +642,64 @@ export default function AdminDashboard({
         updatedAt: now
       };
 
-      await setDoc(doc(db, "projects", orderId), projectPayload, { merge: true });
-      console.log(`[Admin Firestore Write] Auto-created/updated project #${orderId} to Payment Pending.`);
+      const notifPayload = {
+        id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+        userId: targetOrder?.customerId || targetOrder?.email || "Client",
+        userEmail: targetOrder?.email || "",
+        clientEmail: targetOrder?.email || "",
+        title: "Project Approved - Action Required",
+        message: `Your project order #${orderId} has been approved by Arcadia architecture team. Milestone 1 payment link is available in your Client Hub.`,
+        type: "order",
+        read: false,
+        createdAt: now
+      };
+
+      const logPayload = {
+        id: "act_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+        timestamp: now,
+        userId: adminEmail || "Admin",
+        userEmail: adminEmail || "Admin",
+        role: role || "Admin",
+        action: "Order Approved",
+        collection: "orders",
+        documentId: orderId,
+        details: `Order #${orderId} approved and payment requested`,
+        server_key: "arcadia_secure_server_key_2026_futuristic_studio_token"
+      };
+
+      console.log(`[Admin Firestore Write] Executing batch write for order approval #${orderId}...`);
+      
+      const batch = writeBatch(db);
+      
+      const orderRef = doc(db, "orders", orderId);
+      batch.set(orderRef, updatedOrderData, { merge: true });
+      
+      const projectRef = doc(db, "projects", orderId);
+      batch.set(projectRef, projectPayload, { merge: true });
+      
+      const notifRef = doc(collection(db, "notifications"));
+      batch.set(notifRef, notifPayload);
+      
+      const logRef = doc(collection(db, "activityLogs"));
+      batch.set(logRef, logPayload);
+      
+      await batch.commit();
+      console.log(`[Admin Firestore Write] Batch commit completed successfully for order #${orderId}.`);
 
       if (targetOrder?.email) {
-        await createClientNotification(
-          targetOrder.customerId || targetOrder.email,
-          targetOrder.email,
-          "Project Approved - Action Required",
-          `Your project order #${orderId} has been approved by Arcadia architecture team. Milestone 1 payment link is available in your Client Hub.`,
-          "order"
-        );
+        try {
+          await triggerEmail("Project_Status_Update", {
+            to: targetOrder.email,
+            clientName: targetOrder.name || targetOrder.customerName || "Client",
+            projectName: targetOrder.service || "Web Application",
+            status: "Approved"
+          }).catch(emailErr => console.warn("[Order Approved Email Warning]:", emailErr));
+        } catch (emailErr) {
+          console.warn("[Order Approved Email Error]:", emailErr);
+        }
       }
 
-      onShowToast?.("success", "Project approved! First milestone request and client notification successfully dispatched.");
+      onShowToast?.("success", "Project approved! First milestone request, logs, and client notification successfully dispatched.");
       fetchAdminData();
     } catch (err: any) {
       console.error("[Approve Order Firestore Write Error]:", err);
@@ -854,6 +897,12 @@ export default function AdminDashboard({
     const timer = setTimeout(() => {
       setIsAdminDataLoading(false);
     }, 1500);
+
+    if (!user) {
+      return () => {
+        clearTimeout(timer);
+      };
+    }
 
     const unsubscribes = [
       onSnapshot(query(collection(db, "orders"), limit(100)), (snapshot) => {
@@ -1088,7 +1137,7 @@ export default function AdminDashboard({
         clearTimeout(timer);
         unsubscribes.forEach((unsub) => unsub());
       };
-  }, [token]);
+  }, [token, user]);
 
   // Dedicated Crashlytics Real-Time Query with Server-Side Pagination and Field Filtering
   const fetchCrashMetrics = async () => {
@@ -1109,7 +1158,7 @@ export default function AdminDashboard({
   };
 
   useEffect(() => {
-    if (token) {
+    if (token && user) {
       setLoadingCrashes(true);
       setLoadingCrashesError(null);
 
@@ -1166,7 +1215,7 @@ export default function AdminDashboard({
 
       return () => unsubscribe();
     }
-  }, [token, crashSeverityFilter, crashStatusFilter, crashPage, crashLimit]);
+  }, [token, user, crashSeverityFilter, crashStatusFilter, crashPage, crashLimit]);
 
   const fetchSeoSettings = async () => {
     setLoadingSeo(true);
@@ -1493,59 +1542,71 @@ export default function AdminDashboard({
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
     try {
       const targetOrder = orders.find(o => o.id === orderId || o.orderId === orderId);
+      const now = new Date().toISOString();
       const updatedData = {
         status,
         orderStatus: status,
-        updatedAt: new Date().toISOString()
+        updatedAt: now
       };
       
-      console.log(`[Admin Firestore Write] Updating order & project #${orderId} status to '${status}'...`);
-      await setDoc(doc(db, "orders", orderId), updatedData, { merge: true });
-      await setDoc(doc(db, "projects", orderId), {
+      console.log(`[Admin Firestore Write] Executing batch write for order & project status update #${orderId} to '${status}'...`);
+      
+      const batch = writeBatch(db);
+      
+      const orderRef = doc(db, "orders", orderId);
+      batch.set(orderRef, updatedData, { merge: true });
+      
+      const projectRef = doc(db, "projects", orderId);
+      batch.set(projectRef, {
         id: orderId,
         orderId,
         status,
-        updatedAt: new Date().toISOString()
+        updatedAt: now
       }, { merge: true });
+      
+      const notifPayload = {
+        id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+        userId: targetOrder?.customerId || targetOrder?.email || "Client",
+        userEmail: targetOrder?.email || "",
+        clientEmail: targetOrder?.email || "",
+        title: "Project Status Updated",
+        message: `Your project #${orderId} status has been updated to '${status}'. Check your Client Hub for live updates.`,
+        type: "status",
+        read: false,
+        createdAt: now
+      };
+      const notifRef = doc(collection(db, "notifications"));
+      batch.set(notifRef, notifPayload);
 
-      console.log(`[Admin Realtime Sync] Successfully updated order & project #${orderId} status to '${status}' in Firestore.`);
+      const logPayload = {
+        id: "act_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+        timestamp: now,
+        userId: adminEmail || "Admin",
+        userEmail: adminEmail || "Admin",
+        role: role || "Admin",
+        action: "Order Status Updated",
+        collection: "orders",
+        documentId: orderId,
+        details: `Order #${orderId} status updated to '${status}'`,
+        server_key: "arcadia_secure_server_key_2026_futuristic_studio_token"
+      };
+      const logRef = doc(collection(db, "activityLogs"));
+      batch.set(logRef, logPayload);
+
+      await batch.commit();
+      console.log(`[Admin Realtime Sync] Successfully executed batch write for order & project #${orderId} status to '${status}' in Firestore.`);
 
       if (targetOrder && targetOrder.email) {
-        await createClientNotification(
-          targetOrder.customerId || targetOrder.email,
-          targetOrder.email,
-          "Project Status Updated",
-          `Your project #${orderId} status has been updated to '${status}'. Check your Client Hub for live updates.`,
-          "status"
-        );
-
         try {
           await triggerEmail("Project_Status_Update", {
             to: targetOrder.email,
             clientName: targetOrder.name || targetOrder.customerName || "Client",
             projectName: targetOrder.service || "Software Project",
             status
-          });
+          }).catch(emailErr => console.warn("[Status Update Email Warning]:", emailErr));
         } catch (emailErr) {
-          console.warn("[Status Update Email Warning]:", emailErr);
+          console.warn("[Status Update Email Error]:", emailErr);
         }
-      }
-
-      try {
-        await addDoc(collection(db, "activityLogs"), {
-          id: "act_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
-          timestamp: new Date().toISOString(),
-          userId: adminEmail || "Admin",
-          userEmail: adminEmail || "Admin",
-          role: role || "Admin",
-          action: "Order Status Updated",
-          collection: "orders",
-          documentId: orderId,
-          details: `Order #${orderId} status updated to '${status}'`,
-          server_key: "arcadia_secure_server_key_2026_futuristic_studio_token"
-        });
-      } catch (logErr) {
-        console.warn("[Activity Log Status Update Warning]:", logErr);
       }
 
       onShowToast?.("success", `Order #${orderId} status updated to ${status}`);

@@ -45,8 +45,22 @@ function AppContent() {
     logout,
     setClientSession,
     setAdminSession,
-    setOnRedirectRequest
+    setOnRedirectRequest,
+    loading
   } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center flex-col gap-4">
+        <div className="relative w-20 h-20">
+          <div className="absolute inset-0 rounded-full border-2 border-t-amber-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+          <div className="absolute inset-2 rounded-full border border-t-transparent border-r-teal-500 border-b-transparent border-l-transparent animate-spin [animation-duration:1.5s]"></div>
+          <div className="absolute inset-4 rounded-full border border-t-transparent border-r-transparent border-b-violet-500 border-l-transparent animate-spin [animation-duration:2s]"></div>
+        </div>
+        <p className="text-gray-400 font-mono text-xs tracking-widest uppercase animate-pulse">Initializing Security Gateway...</p>
+      </div>
+    );
+  }
 
   // Navigation & State Engine
   const [currentView, setCurrentView] = useState(() => {

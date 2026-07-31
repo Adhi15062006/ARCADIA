@@ -33,6 +33,7 @@ import { generateInvoicePDF, generateRefundPDF } from "../utils/pdfGenerator";
 import { Order, Booking, Inquiry } from "../types";
 import { db, auth } from "../firebase/config";
 import { onSnapshot, doc, collection, setDoc, query, where } from "firebase/firestore";
+import { useAuth } from "../context/AuthContext";
 
 function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
@@ -92,6 +93,7 @@ export default function ClientDashboard({
   onLoginSuccess,
   onLogoutSuccess
 }: ClientDashboardProps) {
+  const { user } = useAuth();
   const [token, setToken] = useState<string | null>(sessionStorage.getItem("arcadia_client_token") || localStorage.getItem("arcadia_client_token"));
   const [userEmail, setUserEmail] = useState<string>(sessionStorage.getItem("arcadia_client_email") || localStorage.getItem("arcadia_client_email") || "");
   const [userName, setUserName] = useState<string>(sessionStorage.getItem("arcadia_client_name") || localStorage.getItem("arcadia_client_name") || "");
@@ -499,7 +501,7 @@ export default function ClientDashboard({
   }, [token]);
 
   useEffect(() => {
-    if (!token || !userEmail) {
+    if (!token || !userEmail || !user) {
       setIsClientDataLoading(false);
       return;
     }
@@ -636,7 +638,7 @@ export default function ClientDashboard({
       clearTimeout(timer);
       unsubscribes.forEach((unsub) => unsub());
     };
-  }, [token, userEmail]);
+  }, [token, userEmail, user]);
 
   const fetchClientData = async () => {
     setIsClientDataLoading(true);
