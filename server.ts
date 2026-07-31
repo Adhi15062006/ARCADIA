@@ -232,6 +232,46 @@ const getAdminAuth = () => {
   return null;
 };
 
+// Sync Admin credentials to Firebase Auth on server startup/import
+(async () => {
+  // Let the event loop cycle once to ensure everything is initialized
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  
+  const adminEmail = process.env.ADMIN_EMAIL || "arcadiadevelopers07@gmail.com";
+  const adminPassword = process.env.ADMIN_PASSWORD || "findme@arcadia1509";
+  const authSdk = getAdminAuth();
+  
+  if (authSdk) {
+    try {
+      let fbUser;
+      try {
+        fbUser = await authSdk.getUserByEmail(adminEmail);
+        // Sync password and claims
+        await authSdk.updateUser(fbUser.uid, { password: adminPassword });
+        await authSdk.setCustomUserClaims(fbUser.uid, { role: "Super Admin", status: "active" });
+        console.log(`[Firebase Admin Auth] Successfully synced admin user password and claims for ${adminEmail}`);
+      } catch (err: any) {
+        if (err.code === 'auth/user-not-found') {
+          fbUser = await authSdk.createUser({
+            uid: "u_admin_root_seed",
+            email: adminEmail,
+            password: adminPassword,
+            displayName: "Super Admin"
+          });
+          await authSdk.setCustomUserClaims(fbUser.uid, { role: "Super Admin", status: "active" });
+          console.log(`[Firebase Admin Auth] Successfully created admin user ${adminEmail}`);
+        } else {
+          console.warn("[Firebase Admin Auth] Error syncing admin user:", err.message || err);
+        }
+      }
+    } catch (err: any) {
+      console.warn("[Firebase Admin Auth] Critical error in syncAdminToFirebaseAuth:", err.message || err);
+    }
+  } else {
+    console.warn("[Firebase Admin Auth] SDK not available, skipping admin sync.");
+  }
+})();
+
 let publicKeysCache: { keys: Record<string, string>; expiresAt: number } | null = null;
 
 function getFirebasePublicKeys(): Promise<Record<string, string>> {
@@ -549,7 +589,7 @@ function saveDB<T>(filename: string, data: T) {
     "services.json": "services",
     "projects.json": "projects",
     "blogs.json": "blogs",
-    "faqs.json": "faq",
+    "faqs.json": "faqs",
     "testimonials.json": "testimonials",
     "vacancies.json": "careers",
     "applications.json": "jobApplications",
@@ -1163,6 +1203,8 @@ app.post("/api/auth/login", authRateLimiter, async (req, res) => {
       const fbUser = await getAdminAuth().getUserByEmail(normalizedEmail);
       fbUid = fbUser.uid;
       await getAdminAuth().setCustomUserClaims(fbUid, { role: userRole, status: user.status || "active" });
+      // Keep Firebase Auth password in sync with bcrypt password validated in login request
+      await getAdminAuth().updateUser(fbUid, { password: password });
     } catch (err: any) {
       if (err.code === "auth/user-not-found") {
         try {
@@ -1177,6 +1219,8 @@ app.post("/api/auth/login", authRateLimiter, async (req, res) => {
         } catch (createErr) {
           console.warn("Failed to auto-create firebase admin in login:", createErr);
         }
+      } else {
+        console.warn("Failed to sync firebase admin password/claims in login:", err.message);
       }
     }
 
@@ -1429,6 +1473,8 @@ app.post("/api/auth/client-login", authRateLimiter, async (req, res) => {
     const fbUser = await getAdminAuth().getUserByEmail(normalizedEmail);
     fbUid = fbUser.uid;
     await getAdminAuth().setCustomUserClaims(fbUid, { role: userRole, status: user.status || "active" });
+    // Keep Firebase Auth password in sync with bcrypt password validated in login request
+    await getAdminAuth().updateUser(fbUid, { password: password });
   } catch (err: any) {
     if (err.code === "auth/user-not-found") {
       try {
@@ -1443,6 +1489,8 @@ app.post("/api/auth/client-login", authRateLimiter, async (req, res) => {
       } catch (createErr) {
         console.log("[Firebase Auth] Auto-create user deferred.");
       }
+    } else {
+      console.warn("Failed to sync firebase client password/claims in login:", err.message);
     }
   }
 

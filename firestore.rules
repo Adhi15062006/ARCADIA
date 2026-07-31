@@ -189,6 +189,11 @@ service cloud.firestore {
       allow write: if isAdmin() || isServerKey(incoming());
     }
 
+    match /faqs/{faqId} {
+      allow read: if true;
+      allow write: if isAdmin() || isServerKey(incoming());
+    }
+
     // 16. Testimonials Collection
     match /testimonials/{testId} {
       allow read: if true;
