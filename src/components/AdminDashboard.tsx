@@ -1811,9 +1811,58 @@ export default function AdminDashboard({
     setIsSeoModalOpen(true);
   };
 
-  // Compute stats for overview
-  const totalRevenue = orders.filter(o => o.isPaid).reduce((sum, o) => sum + parseInt(o.budget), 0);
-  const activeProjectsCount = orders.filter(o => o.status === "In Progress" || o.status === "Accepted").length;
+  // Comprehensive financial & workspace statistics engine
+  const todayStr = new Date().toDateString();
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  const totalRevenue = orders.filter(o => o.isPaid || o.paymentStatus === "Paid").reduce((sum, o) => {
+    const rawVal = parseInt(String(o.total !== undefined ? o.total : (o.budget || 0)));
+    return sum + (isNaN(rawVal) ? 0 : rawVal);
+  }, 0) + payments.filter(p => p.status === "Paid" || p.reviewStatus === "Approved").reduce((sum, p) => {
+    const rawVal = parseInt(String(p.amount || 0));
+    return sum + (isNaN(rawVal) ? 0 : rawVal);
+  }, 0);
+
+  const todaysRevenue = orders.filter(o => (o.isPaid || o.paymentStatus === "Paid") && new Date(o.createdAt || 0).toDateString() === todayStr).reduce((sum, o) => {
+    const rawVal = parseInt(String(o.total !== undefined ? o.total : (o.budget || 0)));
+    return sum + (isNaN(rawVal) ? 0 : rawVal);
+  }, 0) + payments.filter(p => (p.status === "Paid" || p.reviewStatus === "Approved") && new Date(p.createdAt || 0).toDateString() === todayStr).reduce((sum, p) => {
+    const rawVal = parseInt(String(p.amount || 0));
+    return sum + (isNaN(rawVal) ? 0 : rawVal);
+  }, 0);
+
+  const monthlyRevenue = orders.filter(o => {
+    if (!o.isPaid && o.paymentStatus !== "Paid") return false;
+    const d = new Date(o.createdAt || 0);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).reduce((sum, o) => {
+    const rawVal = parseInt(String(o.total !== undefined ? o.total : (o.budget || 0)));
+    return sum + (isNaN(rawVal) ? 0 : rawVal);
+  }, 0);
+
+  const completedRevenue = orders.filter(o => o.status === "Completed" || o.status === "Delivered" || o.orderStatus === "Completed" || o.orderStatus === "Delivered").reduce((sum, o) => {
+    const rawVal = parseInt(String(o.total !== undefined ? o.total : (o.budget || 0)));
+    return sum + (isNaN(rawVal) ? 0 : rawVal);
+  }, 0);
+
+  const pendingRevenue = orders.filter(o => o.status !== "Completed" && o.status !== "Delivered" && o.status !== "Cancelled").reduce((sum, o) => {
+    const rawVal = parseInt(String(o.total !== undefined ? o.total : (o.budget || 0)));
+    return sum + (isNaN(rawVal) ? 0 : rawVal);
+  }, 0);
+
+  const activeProjectsCount = managedProjects.filter(p => p.status === "In Progress" || p.status === "Accepted" || p.status === "Review").length;
+  const completedProjectsCount = managedProjects.filter(p => p.status === "Completed" || p.status === "Delivered").length;
+  const pendingProjectsCount = managedProjects.filter(p => p.status === "Pending" || p.status === "Approved").length;
+
+  const totalOrdersCount = orders.filter(o => !o.isArchived).length;
+  const uniqueClientEmails = new Set([
+    ...orders.map(o => o.email || o.clientEmail).filter(Boolean),
+    ...managedProjects.map(p => p.clientEmail).filter(Boolean),
+    ...usersList.map(u => u.email).filter(Boolean)
+  ]);
+  const activeClientsCount = uniqueClientEmails.size;
+  const demoBookingsCount = bookings.length;
 
   return (
     <section id="admin-dashboard-section" className="py-12 relative w-full min-h-screen bg-arcadia-black border-t border-white/5">
@@ -2042,11 +2091,27 @@ export default function AdminDashboard({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div className="p-5 rounded-2xl bg-white/[0.01] border border-white/5">
                       <div className="flex items-center justify-between mb-3 text-gray-500">
-                        <span className="font-sans text-[10px] uppercase tracking-wider font-bold">TOTAL REVENUE (INR)</span>
+                        <span className="font-sans text-[10px] uppercase tracking-wider font-bold">TOTAL REVENUE</span>
                         <TrendingUp className="w-4 h-4 text-green-400" />
                       </div>
                       <div className="font-display font-extrabold text-2xl text-white">
                         ₹{totalRevenue.toLocaleString("en-IN")}
+                      </div>
+                      <div className="font-mono text-[9px] text-gray-500 mt-1">
+                        Completed: ₹{completedRevenue.toLocaleString("en-IN")} | Pending: ₹{pendingRevenue.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+
+                    <div className="p-5 rounded-2xl bg-white/[0.01] border border-white/5">
+                      <div className="flex items-center justify-between mb-3 text-gray-500">
+                        <span className="font-sans text-[10px] uppercase tracking-wider font-bold">TODAY'S REVENUE</span>
+                        <TrendingUp className="w-4 h-4 text-arcadia-cyan" />
+                      </div>
+                      <div className="font-display font-extrabold text-2xl text-white">
+                        ₹{todaysRevenue.toLocaleString("en-IN")}
+                      </div>
+                      <div className="font-mono text-[9px] text-gray-500 mt-1">
+                        Monthly: ₹{monthlyRevenue.toLocaleString("en-IN")}
                       </div>
                     </div>
 
@@ -2056,6 +2121,20 @@ export default function AdminDashboard({
                         <Layers className="w-4 h-4 text-arcadia-blue" />
                       </div>
                       <div className="font-display font-extrabold text-2xl text-white">{activeProjectsCount} Projects</div>
+                      <div className="font-mono text-[9px] text-gray-500 mt-1">
+                        {completedProjectsCount} Completed | {pendingProjectsCount} Pending
+                      </div>
+                    </div>
+
+                    <div className="p-5 rounded-2xl bg-white/[0.01] border border-white/5">
+                      <div className="flex items-center justify-between mb-3 text-gray-500">
+                        <span className="font-sans text-[10px] uppercase tracking-wider font-bold">CLIENT ORDERS</span>
+                        <ListOrdered className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <div className="font-display font-extrabold text-2xl text-white">{totalOrdersCount} Orders</div>
+                      <div className="font-mono text-[9px] text-gray-500 mt-1">
+                        Direct Firestore tracking
+                      </div>
                     </div>
 
                     <div className="p-5 rounded-2xl bg-white/[0.01] border border-white/5">
@@ -2063,7 +2142,21 @@ export default function AdminDashboard({
                         <span className="font-sans text-[10px] uppercase tracking-wider font-bold">DEMO APPOINTMENTS</span>
                         <Calendar className="w-4 h-4 text-purple-400" />
                       </div>
-                      <div className="font-display font-extrabold text-2xl text-white">{bookings.length} Bookings</div>
+                      <div className="font-display font-extrabold text-2xl text-white">{demoBookingsCount} Bookings</div>
+                      <div className="font-mono text-[9px] text-gray-500 mt-1">
+                        Consultation slots reserved
+                      </div>
+                    </div>
+
+                    <div className="p-5 rounded-2xl bg-white/[0.01] border border-white/5">
+                      <div className="flex items-center justify-between mb-3 text-gray-500">
+                        <span className="font-sans text-[10px] uppercase tracking-wider font-bold">ACTIVE CLIENTS</span>
+                        <Users className="w-4 h-4 text-cyan-400" />
+                      </div>
+                      <div className="font-display font-extrabold text-2xl text-white">{activeClientsCount} Clients</div>
+                      <div className="font-mono text-[9px] text-gray-500 mt-1">
+                        Registered corporate clients
+                      </div>
                     </div>
                   </div>
 

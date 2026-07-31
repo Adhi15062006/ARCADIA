@@ -22,6 +22,9 @@ export function setCrashlyticsUser(user: { id: string; email: string } | null) {
   activeUser = user;
 }
 
+// Track recent crash messages to prevent infinite exception loops
+const recentCrashSet = new Set<string>();
+
 /**
  * Log a detailed client-side runtime exception or error to Firebase Firestore (Crashlytics for Web)
  */
@@ -29,8 +32,20 @@ export async function recordException(
   error: Error | any,
   severity: "error" | "warning" | "fatal" = "error"
 ): Promise<string> {
-  const reportId = "crash_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now();
   const message = error instanceof Error ? error.message : String(error);
+  if (!message || message.includes("Firestore Error:") || message.includes("[Firebase Crashlytics]")) {
+    return "";
+  }
+
+  // Deduplicate identical error messages within 5s
+  const dedupKey = `${message}_${severity}`;
+  if (recentCrashSet.has(dedupKey)) {
+    return "";
+  }
+  recentCrashSet.add(dedupKey);
+  setTimeout(() => recentCrashSet.delete(dedupKey), 5000);
+
+  const reportId = "crash_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now();
   const stack = error instanceof Error ? error.stack : undefined;
   
   const report: CrashReport = {
@@ -52,8 +67,7 @@ export async function recordException(
     await setDoc(reportRef, report);
     console.warn(`[Firebase Crashlytics] Captured and logged exception ${reportId}:`, message);
   } catch (err) {
-    // Fail silently in production, log locally
-    console.error("[Firebase Crashlytics] Failed to log exception to Firestore:", err);
+    console.warn("[Firebase Crashlytics] Exception logging fallback:", err);
   }
 
   return reportId;

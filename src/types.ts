@@ -17,6 +17,13 @@ export interface Project {
   imageUrl: string;
   liveUrl: string;
   caseStudy: string;
+  status?: string;
+  progress?: number;
+  assignedStaff?: string;
+  clientId?: string;
+  clientEmail?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Booking {
@@ -68,7 +75,7 @@ export interface Order {
   paymentMethod?: string;
   paymentStatus?: string;
   orderStatus?: string;
-  status: "Pending" | "Payment Pending" | "Accepted" | "In Progress" | "Completed" | "Cancelled";
+  status: string;
   isPaid: boolean;
   deadline: string;
   description: string;
