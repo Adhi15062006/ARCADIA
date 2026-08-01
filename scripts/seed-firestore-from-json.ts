@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { getApps as getAdminApps, initializeApp as initializeAdminApp, cert } from 'firebase-admin/app';
 import { getFirestore as getAdminFirestore, Firestore } from 'firebase-admin/firestore';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 
@@ -12,16 +15,18 @@ function getAdminDb(): Firestore {
   }
 
   const saPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(process.cwd(), 'destination-service-account.json');
+  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || 'arcadia-developers';
   
   if (fs.existsSync(saPath)) {
     const serviceAccount = JSON.parse(fs.readFileSync(saPath, 'utf8'));
     initializeAdminApp({
-      credential: cert(serviceAccount)
+      credential: cert(serviceAccount),
+      projectId
     });
     console.log(`[Seed Firestore] Connected via Service Account: ${serviceAccount.project_id}`);
   } else {
-    console.log('[Seed Firestore] No service account file found. Attempting default initialization...');
-    initializeAdminApp();
+    console.log(`[Seed Firestore] No service account file found. Attempting initialization with Project ID: ${projectId}...`);
+    initializeAdminApp({ projectId });
   }
   return getAdminFirestore();
 }

@@ -3995,7 +3995,9 @@ app.post("/api/payments/refund", authenticateJWT, requireAdmin, async (req: any,
       status: "Completed",
       notes: notes || "",
       processedBy: req.user.email,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      clientEmail: order.email,
+      clientId: order.customerId || order.userId || order.email
     };
     refunds.unshift(refundRecord);
     saveDB("refunds.json", refunds);

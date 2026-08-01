@@ -147,7 +147,7 @@ service cloud.firestore {
 
     // 9. Refunds Records
     match /refunds/{refundId} {
-      allow read: if true;
+      allow read: if isStaff() || isOwner(resource.data.clientId) || isOwner(resource.data.userId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || isAuthenticated();
       allow write: if isStaff() || isServerKey(incoming());
     }
 

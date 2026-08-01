@@ -33,6 +33,7 @@ import { generateInvoicePDF, generateRefundPDF } from "../utils/pdfGenerator";
 import { Order, Booking, Inquiry } from "../types";
 import { db, auth } from "../firebase/config";
 import { onSnapshot, doc, collection, setDoc, query, where } from "firebase/firestore";
+import { signInWithEmailAndPassword, signInWithCustomToken } from "firebase/auth";
 import { useAuth } from "../context/AuthContext";
 
 function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
@@ -570,13 +571,61 @@ export default function ClientDashboard({
       setIsClientDataLoading(false);
     };
 
+    const processPaymentsSnapshot = (snapshot: any) => {
+      const paymentsFromCol: any[] = [];
+      snapshot.forEach((docSnap: any) => {
+        const item = docSnap.data();
+        const docId = docSnap.id || item.id;
+        const matchEmail = item.clientEmail?.toLowerCase().trim() === cleanEmail || item.email?.toLowerCase().trim() === cleanEmail;
+        const matchUid = currentUid && (item.clientId === currentUid || item.userId === currentUid);
+        if (matchEmail || matchUid) {
+          paymentsFromCol.push({ id: docId, ...item });
+        }
+      });
+      setPaymentsList(prev => {
+        const map = new Map();
+        prev.forEach(p => map.set(p.id, p));
+        paymentsFromCol.forEach(p => map.set(p.id, { ...map.get(p.id), ...p }));
+        return Array.from(map.values()).sort((a: any, b: any) =>
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        );
+      });
+    };
+
+    const processRefundsSnapshot = (snapshot: any) => {
+      const refundsFromCol: any[] = [];
+      snapshot.forEach((docSnap: any) => {
+        const item = docSnap.data();
+        const docId = docSnap.id || item.id;
+        const matchEmail = item.clientEmail?.toLowerCase().trim() === cleanEmail || item.email?.toLowerCase().trim() === cleanEmail;
+        const matchUid = currentUid && (item.clientId === currentUid || item.userId === currentUid);
+        if (matchEmail || matchUid) {
+          refundsFromCol.push({ id: docId, ...item });
+        }
+      });
+      setRefundsList(prev => {
+        const map = new Map();
+        prev.forEach(r => map.set(r.id, r));
+        refundsFromCol.forEach(r => map.set(r.id, { ...map.get(r.id), ...r }));
+        return Array.from(map.values()).sort((a: any, b: any) =>
+          new Date(b.timestamp || b.createdAt || 0).getTime() - new Date(a.timestamp || a.createdAt || 0).getTime()
+        );
+      });
+    };
+
     const qOrdersEmail = query(collection(db, "orders"), where("email", "==", cleanEmail));
     const qOrdersClientEmail = query(collection(db, "orders"), where("clientEmail", "==", cleanEmail));
+    const qOrdersUid = query(collection(db, "orders"), where("customerId", "==", currentUid));
     const qProjectsClientEmail = query(collection(db, "projects"), where("clientEmail", "==", cleanEmail));
+    const qProjectsUid = query(collection(db, "projects"), where("clientId", "==", currentUid));
     const qBookingsEmail = query(collection(db, "bookings"), where("email", "==", cleanEmail));
     const qInquiriesEmail = query(collection(db, "contactMessages"), where("email", "==", cleanEmail));
     const qNotifsUserEmail = query(collection(db, "notifications"), where("userEmail", "==", cleanEmail));
     const qMaintClientEmail = query(collection(db, "maintenanceSubscriptions"), where("clientEmail", "==", cleanEmail));
+    const qPaymentsEmail = query(collection(db, "payments"), where("clientEmail", "==", cleanEmail));
+    const qPaymentsUid = query(collection(db, "payments"), where("clientId", "==", currentUid));
+    const qRefundsEmail = query(collection(db, "refunds"), where("clientEmail", "==", cleanEmail));
+    const qRefundsUid = query(collection(db, "refunds"), where("clientId", "==", currentUid));
 
     const unsubscribes = [
       onSnapshot(qOrdersEmail, processOrdersSnapshot, (err) => {
@@ -589,8 +638,18 @@ export default function ClientDashboard({
         setIsClientDataLoading(false);
       }),
 
+      onSnapshot(qOrdersUid, processOrdersSnapshot, (err) => {
+        console.warn("[Client Orders (UID) Listener Warning]:", err);
+        setIsClientDataLoading(false);
+      }),
+
       onSnapshot(qProjectsClientEmail, processProjectsSnapshot, (err) => {
         console.warn("[Client Projects Listener Warning]:", err);
+        setIsClientDataLoading(false);
+      }),
+
+      onSnapshot(qProjectsUid, processProjectsSnapshot, (err) => {
+        console.warn("[Client Projects (UID) Listener Warning]:", err);
         setIsClientDataLoading(false);
       }),
 
@@ -626,7 +685,23 @@ export default function ClientDashboard({
           list.push({ id: docSnap.id, ...docSnap.data() });
         });
         if (list.length > 0) setMaintenanceSubs(list);
-      }, (err) => console.warn("[Client Maintenance Listener Warning]:", err))
+      }, (err) => console.warn("[Client Maintenance Listener Warning]:", err)),
+
+      onSnapshot(qPaymentsEmail, processPaymentsSnapshot, (err) => {
+        console.warn("[Client Payments (clientEmail) Listener Warning]:", err);
+      }),
+
+      onSnapshot(qPaymentsUid, processPaymentsSnapshot, (err) => {
+        console.warn("[Client Payments (UID) Listener Warning]:", err);
+      }),
+
+      onSnapshot(qRefundsEmail, processRefundsSnapshot, (err) => {
+        console.warn("[Client Refunds (clientEmail) Listener Warning]:", err);
+      }),
+
+      onSnapshot(qRefundsUid, processRefundsSnapshot, (err) => {
+        console.warn("[Client Refunds (UID) Listener Warning]:", err);
+      })
     ];
 
     // Fallback timer to guarantee loading state completes even on network delays
@@ -655,22 +730,105 @@ export default function ClientDashboard({
       ]);
 
       if (oRes.ok && bRes.ok && iRes.ok) {
-        setClientOrders(await oRes.json());
-        setClientBookings(await bRes.json());
-        setClientInquiries(await iRes.json());
+        const apiOrders = await oRes.json();
+        setClientOrders(prev => {
+          if (!Array.isArray(apiOrders)) return prev;
+          const map = new Map();
+          apiOrders.forEach((o: any) => map.set(o.id || o.orderId, o));
+          prev.forEach((o: any) => {
+            const existing = map.get(o.id || o.orderId);
+            map.set(o.id || o.orderId, { ...existing, ...o });
+          });
+          return Array.from(map.values()).sort((a: any, b: any) =>
+            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+          );
+        });
+
+        const apiBookings = await bRes.json();
+        setClientBookings(prev => {
+          if (!Array.isArray(apiBookings)) return prev;
+          const map = new Map();
+          apiBookings.forEach((b: any) => map.set(b.id, b));
+          prev.forEach((b: any) => {
+            const existing = map.get(b.id);
+            map.set(b.id, { ...existing, ...b });
+          });
+          return Array.from(map.values()).sort((a: any, b: any) =>
+            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+          );
+        });
+
+        const apiInquiries = await iRes.json();
+        setClientInquiries(prev => {
+          if (!Array.isArray(apiInquiries)) return prev;
+          const map = new Map();
+          apiInquiries.forEach((i: any) => map.set(i.id, i));
+          prev.forEach((i: any) => {
+            const existing = map.get(i.id);
+            map.set(i.id, { ...existing, ...i });
+          });
+          return Array.from(map.values());
+        });
+
         if (nRes && nRes.ok) {
-          const notificationsData = await nRes.json();
-          setNotifications(notificationsData);
-          setUnreadNotificationsCount(notificationsData.filter((notif: any) => !notif.read).length);
+          const apiNotifs = await nRes.json();
+          setNotifications(prev => {
+            if (!Array.isArray(apiNotifs)) return prev;
+            const map = new Map();
+            apiNotifs.forEach((n: any) => map.set(n.id, n));
+            prev.forEach((n: any) => {
+              const existing = map.get(n.id);
+              map.set(n.id, { ...existing, ...n });
+            });
+            const merged = Array.from(map.values()).sort((a: any, b: any) =>
+              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            );
+            setUnreadNotificationsCount(merged.filter((notif: any) => !notif.read).length);
+            return merged;
+          });
         }
         if (pRes && pRes.ok) {
-          setPaymentsList(await pRes.json());
+          const apiPayments = await pRes.json();
+          setPaymentsList(prev => {
+            if (!Array.isArray(apiPayments)) return prev;
+            const map = new Map();
+            apiPayments.forEach((p: any) => map.set(p.id, p));
+            prev.forEach((p: any) => {
+              const existing = map.get(p.id);
+              map.set(p.id, { ...existing, ...p });
+            });
+            return Array.from(map.values()).sort((a: any, b: any) =>
+              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            );
+          });
         }
         if (rRes && rRes.ok) {
-          setRefundsList(await rRes.json());
+          const apiRefunds = await rRes.json();
+          setRefundsList(prev => {
+            if (!Array.isArray(apiRefunds)) return prev;
+            const map = new Map();
+            apiRefunds.forEach((r: any) => map.set(r.id, r));
+            prev.forEach((r: any) => {
+              const existing = map.get(r.id);
+              map.set(r.id, { ...existing, ...r });
+            });
+            return Array.from(map.values()).sort((a: any, b: any) =>
+              new Date(b.timestamp || b.createdAt || 0).getTime() - new Date(a.timestamp || a.createdAt || 0).getTime()
+            );
+          });
         }
         if (mRes && mRes.ok) {
-          setMaintenanceSubs(await mRes.json());
+          const apiMaint = await mRes.json();
+          setMaintenanceSubs(prev => {
+            if (!Array.isArray(apiMaint)) return prev;
+            const map = new Map();
+            apiMaint.forEach((m: any) => map.set(m.id, m));
+            prev.forEach((m: any) => {
+              const existing = map.get(m.id);
+              map.set(m.id, { ...existing, ...m });
+            });
+            return Array.from(map.values());
+          });
         }
       } else if (oRes.status === 401 || oRes.status === 403) {
         // Token expired
@@ -700,6 +858,20 @@ export default function ClientDashboard({
       const data = await res.json();
 
       if (res.ok) {
+        // Authenticate directly with Firebase Auth using email and password to set native persistence
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+        } catch (firebaseErr: any) {
+          console.warn("Direct Firebase Auth client login failed, trying custom token:", firebaseErr.message);
+          if (data.firebaseToken) {
+            try {
+              await signInWithCustomToken(auth, data.firebaseToken);
+            } catch (tokErr: any) {
+              console.error("Firebase custom token registration/login failed:", tokErr.message);
+            }
+          }
+        }
+
         sessionStorage.setItem("arcadia_client_token", data.token);
         sessionStorage.setItem("arcadia_client_email", data.user.email);
         sessionStorage.setItem("arcadia_client_name", data.user.name);
