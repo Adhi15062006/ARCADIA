@@ -715,6 +715,7 @@ function normalizeOrderSchema(order: any) {
     customerName: order.customerName || order.name || "Client",
     name: order.name || order.customerName || "Client",
     email: order.email || "",
+    clientEmail: order.clientEmail || order.email || "",
     phone: order.phone || "",
     company: order.company || "",
     address: order.address || "Digital Online Order",
@@ -736,6 +737,7 @@ function normalizeOrderSchema(order: any) {
     description: order.description || "",
     fileUrl: order.fileUrl || "",
     paymentScreenshot: order.paymentScreenshot || "",
+    progress: order.progress !== undefined ? order.progress : 0,
     milestones: order.milestones || defaultMilestones,
     createdAt: order.createdAt || now,
     updatedAt: now
@@ -5339,9 +5341,16 @@ app.post("/api/webhooks/razorpay", async (req, res) => {
       const orderId = notes.orderId;
       const milestoneId = notes.milestoneId;
       
-      const order = await getOrderById(orderId);
+      let orders = dbOrders();
+      let orderIdx = orders.findIndex(o => o.id === orderId || o.orderId === orderId);
+      if (orderIdx === -1) {
+        await getOrderById(orderId);
+        orders = dbOrders();
+        orderIdx = orders.findIndex(o => o.id === orderId || o.orderId === orderId);
+      }
       
-      if (order) {
+      if (orderIdx !== -1) {
+        const order = orders[orderIdx];
         const milestone = order.milestones?.find((m: any) => m.id === milestoneId);
         if (milestone) {
           if (event === "payment.captured") {
