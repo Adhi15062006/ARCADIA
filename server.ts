@@ -777,8 +777,35 @@ const dbOrders = () => {
     orders.push(seedOrders[0]);
     saveDB("orders.json", orders);
   }
-  return orders.map(o => normalizeOrderSchema(o));
 };
+
+async function getOrderById(orderId: string): Promise<any> {
+  const orders = dbOrders();
+  let order = orders.find(o => o.id === orderId || o.orderId === orderId);
+  if (order) return order;
+
+  // Fallback: Check Firestore
+  if (adminDb) {
+    try {
+      const docSnap = await adminDb.collection("orders").doc(orderId).get();
+      if (docSnap.exists) {
+        const data = normalizeOrderSchema(docSnap.data());
+        // Sync to local orders.json
+        const localOrders = getDB<any[]>("orders.json", seedOrders);
+        const existsLocally = localOrders.some(o => o.id === data.id || o.orderId === data.id);
+        if (!existsLocally) {
+          localOrders.unshift(data);
+          saveDB("orders.json", localOrders);
+        }
+        return data;
+      }
+    } catch (err: any) {
+      console.warn(`[getOrderById Fallback] Failed to fetch order ${orderId} from Firestore:`, err.message);
+    }
+  }
+  return null;
+}
+
 const dbInquiries = () => getDB<any[]>("inquiries.json", []);
 const dbVacancies = () => getDB<any[]>("vacancies.json", seedVacancies);
 const dbApplications = () => getDB<any[]>("applications.json", []);
@@ -3443,10 +3470,15 @@ app.post("/api/payments/create-order", authenticateJWT, async (req: any, res) =>
       return res.status(400).json({ error: "Missing orderId or milestoneId parameters." });
     }
 
-    const orders = dbOrders();
-    const orderIndex = orders.findIndex(o => o.id === orderId);
+    let orders = dbOrders();
+    let orderIndex = orders.findIndex(o => o.id === orderId || o.orderId === orderId);
     if (orderIndex === -1) {
-      return res.status(404).json({ error: "Order not found." });
+      const fetched = await getOrderById(orderId);
+      if (!fetched) {
+        return res.status(404).json({ error: "Order not found." });
+      }
+      orders = dbOrders();
+      orderIndex = orders.findIndex(o => o.id === orderId || o.orderId === orderId);
     }
     const order = orders[orderIndex];
 
@@ -3556,10 +3588,15 @@ app.post("/api/payments/verify-payment", authenticateJWT, async (req: any, res) 
       return res.status(400).json({ error: "Missing required payment verification details." });
     }
 
-    const orders = dbOrders();
-    const orderIdx = orders.findIndex(o => o.id === orderId);
+    let orders = dbOrders();
+    let orderIdx = orders.findIndex(o => o.id === orderId || o.orderId === orderId);
     if (orderIdx === -1) {
-      return res.status(404).json({ error: "Order not found." });
+      const fetched = await getOrderById(orderId);
+      if (!fetched) {
+        return res.status(404).json({ error: "Order not found." });
+      }
+      orders = dbOrders();
+      orderIdx = orders.findIndex(o => o.id === orderId || o.orderId === orderId);
     }
     const order = orders[orderIdx];
 
@@ -3777,10 +3814,15 @@ app.post("/api/payments/review", authenticateJWT, requireAdmin, async (req: any,
     }
     const payment = payments[payIdx];
 
-    const orders = dbOrders();
-    const orderIdx = orders.findIndex(o => o.id === payment.projectId);
+    let orders = dbOrders();
+    let orderIdx = orders.findIndex(o => o.id === payment.projectId || o.orderId === payment.projectId);
     if (orderIdx === -1) {
-      return res.status(404).json({ error: "Associated project order not found." });
+      const fetched = await getOrderById(payment.projectId);
+      if (!fetched) {
+        return res.status(404).json({ error: "Associated project order not found." });
+      }
+      orders = dbOrders();
+      orderIdx = orders.findIndex(o => o.id === payment.projectId || o.orderId === payment.projectId);
     }
     const order = orders[orderIdx];
 
@@ -4077,10 +4119,15 @@ app.post("/api/payments/refund", authenticateJWT, requireAdmin, async (req: any,
       return res.status(400).json({ error: "Only approved milestone payments are eligible for processing refunds." });
     }
 
-    const orders = dbOrders();
-    const orderIdx = orders.findIndex(o => o.id === payment.projectId);
+    let orders = dbOrders();
+    let orderIdx = orders.findIndex(o => o.id === payment.projectId || o.orderId === payment.projectId);
     if (orderIdx === -1) {
-      return res.status(404).json({ error: "Order not found." });
+      const fetched = await getOrderById(payment.projectId);
+      if (!fetched) {
+        return res.status(404).json({ error: "Order not found." });
+      }
+      orders = dbOrders();
+      orderIdx = orders.findIndex(o => o.id === payment.projectId || o.orderId === payment.projectId);
     }
     const order = orders[orderIdx];
 
@@ -5246,7 +5293,7 @@ app.post("/api/maintenance/subscriptions/:id/simulate-payment", authenticateJWT,
 });
 
 // 12. Public Razorpay Webhook Endpoint
-app.post("/api/webhooks/razorpay", (req, res) => {
+app.post("/api/webhooks/razorpay", async (req, res) => {
   try {
     const signature = req.headers["x-razorpay-signature"];
     const event = req.body.event;
@@ -5273,8 +5320,7 @@ app.post("/api/webhooks/razorpay", (req, res) => {
       const orderId = notes.orderId;
       const milestoneId = notes.milestoneId;
       
-      const orders = dbOrders();
-      const order = orders.find(o => o.id === orderId || o.orderId === orderId);
+      const order = await getOrderById(orderId);
       
       if (order) {
         const milestone = order.milestones?.find((m: any) => m.id === milestoneId);
