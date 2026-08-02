@@ -106,6 +106,7 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
@@ -979,6 +980,74 @@ async function syncUserToFirestore(user: any) {
   }
 }
 
+function syncUserOrdersAndProjects(email: string, uid: string) {
+  if (!email || !uid) return;
+  const normalizedEmail = email.toLowerCase().trim();
+  
+  // 1. Sync orders
+  const orders = dbOrders();
+  let ordersChanged = false;
+  orders.forEach((order: any) => {
+    if (order.email && order.email.toLowerCase().trim() === normalizedEmail) {
+      if (order.customerId !== uid || order.userId !== uid) {
+        order.customerId = uid;
+        order.userId = uid;
+        ordersChanged = true;
+      }
+    }
+  });
+  if (ordersChanged) {
+    saveDB("orders.json", orders);
+  }
+
+  // 2. Sync projects
+  const projects = dbProjects();
+  let projectsChanged = false;
+  projects.forEach((proj: any) => {
+    if ((proj.clientEmail && proj.clientEmail.toLowerCase().trim() === normalizedEmail) ||
+        (proj.email && proj.email.toLowerCase().trim() === normalizedEmail)) {
+      if (proj.clientId !== uid || proj.userId !== uid) {
+        proj.clientId = uid;
+        proj.userId = uid;
+        projectsChanged = true;
+      }
+    }
+  });
+  if (projectsChanged) {
+    saveDB("projects.json", projects);
+  }
+
+  // 3. Sync payments
+  const payments = dbPayments();
+  let paymentsChanged = false;
+  payments.forEach((pay: any) => {
+    if (pay.clientEmail && pay.clientEmail.toLowerCase().trim() === normalizedEmail) {
+      if (pay.clientId !== uid) {
+        pay.clientId = uid;
+        paymentsChanged = true;
+      }
+    }
+  });
+  if (paymentsChanged) {
+    saveDB("payments.json", payments);
+  }
+
+  // 4. Sync refunds
+  const refunds = dbRefunds();
+  let refundsChanged = false;
+  refunds.forEach((ref: any) => {
+    if (ref.clientEmail && ref.clientEmail.toLowerCase().trim() === normalizedEmail) {
+      if (ref.clientId !== uid) {
+        ref.clientId = uid;
+        refundsChanged = true;
+      }
+    }
+  });
+  if (refundsChanged) {
+    saveDB("refunds.json", refunds);
+  }
+}
+
 // --- ADMIN MANAGEMENT AND LOG ACTIVITY HELPERS ---
 
 async function logAdminSessionActivity(req: any, userId: string, email: string, action: string, status: "Success" | "Failure", details?: string) {
@@ -1425,6 +1494,9 @@ app.post("/api/auth/client-register", authRateLimiter, async (req, res) => {
   users.push(newUser);
   saveDB("users.json", users);
 
+  // Sync client anonymous orders/projects to the registered UID
+  syncUserOrdersAndProjects(normalizedEmail, uid);
+
   await syncUserToFirestore(newUser);
   await logAudit(req, "Client Registration", "users", "Success", `New customer registered: ${name} (${normalizedEmail})`);
 
@@ -1502,6 +1574,10 @@ app.post("/api/auth/client-login", authRateLimiter, async (req, res) => {
   }
 
   const token = jwt.sign({ uid: user.id, email: normalizedEmail, name: user.name, role: userRole }, JWT_SECRET, { expiresIn: "24h" });
+  
+  // Sync client anonymous orders/projects to the logged-in UID
+  syncUserOrdersAndProjects(normalizedEmail, fbUid);
+
   await logAudit(req, "Client Login", "auth", "Success", `Client logged in successfully: ${user.name} (${normalizedEmail})`);
 
   return res.json({
@@ -1558,6 +1634,10 @@ app.post("/api/auth/social-login", authRateLimiter, async (req, res) => {
       };
       users.push(user);
       saveDB("users.json", users);
+      
+      // Sync client anonymous orders/projects to the new social UID
+      syncUserOrdersAndProjects(normalizedEmail, decodedToken.uid);
+
       await syncUserToFirestore(user);
       await logAudit(req, "Client Social Registration", "users", "Success", `New customer registered via social login: ${name} (${normalizedEmail})`);
     } else {
@@ -1567,6 +1647,10 @@ app.post("/api/auth/social-login", authRateLimiter, async (req, res) => {
         user.avatar = avatar;
       }
       saveDB("users.json", users);
+      
+      // Sync client anonymous orders/projects to the existing social user UID
+      syncUserOrdersAndProjects(normalizedEmail, user.id);
+
       await syncUserToFirestore(user);
       await logAudit(req, "Client Social Login", "auth", "Success", `Client logged in via social: ${name} (${normalizedEmail})`);
     }
@@ -2676,22 +2760,51 @@ app.put("/api/client/notifications/read", authenticateJWT, (req: any, res) => {
 
 app.get("/api/client/orders", authenticateJWT, (req: any, res) => {
   const userEmail = req.user.email;
+  const uid = req.user.uid;
   const orders = dbOrders();
-  const filtered = orders.filter(o => normalizeEmail(o.email) === normalizeEmail(userEmail));
+  const filtered = orders.filter(o => 
+    normalizeEmail(o.email) === normalizeEmail(userEmail) || 
+    normalizeEmail(o.clientEmail) === normalizeEmail(userEmail) ||
+    o.userId === uid || 
+    o.customerId === uid
+  );
+  res.json(filtered);
+});
+
+app.get("/api/client/projects", authenticateJWT, (req: any, res) => {
+  const userEmail = req.user.email;
+  const uid = req.user.uid;
+  const projects = dbProjects();
+  const filtered = projects.filter(p => 
+    normalizeEmail(p.clientEmail) === normalizeEmail(userEmail) || 
+    normalizeEmail(p.email) === normalizeEmail(userEmail) || 
+    p.clientId === uid || 
+    p.userId === uid
+  );
   res.json(filtered);
 });
 
 app.get("/api/client/bookings", authenticateJWT, (req: any, res) => {
   const userEmail = req.user.email;
+  const uid = req.user.uid;
   const bookings = dbBookings();
-  const filtered = bookings.filter(b => normalizeEmail(b.email) === normalizeEmail(userEmail));
+  const filtered = bookings.filter(b => 
+    normalizeEmail(b.email) === normalizeEmail(userEmail) || 
+    b.customerId === uid || 
+    b.userId === uid
+  );
   res.json(filtered);
 });
 
 app.get("/api/client/inquiries", authenticateJWT, (req: any, res) => {
   const userEmail = req.user.email;
+  const uid = req.user.uid;
   const inquiries = dbInquiries();
-  const filtered = inquiries.filter(i => normalizeEmail(i.email) === normalizeEmail(userEmail));
+  const filtered = inquiries.filter(i => 
+    normalizeEmail(i.email) === normalizeEmail(userEmail) || 
+    i.customerId === uid || 
+    i.userId === uid
+  );
   res.json(filtered);
 });
 
@@ -3401,7 +3514,7 @@ app.post("/api/payments/create-order", authenticateJWT, async (req: any, res) =>
       amount: amountInINR,
       currency: "INR",
       milestoneId,
-      clientId: normalizeEmail(order.email),
+      clientId: order.customerId || order.userId || normalizeEmail(order.email),
       clientName: order.name,
       projectId: order.id,
       projectName: order.service,
@@ -3495,15 +3608,17 @@ app.post("/api/payments/verify-payment", authenticateJWT, async (req: any, res) 
       return res.status(400).json({ error: "Cryptographic security verification failed. Invalid transaction signature." });
     }
 
-    // Save payment as Awaiting Review / Under Review
+    // Save payment as Approved
     const paymentIdx = payments.findIndex(p => p.orderId === razorpay_order_id);
     const amountINR = milestone.amount;
+    const resolvedClientId = order.customerId || order.userId || normalizeEmail(order.email);
 
     if (paymentIdx !== -1) {
       payments[paymentIdx].id = razorpay_payment_id; // Update with actual Payment ID
-      payments[paymentIdx].status = "Under Review";
-      payments[paymentIdx].notes = `Successfully verified transaction. Pending administrator final authorization.`;
+      payments[paymentIdx].status = "Approved";
+      payments[paymentIdx].notes = `Successfully verified transaction. Approved cryptographically via Razorpay Signature.`;
       payments[paymentIdx].createdAt = new Date().toISOString();
+      payments[paymentIdx].clientId = resolvedClientId;
     } else {
       payments.unshift({
         id: razorpay_payment_id,
@@ -3511,25 +3626,51 @@ app.post("/api/payments/verify-payment", authenticateJWT, async (req: any, res) 
         amount: amountINR,
         currency: "INR",
         milestoneId,
-        clientId: normalizeEmail(order.email),
+        clientId: resolvedClientId,
         clientName: order.name,
         projectId: order.id,
         projectName: order.service,
-        status: "Under Review",
+        status: "Approved",
         createdAt: new Date().toISOString(),
         refundedAmount: 0,
         refundStatus: "None",
-        notes: `Direct verification. Pending administrator final authorization.`
+        notes: `Direct verification. Approved cryptographically via Razorpay Signature.`
       });
     }
     saveDB("payments.json", payments);
 
-    // Update milestone state to "Under Review" so user dashboard shows it is awaiting approval
-    milestone.status = "Under Review";
+    // Update milestone state to "Paid" immediately upon signature verification
+    const now = new Date().toISOString();
+    milestone.status = "Paid";
+    milestone.paidAt = now;
     milestone.paymentId = razorpay_payment_id;
     milestone.paymentOrderId = razorpay_order_id;
-    order.status = "Payment Pending Approval";
+
+    // Determine the next status and progress
+    const nextStatus = milestoneId === "m1" ? "Accepted" : milestoneId === "m2" ? "In Progress" : "Completed";
+    const nextProgress = milestoneId === "m1" ? 15 : milestoneId === "m2" ? 65 : 100;
+
+    order.status = nextStatus;
+    order.orderStatus = nextStatus;
+    order.progress = nextProgress;
+    if (milestoneId === "m3") {
+      order.isPaid = true;
+      order.paymentStatus = "Paid";
+    } else {
+      order.paymentStatus = "Partially Paid";
+    }
+    order.updatedAt = now;
     saveDB("orders.json", orders);
+
+    // Sync corresponding project in 'projects' collection
+    const projects = dbProjects();
+    const projIdx = projects.findIndex(p => p.id === order.id || p.projectId === order.id || p.orderId === order.id);
+    if (projIdx !== -1) {
+      projects[projIdx].status = nextStatus;
+      projects[projIdx].progress = nextProgress;
+      projects[projIdx].updatedAt = now;
+      saveDB("projects.json", projects);
+    }
 
     // Log success
     const pHistory = dbPaymentHistory();
@@ -3543,9 +3684,10 @@ app.post("/api/payments/verify-payment", authenticateJWT, async (req: any, res) 
     });
     saveDB("paymentHistory.json", pHistory);
 
-    // Trigger automated email notification for payment submission
+    // Trigger automated email notifications
+    const emailTemplate = milestoneId === "m1" ? "Payment_Approved_30" : milestoneId === "m2" ? "Payment_Approved_50" : "Payment_Approved_100";
     triggerEmail(
-      "Payment_Submitted",
+      emailTemplate,
       {
         to: normalizeEmail(order.email),
         clientName: order.name,
@@ -3554,21 +3696,20 @@ app.post("/api/payments/verify-payment", authenticateJWT, async (req: any, res) 
         milestoneLabel: milestone.label,
         milestoneId,
         paymentId: razorpay_payment_id,
-        dateTime: new Date().toISOString()
+        dateTime: now
       },
       adminDb,
       saveDB
-    ).catch(err => console.error("Error sending Payment_Submitted email:", err));
+    ).catch(err => console.error(`Error sending ${emailTemplate} email:`, err));
 
-    // Trigger automated project status update email
     triggerEmail(
       "Project_Status_Update",
       {
         to: normalizeEmail(order.email),
         clientName: order.name,
         projectName: order.service,
-        status: "Payment Pending Approval",
-        dateTime: new Date().toISOString()
+        status: nextStatus,
+        dateTime: now
       },
       adminDb,
       saveDB
@@ -3579,13 +3720,13 @@ app.post("/api/payments/verify-payment", authenticateJWT, async (req: any, res) 
     notifications.unshift({
       id: "notif_" + Math.random().toString(36).substr(2, 9),
       userEmail: normalizeEmail(order.email),
-      title: "Payment Processing Under Review",
-      message: `Your milestone payment of ₹${amountINR.toLocaleString("en-IN")} has been verified. It is currently under review by our finance operations.`,
+      title: "Milestone Payment Approved",
+      message: `Your milestone payment of ₹${amountINR.toLocaleString("en-IN")} for milestone '${milestone.label}' has been verified & approved.`,
       read: false,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
       orderId: order.id,
       milestoneId,
-      type: "Processing"
+      type: "Payment"
     });
 
     // Notify administrators
@@ -3594,25 +3735,25 @@ app.post("/api/payments/verify-payment", authenticateJWT, async (req: any, res) 
       notifications.unshift({
         id: "notif_" + Math.random().toString(36).substr(2, 9),
         userEmail: email,
-        title: "Milestone Payment Review Required",
-        message: `Client ${order.name} submitted milestone payment ₹${amountINR.toLocaleString("en-IN")} for project ${order.service}. Final approval required.`,
+        title: "Payment Approved Automatically",
+        message: `Payment of ₹${amountINR.toLocaleString("en-IN")} by ${order.name} for milestone '${milestone.label}' verified automatically.`,
         read: false,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         orderId: order.id,
         milestoneId,
-        type: "Action Required"
+        type: "System Log"
       });
     });
     saveDB("notifications.json", notifications);
 
-    logActivity("Payment Signature Verified", `Payment verified: ID ${razorpay_payment_id} for ₹${amountINR} on Order ${order.id}. Set to Under Review.`);
+    logActivity("Payment Signature Verified", `Payment verified automatically: ID ${razorpay_payment_id} for ₹${amountINR} on Order ${order.id}.`);
 
     res.json({
       success: true,
-      message: "Payment cryptographically verified. Status set to Awaiting Review.",
+      message: "Payment cryptographically verified and approved successfully.",
       payment: {
         id: razorpay_payment_id,
-        status: "Under Review"
+        status: "Approved"
       }
     });
   } catch (err: any) {
@@ -5125,6 +5266,133 @@ app.post("/api/webhooks/razorpay", (req, res) => {
     }
 
     const payload = req.body.payload;
+    
+    if (payload && payload.payment && event.startsWith("payment.") && payload.payment.entity.notes && payload.payment.entity.notes.orderId && payload.payment.entity.notes.milestoneId) {
+      const rzPayment = payload.payment.entity;
+      const notes = rzPayment.notes;
+      const orderId = notes.orderId;
+      const milestoneId = notes.milestoneId;
+      
+      const orders = dbOrders();
+      const order = orders.find(o => o.id === orderId || o.orderId === orderId);
+      
+      if (order) {
+        const milestone = order.milestones?.find((m: any) => m.id === milestoneId);
+        if (milestone) {
+          if (event === "payment.captured") {
+            const payments = dbPayments();
+            const isDuplicate = payments.some(p => p.id === rzPayment.id && p.status === "Approved");
+            
+            if (!isDuplicate && milestone.status !== "Paid") {
+              const now = new Date().toISOString();
+              milestone.status = "Paid";
+              milestone.paidAt = now;
+              milestone.paymentId = rzPayment.id;
+              milestone.paymentOrderId = rzPayment.order_id;
+              
+              const nextStatus = milestoneId === "m1" ? "Accepted" : milestoneId === "m2" ? "In Progress" : "Completed";
+              const nextProgress = milestoneId === "m1" ? 15 : milestoneId === "m2" ? 65 : 100;
+              
+              order.status = nextStatus;
+              order.orderStatus = nextStatus;
+              order.progress = nextProgress;
+              if (milestoneId === "m3") {
+                order.isPaid = true;
+                order.paymentStatus = "Paid";
+              } else {
+                order.paymentStatus = "Partially Paid";
+              }
+              order.updatedAt = now;
+              saveDB("orders.json", orders);
+              
+              const projects = dbProjects();
+              const projIdx = projects.findIndex(p => p.id === order.id || p.projectId === order.id || p.orderId === order.id);
+              if (projIdx !== -1) {
+                projects[projIdx].status = nextStatus;
+                projects[projIdx].progress = nextProgress;
+                projects[projIdx].updatedAt = now;
+                saveDB("projects.json", projects);
+              }
+              
+              const amountINR = rzPayment.amount / 100;
+              const resolvedClientId = order.customerId || order.userId || normalizeEmail(order.email);
+              const payIdx = payments.findIndex(p => p.id === rzPayment.id || p.orderId === rzPayment.order_id);
+              if (payIdx !== -1) {
+                payments[payIdx].id = rzPayment.id;
+                payments[payIdx].status = "Approved";
+                payments[payIdx].notes = "Successfully verified via Webhook Captured event.";
+                payments[payIdx].createdAt = now;
+                payments[payIdx].clientId = resolvedClientId;
+              } else {
+                payments.unshift({
+                  id: rzPayment.id,
+                  orderId: rzPayment.order_id,
+                  amount: amountINR,
+                  currency: "INR",
+                  milestoneId,
+                  clientId: resolvedClientId,
+                  clientName: order.name,
+                  projectId: order.id,
+                  projectName: order.service,
+                  status: "Approved",
+                  createdAt: now,
+                  refundedAmount: 0,
+                  refundStatus: "None",
+                  notes: "Webhook Auto-Verification."
+                });
+              }
+              saveDB("payments.json", payments);
+              
+              // Send Real-time notification to client portal
+              const notifications = dbNotifications();
+              notifications.unshift({
+                id: "notif_wh_" + Math.random().toString(36).substr(2, 9),
+                userEmail: normalizeEmail(order.email),
+                title: "Milestone Payment Successful (Verified)",
+                message: `Your milestone payment of ₹${amountINR.toLocaleString("en-IN")} for milestone '${milestone.label}' has been verified via Webhook.`,
+                read: false,
+                createdAt: now,
+                orderId: order.id,
+                milestoneId,
+                type: "Payment"
+              });
+              saveDB("notifications.json", notifications);
+              
+              logActivity("Webhook: Payment Captured", `Captured payment ${rzPayment.id} for order ${order.id} milestone ${milestoneId}`);
+            }
+          } else if (event === "payment.failed") {
+            if (milestone.status !== "Paid") {
+              milestone.status = "Failed";
+              order.status = "Payment Failed";
+              order.updatedAt = new Date().toISOString();
+              saveDB("orders.json", orders);
+              
+              const amountINR = rzPayment.amount / 100;
+              const payments = dbPayments();
+              payments.unshift({
+                id: rzPayment.id,
+                orderId: rzPayment.order_id,
+                amount: amountINR,
+                currency: "INR",
+                milestoneId,
+                clientId: order.customerId || order.userId || normalizeEmail(order.email),
+                clientName: order.name,
+                projectId: order.id,
+                projectName: order.service,
+                status: "Failed",
+                createdAt: new Date().toISOString(),
+                refundedAmount: 0,
+                refundStatus: "None",
+                notes: `Transaction rejected: ${rzPayment.error_description || "Declined"}`
+              });
+              saveDB("payments.json", payments);
+              
+              logActivity("Webhook: Payment Failed", `Standard payment of ₹${amountINR} failed for order ${order.id} milestone ${milestoneId}`);
+            }
+          }
+        }
+      }
+    }
     
     if (payload && payload.subscription) {
       const rzSub = payload.subscription.entity;

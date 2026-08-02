@@ -124,17 +124,17 @@ service cloud.firestore {
 
     // 6. Orders Collection (Strict Payload & Immutability Rules)
     match /orders/{orderId} {
-      allow read: if isStaff() || isOwner(resource.data.userId) || isOwner(resource.data.customerId) || isOwner(resource.data.clientId) || isUserEmail(resource.data.email) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || isAuthenticated();
+      allow read: if isStaff() || isOwner(resource.data.userId) || isOwner(resource.data.customerId) || isOwner(resource.data.clientId) || isUserEmail(resource.data.email) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
       allow create: if (incoming().price == null || incoming().price >= 0) && (incoming().total == null || incoming().total >= 0);
-      allow update: if (isStaff() || isServerKey(incoming()) || isAuthenticated()) && (!incoming().diff(resource.data).affectedKeys().hasAny(['customerId']));
+      allow update: if (isStaff() || isServerKey(incoming()) || isOwner(resource.data.userId) || isOwner(resource.data.customerId) || isOwner(resource.data.clientId) || isUserEmail(resource.data.email) || isUserEmail(resource.data.clientEmail)) && (!incoming().diff(resource.data).affectedKeys().hasAny(['customerId']));
       allow delete: if isAdmin() || isServerKey(existing());
     }
 
     // 7. Projects Delivery Collection
     match /projects/{projectId} {
-      allow read: if isStaff() || isOwner(resource.data.clientId) || isOwner(resource.data.userId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data) || isAuthenticated();
+      allow read: if isStaff() || isOwner(resource.data.clientId) || isOwner(resource.data.userId) || isUserEmail(resource.data.clientEmail) || isServerKey(resource.data);
       allow create: if true;
-      allow update: if isStaff() || isServerKey(incoming()) || isAuthenticated();
+      allow update: if isStaff() || isServerKey(incoming()) || isOwner(resource.data.clientId) || isOwner(resource.data.userId) || isUserEmail(resource.data.clientEmail);
       allow delete: if isAdmin() || isServerKey(existing());
     }
 

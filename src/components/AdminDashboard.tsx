@@ -746,7 +746,7 @@ export default function AdminDashboard({
       await setDoc(doc(db, "projects", orderId), {
         id: orderId,
         orderId,
-        clientId: orderObj.customerId || orderObj.email,
+        clientId: orderObj.customerId || orderObj.userId || orderObj.email,
         clientEmail: orderObj.email,
         title: orderObj.service,
         status: nextStatus,
@@ -759,7 +759,7 @@ export default function AdminDashboard({
         id: `pay_${orderId}_${milestoneId}`,
         orderId,
         milestoneId,
-        clientId: orderObj.customerId || orderObj.email,
+        clientId: orderObj.customerId || orderObj.userId || orderObj.email,
         clientEmail: orderObj.email,
         amount: Math.round((parseInt(orderObj.budget) || 0) * (milestoneId === "m1" ? 0.3 : milestoneId === "m2" ? 0.5 : 0.2)),
         status: "Approved",
@@ -1281,8 +1281,12 @@ export default function AdminDashboard({
         if (mSubRes && mSubRes.ok) setMaintenanceSubs(await mSubRes.json());
         if (mAnalyticRes && mAnalyticRes.ok) setMaintenanceAnalytics(await mAnalyticRes.json());
       } else {
-        // Token expired/invalid, clear auth
-        handleLogout();
+        // Token expired/invalid, clear auth ONLY on explicit 401 or 403 authorization failures
+        if (bRes.status === 401 || bRes.status === 403 || oRes.status === 401 || oRes.status === 403 || iRes.status === 401 || iRes.status === 403 || lRes.status === 401 || lRes.status === 403) {
+          handleLogout();
+        } else {
+          onShowToast?.("error", "Database Handshake Warning: Failed to sync latest administrative logs from server.");
+        }
       }
     } catch (err) {
       console.error("Error fetching admin data", err);

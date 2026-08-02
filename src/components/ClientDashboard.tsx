@@ -362,7 +362,7 @@ export default function ClientDashboard({
 
             if (verifyResponse.ok) {
               setPayStatus("success");
-              onShowToast("success", "Payment verified cryptographically! Awaiting Admin approval.");
+              onShowToast("success", "Payment verified cryptographically and processed successfully!");
               
               // Direct top-level Firestore broadcast
               const targetOrder = clientOrders.find(o => o.id === orderData.orderId);
@@ -719,14 +719,15 @@ export default function ClientDashboard({
     setIsClientDataLoading(true);
     try {
       const headers = { "Authorization": `Bearer ${token}` };
-      const [oRes, bRes, iRes, nRes, pRes, rRes, mRes] = await Promise.all([
+      const [oRes, bRes, iRes, nRes, pRes, rRes, mRes, projRes] = await Promise.all([
         fetch("/api/client/orders", { headers }),
         fetch("/api/client/bookings", { headers }),
         fetch("/api/client/inquiries", { headers }),
         fetch("/api/client/notifications", { headers }),
         fetch("/api/payments/list", { headers }),
         fetch("/api/payments/refunds-list", { headers }),
-        fetch("/api/maintenance/subscriptions", { headers })
+        fetch("/api/maintenance/subscriptions", { headers }),
+        fetch("/api/client/projects", { headers })
       ]);
 
       if (oRes.ok && bRes.ok && iRes.ok) {
@@ -743,6 +744,33 @@ export default function ClientDashboard({
             new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
           );
         });
+
+        if (projRes && projRes.ok) {
+          const apiProjects = await projRes.json();
+          if (Array.isArray(apiProjects)) {
+            setClientOrders(prev => {
+              const map = new Map();
+              prev.forEach((o: any) => map.set(o.id || o.orderId, o));
+              apiProjects.forEach((p: any) => {
+                const existing = map.get(p.id);
+                map.set(p.id, {
+                  ...(existing || {}),
+                  id: p.id,
+                  orderId: p.id,
+                  service: p.service || p.title || existing?.service || "Web Application",
+                  status: p.status || existing?.status || "In Progress",
+                  orderStatus: p.status || existing?.orderStatus || "In Progress",
+                  progress: p.progress !== undefined ? p.progress : (existing?.progress || 0),
+                  assignedStaff: p.assignedStaff || existing?.assignedStaff || "Assigned Developer",
+                  createdAt: p.createdAt || existing?.createdAt || new Date().toISOString()
+                });
+              });
+              return Array.from(map.values()).sort((a: any, b: any) =>
+                new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+              );
+            });
+          }
+        }
 
         const apiBookings = await bRes.json();
         setClientBookings(prev => {

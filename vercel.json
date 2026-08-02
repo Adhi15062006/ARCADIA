@@ -5,31 +5,31 @@
   "rewrites": [
     {
       "source": "/api/test-all",
-      "destination": "/api/test-all.js"
+      "destination": "/api/test-all"
     },
     {
       "source": "/api/:path*",
-      "destination": "/api/index.js"
+      "destination": "/api/index"
     },
     {
       "source": "/firebase-config.js",
-      "destination": "/api/index.js"
+      "destination": "/api/index"
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/api/index.js"
+      "destination": "/api/index"
     },
     {
       "source": "/robots.txt",
-      "destination": "/api/index.js"
+      "destination": "/api/index"
     },
     {
       "source": "/auth/callback",
-      "destination": "/api/index.js"
+      "destination": "/api/index"
     },
     {
       "source": "/auth/callback/",
-      "destination": "/api/index.js"
+      "destination": "/api/index"
     },
     {
       "source": "/:path*",

@@ -227,42 +227,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const avatar = firebaseUser.photoURL || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80`;
           const token = idTokenResult.token;
 
-          // Auto-create or ensure users/{uid} document exists in Firestore for Security Rules matching
-          try {
-            const userDocRef = doc(db, "users", firebaseUser.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (!userDoc.exists()) {
-              console.log("[Auth Audit] Auto-creating user role document for UID:", firebaseUser.uid);
-              await setDoc(userDocRef, {
-                uid: firebaseUser.uid,
-                email,
-                name,
-                role,
-                status,
-                createdAt: new Date().toISOString()
-              }, { merge: true });
-            } else {
-              const docData = userDoc.data();
-              if (docData.role && docData.role !== role && adminRoles.includes(docData.role)) {
-                role = docData.role;
-              }
-            }
-          } catch (docErr) {
-            console.warn("[Auth Audit] Automatic user role document sync deferred:", docErr);
-          }
-
-          if (status === "suspended") {
-            console.warn("[AuthContext] Account is suspended, logging out.");
-            await logout();
-            setLoading(false);
-            return;
-          }
-
+          // Set sessions immediately to avoid blocking on background network requests (instant login/page-load)
           if (adminRoles.includes(role)) {
             setAdminSession(token, email, role);
           } else {
             setClientSession(name, email, token, avatar);
           }
+
+          // Auto-create or ensure users/{uid} document exists in Firestore for Security Rules matching (Non-blocking background sync)
+          (async () => {
+            try {
+              const userDocRef = doc(db, "users", firebaseUser.uid);
+              const userDoc = await getDoc(userDocRef);
+              
+              if (!userDoc.exists()) {
+                console.log("[Auth Audit] Auto-creating user role document for UID:", firebaseUser.uid);
+                await setDoc(userDocRef, {
+                  uid: firebaseUser.uid,
+                  email,
+                  name,
+                  role,
+                  status,
+                  createdAt: new Date().toISOString()
+                }, { merge: true });
+              } else {
+                const docData = userDoc.data();
+                if (docData.status === "suspended") {
+                  console.warn("[AuthContext] Account is suspended, logging out.");
+                  await logout();
+                  return;
+                }
+                
+                // If role was updated/elevated in database, update local sessions
+                if (docData.role && docData.role !== role) {
+                  const updatedRole = docData.role;
+                  if (adminRoles.includes(updatedRole)) {
+                    setAdminSession(token, email, updatedRole);
+                  } else {
+                    setClientSession(name, email, token, avatar);
+                  }
+                }
+              }
+            } catch (docErr) {
+              console.warn("[Auth Audit] Automatic user role document sync deferred:", docErr);
+            }
+          })();
         } catch (err) {
           console.error("[AuthContext] Error identifying claims:", err);
         }
