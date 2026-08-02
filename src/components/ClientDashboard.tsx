@@ -328,7 +328,7 @@ export default function ClientDashboard({
 
       if (!response.ok) {
         const data = await response.json();
-        onShowToast("error", data.error || "Failed to create payment order.");
+        onShowToast("error", data.error || data.message || "Failed to create payment order.");
         setPayStatus("idle");
         return;
       }
@@ -410,8 +410,9 @@ export default function ClientDashboard({
       };
 
       if (!(window as any).Razorpay) {
-        console.warn("Razorpay Checkout SDK not present in window context. Initializing secure sandboxed simulator.");
-        setCheckoutSimData(orderData);
+        console.error("Razorpay Checkout SDK not present in window context.");
+        onShowToast("error", "Razorpay Checkout SDK failed to load. Please disable ad-blockers or reload the page.");
+        setPayStatus("idle");
         return;
       }
 

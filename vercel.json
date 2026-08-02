@@ -9,27 +9,27 @@
     },
     {
       "source": "/api/:path*",
-      "destination": "/api/index"
+      "destination": "/api"
     },
     {
       "source": "/firebase-config.js",
-      "destination": "/api/index"
+      "destination": "/api"
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/api/index"
+      "destination": "/api"
     },
     {
       "source": "/robots.txt",
-      "destination": "/api/index"
+      "destination": "/api"
     },
     {
       "source": "/auth/callback",
-      "destination": "/api/index"
+      "destination": "/api"
     },
     {
       "source": "/auth/callback/",
-      "destination": "/api/index"
+      "destination": "/api"
     },
     {
       "source": "/:path*",

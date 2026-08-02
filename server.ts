@@ -354,36 +354,30 @@ async function verifyFirebaseTokenManual(token: string): Promise<any> {
 // Lazy Razorpay Initialization
 let rzpInstance: any = null;
 function getRazorpayInstance() {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keyId || !keySecret) {
+    throw new Error("RAZORPAY_KEYS_MISSING");
+  }
   if (rzpInstance === null) {
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (keyId && keySecret) {
-      try {
-        rzpInstance = new Razorpay({
-          key_id: keyId,
-          key_secret: keySecret
-        });
-        console.log("[Razorpay] Initialized with real API credentials.");
-      } catch (err) {
-        console.error("[Razorpay] Error initializing Razorpay SDK:", err);
-        rzpInstance = null;
-      }
-    } else {
-      console.warn("[Razorpay] API keys are missing. Running in secure Sandbox Simulation Mode.");
+    try {
+      rzpInstance = new Razorpay({
+        key_id: keyId,
+        key_secret: keySecret
+      });
+      console.log("[Razorpay] Initialized with real API credentials.");
+    } catch (err) {
+      console.error("[Razorpay] Error initializing Razorpay SDK:", err);
+      rzpInstance = null;
+      throw new Error("RAZORPAY_INIT_ERROR");
     }
   }
   return rzpInstance;
 }
 
 function verifyRazorpaySignature(orderId: string, paymentId: string, signature: string): boolean {
-  const rzp = getRazorpayInstance();
-  if (!rzp) {
-    // Sandbox mode: Accept simulator signature or any signature starting with "sim_" or matching standard patterns
-    const isValidSim = signature === `sim_sig_${orderId}_${paymentId}` || signature.startsWith("sim_");
-    console.log(`[Razorpay Sandbox] Verifying mock signature for order ${orderId}, payment ${paymentId}: ${isValidSim}`);
-    return isValidSim;
-  }
   try {
+    getRazorpayInstance(); // Throws if key is missing
     const text = orderId + "|" + paymentId;
     const generated = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
@@ -3517,10 +3511,13 @@ app.post("/api/payments/create-order", authenticateJWT, async (req: any, res) =>
     const amountInINR = milestone.amount;
     const amountInPaise = Math.round(amountInINR * 100);
 
+    console.log(`[Razorpay Order Creation] Request received. Order ID: ${orderId}, Milestone: ${milestoneId}, Amount: ₹${amountInINR} (${amountInPaise} paise)`);
+
     let razorpayOrderId = "";
-    const rzp = getRazorpayInstance();
-    if (rzp) {
-      // Create real Razorpay order
+    try {
+      const rzp = getRazorpayInstance(); // Will throw if keys are missing
+      
+      console.log(`[Razorpay Order Creation] Requesting Razorpay API for amount: ${amountInPaise} paise`);
       const rzpOrder = await rzp.orders.create({
         amount: amountInPaise,
         currency: "INR",
@@ -3528,14 +3525,24 @@ app.post("/api/payments/create-order", authenticateJWT, async (req: any, res) =>
         notes: {
           orderId,
           milestoneId,
-          clientId: order.email,
+          clientId: order.customerId || order.userId || normalizeEmail(order.email),
           projectName: order.service
         }
       });
+      
       razorpayOrderId = rzpOrder.id;
-    } else {
-      // Generate secure sandbox simulated Razorpay order ID
-      razorpayOrderId = "order_sim_" + Math.random().toString(36).substr(2, 9);
+      console.log(`[Razorpay Order Creation] Successfully generated Razorpay Order ID: ${razorpayOrderId}`);
+    } catch (rzpErr: any) {
+      console.error("[Razorpay Order Creation] Razorpay API error:", rzpErr.message || rzpErr);
+      const code = rzpErr.message === "RAZORPAY_KEYS_MISSING" ? "RAZORPAY_CONFIGURATION_ERROR" : "RAZORPAY_ORDER_CREATION_FAILED";
+      const message = rzpErr.message === "RAZORPAY_KEYS_MISSING" 
+        ? "Razorpay API keys are not configured on the server."
+        : "Failed to create order on Razorpay payment gateway.";
+      return res.status(500).json({
+        success: false,
+        code,
+        message
+      });
     }
 
     // Save transaction log as Initiated
@@ -3565,7 +3572,7 @@ app.post("/api/payments/create-order", authenticateJWT, async (req: any, res) =>
       success: true,
       razorpay_order_id: razorpayOrderId,
       amount: amountInINR,
-      key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_mock_key_2026",
+      key_id: process.env.RAZORPAY_KEY_ID,
       milestoneId,
       orderId: order.id,
       clientEmail: order.email,
@@ -3616,6 +3623,17 @@ app.post("/api/payments/verify-payment", authenticateJWT, async (req: any, res) 
     const isDuplicate = payments.some(p => p.id === razorpay_payment_id && p.status === "Approved");
     if (isDuplicate) {
       return res.status(400).json({ error: "This payment has already been approved and credited." });
+    }
+
+    // Ensure keys are present on server
+    try {
+      getRazorpayInstance();
+    } catch (confErr: any) {
+      return res.status(500).json({
+        success: false,
+        code: "RAZORPAY_CONFIGURATION_ERROR",
+        message: "Razorpay API keys are not configured on the server."
+      });
     }
 
     // Cryptographic signature verification
