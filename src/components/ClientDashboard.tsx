@@ -503,13 +503,17 @@ export default function ClientDashboard({
   }, [token]);
 
   useEffect(() => {
-    if (!token || !userEmail || !user) {
+    if (!token) {
       setIsClientDataLoading(false);
       return;
     }
 
-    const cleanEmail = userEmail.toLowerCase().trim();
-    const currentUid = auth.currentUser?.uid;
+    const cleanEmail = (auth.currentUser?.email || user?.email || userEmail || "").toLowerCase().trim();
+    const currentUid = auth.currentUser?.uid || user?.uid;
+
+    if (!cleanEmail || !currentUid) {
+      return;
+    }
 
     const processOrdersSnapshot = (snapshot: any) => {
       const ordersFromCol: any[] = [];

@@ -771,6 +771,7 @@ const dbOrders = () => {
     orders.push(seedOrders[0]);
     saveDB("orders.json", orders);
   }
+  return orders.map(o => normalizeOrderSchema(o));
 };
 
 async function getOrderById(orderId: string): Promise<any> {
@@ -4717,9 +4718,9 @@ app.get("/api/maintenance/subscriptions", authenticateJWT, (req: any, res) => {
         }
       });
     } else {
-      const userEmail = user.email.toLowerCase().trim();
+      const userEmail = normalizeEmail(user.email);
       orders.forEach((order: any) => {
-        if (order.status === "Completed" && order.email.toLowerCase().trim() === userEmail) {
+        if (order.status === "Completed" && normalizeEmail(order.email) === userEmail) {
           checkAndCreateMaintenance(order);
         }
       });
@@ -4732,8 +4733,8 @@ app.get("/api/maintenance/subscriptions", authenticateJWT, (req: any, res) => {
     if (user.role === "Admin" || user.role === "SuperAdmin") {
       results = refreshedMaintenance;
     } else {
-      const userEmail = user.email.toLowerCase().trim();
-      results = refreshedMaintenance.filter((m: any) => m.clientEmail === userEmail);
+      const userEmail = normalizeEmail(user.email);
+      results = refreshedMaintenance.filter((m: any) => normalizeEmail(m.clientEmail) === userEmail);
     }
 
     // Filters & Search for Admin

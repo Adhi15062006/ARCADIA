@@ -222,17 +222,6 @@ function AppContent() {
         console.warn("Real-time listener for services.json fallback failed:", error);
       }),
 
-      onSnapshot(collection(db, "projects"), (snapshot) => {
-        if (!snapshot.empty) {
-          const list: Project[] = [];
-          snapshot.forEach((docSnap) => {
-            list.push({ id: docSnap.id, ...docSnap.data() } as Project);
-          });
-          setProjects(list);
-        }
-      }, (error) => {
-        console.warn("Real-time listener for top-level projects collection failed:", error);
-      }),
 
       onSnapshot(doc(db, "arcadia_system_db", "projects.json"), (snapshot) => {
         const data = snapshot.data();
