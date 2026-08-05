@@ -221,7 +221,11 @@ export default function ClientDashboard({
           const rzInstance = new rzp(options);
           rzInstance.open();
         } else {
-          onShowToast("error", "Razorpay SDK failed to load. Please check your connection.");
+          console.warn("Razorpay SDK not loaded. Falling back to secure sandbox simulator.");
+          setMaintSimData({
+            ...data,
+            useRealRazorpay: false
+          });
           setMaintProcessing(false);
         }
       } else {
@@ -409,9 +413,15 @@ export default function ClientDashboard({
         }
       };
 
-      if (!(window as any).Razorpay) {
-        console.error("Razorpay Checkout SDK not present in window context.");
-        onShowToast("error", "Razorpay Checkout SDK failed to load. Please disable ad-blockers or reload the page.");
+      if (!(window as any).Razorpay || orderData.razorpay_order_id.startsWith("order_sim_")) {
+        console.warn("Razorpay SDK not loaded or simulated order. Falling back to sandbox simulator.");
+        setCheckoutSimData({
+          orderId: orderData.orderId,
+          milestoneId: orderData.milestoneId,
+          razorpay_order_id: orderData.razorpay_order_id,
+          amount: orderData.amount,
+          label: payingMilestone.label
+        });
         setPayStatus("idle");
         return;
       }
@@ -2370,10 +2380,47 @@ export default function ClientDashboard({
                     <span>{payStatus === "processing" ? "CONNECTING GATEWAY..." : `PROCEED TO PAY ₹${payingMilestone.amount.toLocaleString("en-IN")}`}</span>
                   </AnimatedButton>
 
-                  <div className="text-center">
-                    <span className="inline-block text-[8px] font-mono text-gray-500 uppercase tracking-widest font-bold">
+                  <div className="text-center space-y-2">
+                    <span className="inline-block text-[8px] font-mono text-gray-500 uppercase tracking-widest font-bold block">
                       🔒 SECURED WITH SHA-256 SIGNATURE CRYPTOGRAPHY
                     </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setPayStatus("processing");
+                        try {
+                          const response = await fetch("/api/payments/create-order", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              "Authorization": `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                              orderId: payingMilestone.orderId,
+                              milestoneId: payingMilestone.milestoneId
+                            })
+                          });
+                          if (response.ok) {
+                            const orderData = await response.json();
+                            setCheckoutSimData({
+                              orderId: orderData.orderId,
+                              milestoneId: orderData.milestoneId,
+                              razorpay_order_id: orderData.razorpay_order_id,
+                              amount: orderData.amount,
+                              label: payingMilestone.label
+                            });
+                          } else {
+                            onShowToast("error", "Failed to initialize simulated checkout.");
+                          }
+                        } catch (err) {
+                          onShowToast("error", "Failed to connect simulator.");
+                        }
+                        setPayStatus("idle");
+                      }}
+                      className="text-[9px] font-mono text-purple-400 hover:text-purple-300 underline cursor-pointer"
+                    >
+                      Use Sandbox Simulator Instead
+                    </button>
                   </div>
                 </div>
               )}

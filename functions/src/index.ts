@@ -109,8 +109,9 @@ export const onPaymentSuccess = onDocumentUpdated("payments/{paymentId}", async 
   const beforeData = change.before.data();
   const afterData = change.after.data();
 
-  // Trigger only on status transition to Success
-  if (beforeData?.status !== "Success" && afterData?.status === "Success") {
+  // Trigger only on status transition to Success or Approved
+  if ((beforeData?.status !== "Success" && beforeData?.status !== "Approved") && 
+      (afterData?.status === "Success" || afterData?.status === "Approved")) {
     const orderId = afterData.orderId;
     const customerId = afterData.customerId;
     const paymentId = event.params.paymentId;
@@ -218,9 +219,9 @@ export const onDatabaseDocUpdated = onDocumentUpdated("arcadia_system_db/{docNam
     const ordersList = await getJsonDb("orders.json");
 
     for (const payment of paymentsAfter) {
-      // Find payments that transitioned to "Success"
-      const wasSuccessBefore = paymentsBefore.some(p => p.id === payment.id && p.status === "Success");
-      if (payment.status === "Success" && !wasSuccessBefore) {
+      // Find payments that transitioned to "Success" or "Approved"
+      const wasSuccessBefore = paymentsBefore.some(p => p.id === payment.id && (p.status === "Success" || p.status === "Approved"));
+      if ((payment.status === "Success" || payment.status === "Approved") && !wasSuccessBefore) {
         const alreadyExists = invoicesList.some((inv: any) => inv.paymentId === payment.id || inv.orderId === payment.orderId);
         if (!alreadyExists) {
           const invoiceNum = `INV-${Date.now().toString().slice(-6)}`;
